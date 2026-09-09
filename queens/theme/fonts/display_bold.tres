@@ -1,0 +1,10 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Fredoka[wdth,wght].ttf" id="1_vvahm"]
+
+[resource]
+base_font = ExtResource("1_vvahm")
+variation_opentype = {
+2003072104: 100,
+2003265652: 700
+}

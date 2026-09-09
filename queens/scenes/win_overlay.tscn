@@ -1,18 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/win_overlay.gd" id="1_script"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(1, 1, 1, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.117647, 0.117647, 0.164706, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+[ext_resource type="Texture2D" path="res://assets/board/crown_gold.svg" id="2_crown"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/medal.svg" id="3_medal"]
+[ext_resource type="Script" path="res://scripts/ui/star_row.gd" id="4_stars"]
 
 [node name="WinOverlay" type="Control"]
 visible = false
@@ -31,100 +22,124 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.45)
+color = Color(0.122, 0.106, 0.227, 0.55)
 
 [node name="Panel" type="PanelContainer" parent="."]
 layout_mode = 1
+theme_type_variation = &"CardElevated"
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -310.0
+offset_left = -320.0
 offset_top = 0.0
-offset_right = 310.0
+offset_right = 320.0
 offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Margin" type="MarginContainer" parent="Panel"]
+[node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
+theme_override_constants/separation = 12
 
-[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+[node name="Crown" type="TextureRect" parent="Panel/VBox"]
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
-theme_override_constants/separation = 16
+size_flags_horizontal = 4
+texture = ExtResource("2_crown")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="Title" type="Label" parent="Panel/Margin/VBox"]
+[node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.772549, 0.560784, 0, 1)
-theme_override_font_sizes/font_size = 52
+theme_type_variation = &"LabelGold"
 text = "Solved!"
 horizontal_alignment = 1
 
-[node name="ScoreLabel" type="Label" parent="Panel/Margin/VBox"]
+[node name="ScoreLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 72
+theme_type_variation = &"LabelScore"
 text = "767"
 horizontal_alignment = 1
 
-[node name="BadgeLabel" type="Label" parent="Panel/Margin/VBox"]
+[node name="PointsLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.772549, 0.560784, 0, 1)
-theme_override_font_sizes/font_size = 28
-text = "Flawless · New best"
+theme_type_variation = &"LabelCaption"
+text = "points"
 horizontal_alignment = 1
 
-[node name="DetailLabel" type="Label" parent="Panel/Margin/VBox"]
+[node name="Badges" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 24
-text = "Time 3:03 · par 4:05
-Mistakes 0 · Undos 1
-Level 650 × accuracy 1.00 × speed 1.18 × undo 1.00"
-horizontal_alignment = 1
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Stats" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Factors" type="VBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="LeagueCard" type="PanelContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"CardFlat"
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBox/LeagueCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Medal" type="TextureRect" parent="Panel/VBox/LeagueCard/HBox"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("3_medal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LeagueLabel" type="Label" parent="Panel/VBox/LeagueCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"LabelCaptionInk"
+text = "Bronze league · #5 of 30 · safe"
 autowrap_mode = 3
 
-[node name="LeagueLabel" type="Label" parent="Panel/Margin/VBox"]
+[node name="NextLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 24
-text = "Bronze league · 2010 pts · #5 of 30 · safe"
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="NextLabel" type="Label" parent="Panel/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"LabelCaption"
 text = "Next game"
 horizontal_alignment = 1
 
-[node name="HarderButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 84)
+[node name="Next" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "Harder"
+theme_override_constants/separation = 10
 
-[node name="SameButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 84)
+[node name="Easier" type="Button" parent="Panel/VBox/Next"]
+custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "Same"
-
-[node name="EasierButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 84)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
+size_flags_horizontal = 3
+theme_type_variation = &"ButtonSecondary"
 text = "Easier"
 
-[node name="HomeButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 72)
+[node name="Same" type="Button" parent="Panel/VBox/Next"]
+custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+size_flags_horizontal = 3
+theme_type_variation = &"ButtonPrimary"
+text = "Same"
+
+[node name="Harder" type="Button" parent="Panel/VBox/Next"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"ButtonSecondary"
+text = "Harder"
+
+[node name="HomeButton" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_type_variation = &"ButtonGhost"
 text = "Home"

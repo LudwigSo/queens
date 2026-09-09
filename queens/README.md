@@ -5,13 +5,29 @@ queen in every row, column and colour region, and no two queens may touch.
 
 ## How it plays
 
-The home screen offers three buttons: **Easier**, **Same** and **Harder**.
-Each picks a level whose solver difficulty is stepped relative to the last
-game you started, finished or not (see `scripts/level_picker.gd`). The full
-level list is still available under *All levels*. A level you started stays
-locked for seven days (`cooldown_seconds` in `scripts/config.gd`), so a time
-cannot be improved by replaying a solution you remember. Giving up counts as
-a played game.
+The home screen offers three cards: **Easier**, **Same** and **Harder**.
+Each previews the level it would start, picked so its solver difficulty is
+stepped relative to the last game you started, finished or not (see
+`scripts/level_picker.gd`). The full level list is under *All levels*, with
+a size filter and a leaderboard per level. A level you started stays locked
+for seven days (`cooldown_seconds` in `scripts/config.gd`), so a time cannot
+be improved by replaying a solution you remember. Giving up counts as a
+played game. A first run starts with an interactive tutorial (replayable
+from Settings).
+
+On the board: tap a cell to mark it X, tap again for a queen, tap a third
+time to clear. Drag across cells to paint or erase X marks as one stroke
+(one undo step). Long-press an empty cell to place a queen straight away.
+Placing a queen automatically X-marks its row, column, region and the
+cells around it. A queen on a wrong cell flashes red (switchable in
+Settings); two queens that attack each other shake and stay red.
+
+**Hints** (the bulb in the actions bar) never place a wrong queen. They
+try, in order: point at a wrong queen, point at a wrong X, find a row,
+column or region with only one spot left and place the queen there, find a
+region confined to one row or column and X the rest of it, and finally
+reveal the queen of the most constrained row (`scripts/hint_finder.gd`).
+Hints are free but cost score (see below) and the Flawless badge.
 
 ### Energy
 
@@ -34,7 +50,8 @@ par      = 30 + 3 * difficulty + 0.5 * size^2   seconds
 accuracy = 1 / (1 + 0.4 * wrong placements)     the dominant factor
 speed    = clamp(0.5 + 0.5 * par / time, 0.5, 1.25)
 undo     = clamp(1 - 0.01 * undos, 0.85, 1)
-score    = round(base * accuracy * speed * undo)
+hint     = clamp(1 - 0.15 * hints, 0.4, 1)
+score    = round(base * accuracy * speed * undo * hint)
 ```
 
 A wrong placement is a queen put on a cell that is not part of the
@@ -89,6 +106,57 @@ Challenger), and fabricates friends from friend codes. A real backend
 (for example Supabase) implements the same contract; the client does not
 change.
 
+## Design system and assets
+
+Everything visual is generated from the repository; there is no art
+pipeline outside it.
+
+* **Tokens**: `theme/tokens.gd` (`Ui`) holds every colour, radius, spacing
+  and font size. Runtime drawing code (the board, list rows) reads the same
+  constants.
+* **Theme**: `theme/theme.tres` is *generated* by
+  `theme/theme_builder.gd` from the tokens; never edit it by hand. It also
+  writes the glossy 9-patch button textures under `assets/ui/`. Rebuild
+  with:
+
+  ```bash
+  godot --headless --path queens --script theme/theme_builder.gd
+  ```
+
+  On a clean checkout run it, then `--import`, then run it again so the
+  button textures are picked up (the first pass falls back to flat styles).
+  Screens use `theme_type_variation` names such as `ButtonPrimary`,
+  `ButtonSecondary`, `ButtonGhost`, `ButtonPill`, `ButtonIcon`,
+  `ButtonCard`, `LabelTitle`, `LabelCaption`, `Card`, `CardElevated`,
+  `RowPanel`, `Chip`, `Sheet`, `ScreenMargin`.
+* **Fonts**: Fredoka (display) and Nunito (body), both SIL Open Font
+  License, in `assets/fonts/`.
+* **Icons**: `../tools/gen_icons.py` writes the line icon set to
+  `assets/icons/line/` (64 px, white strokes, tinted by the theme).
+  `../tools/gen_crowns.py` writes the three crown sprites to
+  `assets/board/`.
+* **Sound**: `../tools/gen_sfx.py` synthesizes every effect and
+  `../tools/gen_music.py` the ambient loop into `assets/audio/` (numpy
+  only). The `Audio` autoload (`scripts/audio_manager.gd`) loads them
+  lazily and is a silent no-op for any missing file; scripts call it
+  through the static `Sfx` front so headless tests never need it.
+* **Motion**: `scripts/ui/motion.gd` holds the durations and tween
+  helpers. `Motion.instant` (tests) and `Motion.reduced` (the "Reduce
+  motion" setting) collapse every animation.
+* **Brand**: `tools/brand_render.gd` renders the adaptive launcher icon,
+  the boot splash, the wordmark and the store feature graphic into
+  `assets/brand/` with the real fonts (needs a window):
+
+  ```bash
+  godot --path queens res://tools/brand_render.tscn -- queens/assets/brand
+  ```
+
+  `tools/store_shots.gd` composes 1080x1920 store screenshots from the
+  screenshot suite's output (`-- <screenshot_dir> <out_dir>`).
+
+The app name is still a placeholder ("Queens"); the wordmark, icon and
+package name (`export_presets.cfg`) change together once it is chosen.
+
 ## Running locally
 
 Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press
@@ -107,6 +175,16 @@ godot --headless --path queens --import
 
 ```bash
 godot --headless --path queens --script tests/run_tests.gd
+```
+
+The screenshot suite drives the real scene tree through `main.debug`
+(`scripts/debug_api.gd`) with animations disabled and writes one PNG per
+screen and state (home, board with conflicts, pause menu, hint, solved,
+win overlay, shop, level overview, league, settings, tutorial, round
+summary). It needs a window:
+
+```bash
+godot --path queens res://tests/screenshot.tscn -- build/shots
 ```
 
 Progress is stored in `user://save.json` (see `scripts/save_data.gd`); a

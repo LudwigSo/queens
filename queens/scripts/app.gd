@@ -33,6 +33,7 @@ func _ready() -> void:
 	rng.seed = Time.get_ticks_usec()
 	picker = LevelPicker.new(catalog, config, rng)
 	energy = EnergyLedger.new(save, config)
+	apply_settings()
 	save.changed.connect(_queue_save)
 	_start_backend()
 	_forfeit_dangling_game()
@@ -46,6 +47,15 @@ func _ready() -> void:
 	purchases.start()
 	purchases.query_products([config.unlimited_product_id])
 	purchases.restore()
+
+
+## Pushes the persisted settings into the motion and audio systems.
+func apply_settings() -> void:
+	var st := save.settings()
+	Motion.reduced = bool(st.get("reduced_motion", false))
+	var audio := get_node_or_null("/root/Audio")
+	if audio != null:
+		audio.apply_settings(st)
 
 
 ## Real providers only on Android with the plugin present; the fakes let the

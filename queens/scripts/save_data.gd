@@ -45,7 +45,20 @@ static func defaults(cfg: GameConfig) -> Dictionary:
 		"levels": {},
 		"results": [],
 		"pending_results": [],
-		"settings": {},
+		"settings": settings_defaults(),
+	}
+
+
+## Player settings, all with a default so screens never check for keys.
+static func settings_defaults() -> Dictionary:
+	return {
+		"sfx": true,
+		"music": true,
+		"haptics": true,
+		"reduced_motion": false,
+		"mistake_alerts": true,
+		"region_patterns": false,
+		"tutorial_done": false,
 	}
 
 
@@ -133,7 +146,12 @@ static func migrate(dict: Dictionary, cfg: GameConfig) -> Dictionary:
 						dict[key] = base[key]
 				version = 1
 		dict["version"] = version
-	# Fill missing per-level fields so callers can index without checks.
+	# Fill missing settings and per-level fields so callers can index without checks.
+	if not dict.get("settings") is Dictionary:
+		dict["settings"] = {}
+	for key in settings_defaults():
+		if not dict["settings"].has(key):
+			dict["settings"][key] = settings_defaults()[key]
 	var levels: Dictionary = dict["levels"]
 	for id in levels:
 		var entry: Dictionary = levels[id]
@@ -224,12 +242,62 @@ func begin_game(level: Dictionary, marker: Dictionary, now: int) -> void:
 	entry["plays"] = int(entry["plays"]) + 1
 	entry["last_started_at"] = now
 	data["current_game"] = marker
+	_touch_streak(now)
 	data["last_game"] = {
 		"level_id": str(level["id"]),
 		"difficulty": float(level["difficulty"]),
 		"started_at": now,
 	}
 	mark_changed()
+
+
+func setting(key: String) -> Variant:
+	return data.get("settings", {}).get(key, settings_defaults().get(key))
+
+
+func set_setting(key: String, value: Variant) -> void:
+	if not data.has("settings"):
+		data["settings"] = settings_defaults()
+	data["settings"][key] = value
+	mark_changed()
+
+
+func settings() -> Dictionary:
+	var out := settings_defaults()
+	for key in data.get("settings", {}):
+		out[key] = data["settings"][key]
+	return out
+
+
+## Calendar day (UTC) index of a unix time.
+static func day_index(unix_time: int) -> int:
+	@warning_ignore("integer_division")
+	return unix_time / 86400
+
+
+## Days in a row with at least one game started, counting today or yesterday.
+func streak_days(now: int) -> int:
+	var streak: Dictionary = data.get("player", {}).get("streak", {})
+	var last_day := int(streak.get("last_day", -1))
+	var today := day_index(now)
+	if last_day == today or last_day == today - 1:
+		return int(streak.get("count", 0))
+	return 0
+
+
+func _touch_streak(now: int) -> void:
+	var player: Dictionary = data["player"]
+	var streak: Dictionary = player.get("streak", {"count": 0, "last_day": -1})
+	var today := day_index(now)
+	var last_day := int(streak.get("last_day", -1))
+	if last_day == today:
+		pass
+	elif last_day == today - 1:
+		streak["count"] = int(streak.get("count", 0)) + 1
+	else:
+		streak["count"] = 1
+	streak["last_day"] = today
+	player["streak"] = streak
 
 
 ## The last game started ({level_id, difficulty, started_at}) or {}.

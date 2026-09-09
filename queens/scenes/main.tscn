@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/home_screen.tscn" id="6_home"]
@@ -6,10 +6,15 @@
 [ext_resource type="PackedScene" path="res://scenes/game_screen.tscn" id="3_game"]
 [ext_resource type="PackedScene" path="res://scenes/win_overlay.tscn" id="4_win"]
 [ext_resource type="PackedScene" path="res://scenes/message_dialog.tscn" id="5_message"]
-[ext_resource type="PackedScene" path="res://scenes/energy_dialog.tscn" id="7_energy"]
+[ext_resource type="PackedScene" path="res://scenes/shop_sheet.tscn" id="7_energy"]
 [ext_resource type="PackedScene" path="res://scenes/league_screen.tscn" id="8_league"]
 [ext_resource type="PackedScene" path="res://scenes/level_detail.tscn" id="9_detail"]
 [ext_resource type="PackedScene" path="res://scenes/round_summary.tscn" id="10_round"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="11_pause"]
+[ext_resource type="PackedScene" path="res://scenes/toast.tscn" id="12_toast"]
+[ext_resource type="PackedScene" path="res://scenes/settings_screen.tscn" id="13_settings"]
+[ext_resource type="PackedScene" path="res://scenes/tutorial.tscn" id="14_tutorial"]
+[ext_resource type="PackedScene" path="res://scenes/splash.tscn" id="15_splash"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -27,7 +32,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.960784, 0.956863, 0.94902, 1)
+color = Color(0.964706, 0.956863, 0.984314, 1)
 
 [node name="Home" parent="." instance=ExtResource("6_home")]
 layout_mode = 1
@@ -42,7 +47,16 @@ layout_mode = 1
 [node name="LevelDetail" parent="." instance=ExtResource("9_detail")]
 layout_mode = 1
 
+[node name="Settings" parent="." instance=ExtResource("13_settings")]
+layout_mode = 1
+
+[node name="Tutorial" parent="." instance=ExtResource("14_tutorial")]
+layout_mode = 1
+
 [node name="Game" parent="." instance=ExtResource("3_game")]
+layout_mode = 1
+
+[node name="PauseMenu" parent="." instance=ExtResource("11_pause")]
 layout_mode = 1
 
 [node name="WinOverlay" parent="." instance=ExtResource("4_win")]
@@ -55,4 +69,10 @@ layout_mode = 1
 layout_mode = 1
 
 [node name="MessageDialog" parent="." instance=ExtResource("5_message")]
+layout_mode = 1
+
+[node name="Splash" parent="." instance=ExtResource("15_splash")]
+layout_mode = 1
+
+[node name="Toast" parent="." instance=ExtResource("12_toast")]
 layout_mode = 1

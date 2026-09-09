@@ -1,0 +1,87 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/level_card.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/board_thumb.gd" id="2_thumb"]
+[ext_resource type="Script" path="res://scripts/ui/star_row.gd" id="3_stars"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/lock.svg" id="4_lock"]
+
+[node name="LevelCard" type="Button"]
+custom_minimum_size = Vector2(0, 230)
+theme_type_variation = &"ButtonCard"
+script = ExtResource("1_script")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = -16.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Thumb" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("2_thumb")
+
+[node name="Title" type="Label" parent="VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaptionInk"
+text = "Level 21"
+horizontal_alignment = 1
+
+[node name="Meta" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SizeLabel" type="Label" parent="VBox/Meta"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "7×7"
+
+[node name="Stars" type="HBoxContainer" parent="VBox/Meta"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_stars")
+icon_size = 16
+
+[node name="Best" type="Label" parent="VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "Best 143 pts"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="LockRow" type="HBoxContainer" parent="VBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="LockIcon" type="TextureRect" parent="VBox/LockRow"]
+modulate = Color(0.603922, 0.588235, 0.705882, 1)
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_lock")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LockLabel" type="Label" parent="VBox/LockRow"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "6d 23h"

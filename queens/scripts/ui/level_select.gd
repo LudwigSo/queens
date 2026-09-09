@@ -1,47 +1,88 @@
 extends Control
-## The level overview: one button per level, locked ones disabled.
-## Only emits intents; the main script builds the rows and starts games.
+## The level overview: a size filter and a grid of LevelCards. Tapping a
+## card opens the level's detail (leaderboard and Play).
 
-signal level_chosen(level_id: String)
 signal detail_requested(level_id: String)
 signal back_requested
 
+const LevelCardScene := preload("res://scenes/ui/level_card.tscn")
+
 @onready var grid: GridContainer = $Margin/VBox/Scroll/Grid
+@onready var scroll: ScrollContainer = $Margin/VBox/Scroll
+@onready var filter: Segmented = $Margin/VBox/Filter
 @onready var back_button: Button = $Margin/VBox/TopBar/BackButton
-@onready var spacer: Control = $Margin/VBox/TopBar/Spacer
+@onready var skeleton: Control = $Margin/VBox/Skeleton
+
+var _cards: Array = []       ## card dictionaries in display order
+var _nodes: Dictionary = {}  ## level id -> LevelCard
+var _size_filter: int = 0    ## 0 = all
 
 
 func _ready() -> void:
 	back_button.pressed.connect(back_requested.emit)
+	filter.selected.connect(_on_filter)
 
 
 func set_back_visible(shown: bool) -> void:
 	back_button.visible = shown
-	spacer.visible = shown
 
 
-## rows: [{id: String, text: String, locked: bool}] in display order.
-func refresh(rows: Array) -> void:
+func set_loading(loading: bool) -> void:
+	skeleton.visible = loading
+	scroll.visible = not loading
+
+
+## cards: [{id, level_no, size, difficulty, stars, regions, locked, lock_text, best_text, played}]
+func refresh(cards: Array) -> void:
+	_cards = cards
+	var sizes := {}
+	for c in cards:
+		sizes[int(c["size"])] = true
+	var options: Array = [{"id": "0", "text": "All"}]
+	var keys := sizes.keys()
+	keys.sort()
+	for s in keys:
+		options.append({"id": str(s), "text": "%d×%d" % [s, s]})
+	filter.set_options(options)
+	filter.select(str(_size_filter), false)
+	_rebuild()
+
+
+func _rebuild() -> void:
 	for child in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
-	for row in rows:
-		var cell := VBoxContainer.new()
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cell.add_theme_constant_override("separation", 4)
-		var btn := Button.new()
-		btn.text = row["text"]
-		btn.disabled = row["locked"]
-		btn.custom_minimum_size = Vector2(0, 170)
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.add_theme_font_size_override("font_size", 28)
-		btn.pressed.connect(level_chosen.emit.bind(row["id"]))
-		cell.add_child(btn)
-		var detail := Button.new()
-		detail.text = "Leaderboard"
-		detail.flat = true
-		detail.custom_minimum_size = Vector2(0, 44)
-		detail.add_theme_font_size_override("font_size", 22)
-		detail.pressed.connect(detail_requested.emit.bind(row["id"]))
-		cell.add_child(detail)
-		grid.add_child(cell)
+	_nodes.clear()
+	var shown: Array = []
+	for c in _cards:
+		if _size_filter != 0 and int(c["size"]) != _size_filter:
+			continue
+		var card: LevelCard = LevelCardScene.instantiate()
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.custom_minimum_size = Vector2(0, 236)
+		grid.add_child(card)
+		card.setup(c)
+		card.chosen.connect(_on_card_chosen)
+		_nodes[str(c["id"])] = card
+		shown.append(card)
+	Motion.stagger(shown, 0.02, Motion.BASE, 10)
+
+
+func _on_filter(id: String) -> void:
+	_size_filter = int(id)
+	_rebuild()
+	scroll.scroll_vertical = 0
+
+
+func _on_card_chosen(level_id: String) -> void:
+	detail_requested.emit(level_id)
+
+
+func card_for(level_id: String) -> LevelCard:
+	return _nodes.get(level_id)
+
+
+func scroll_to(level_id: String) -> void:
+	var card: LevelCard = _nodes.get(level_id)
+	if card != null:
+		scroll.scroll_vertical = int(card.position.y)

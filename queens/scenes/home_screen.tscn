@@ -1,6 +1,14 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/home_screen.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/star_row.gd" id="2_stars"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/gear.svg" id="3_gear"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/bolt.svg" id="4_bolt"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/medal.svg" id="5_medal"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/chevron_right.svg" id="6_chev"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/grid.svg" id="7_grid"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/flame.svg" id="8_flame"]
+[ext_resource type="Texture2D" path="res://assets/brand/wordmark.png" id="9_wordmark"]
 
 [node name="Home" type="Control"]
 layout_mode = 3
@@ -13,57 +21,138 @@ script = ExtResource("1_script")
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
+theme_type_variation = &"ScreenMargin"
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="TopBar" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 20
+
+[node name="SettingsButton" type="Button" parent="Margin/VBox/TopBar"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+theme_type_variation = &"ButtonIcon"
+icon = ExtResource("3_gear")
+icon_alignment = 1
+expand_icon = true
 
 [node name="TopSpacer" type="Control" parent="Margin/VBox/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="EnergyButton" type="Button" parent="Margin/VBox/TopBar"]
-custom_minimum_size = Vector2(0, 70)
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "Energy 10"
+size_flags_vertical = 4
+theme_type_variation = &"ButtonPillWhite"
+text = "10"
+icon = ExtResource("4_bolt")
 
-[node name="Title" type="Label" parent="Margin/VBox"]
+[node name="Hero" type="VBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 80
-text = "Queens"
-horizontal_alignment = 1
+theme_override_constants/separation = 6
 
-[node name="Rules" type="Label" parent="Margin/VBox"]
+[node name="Title" type="TextureRect" parent="Margin/VBox/Hero"]
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 26
-text = "One queen in every row, column and colour region.
-Queens may not touch, not even diagonally."
-horizontal_alignment = 1
-autowrap_mode = 3
+texture = ExtResource("9_wordmark")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="LeagueLabel" type="Label" parent="Margin/VBox"]
+[node name="Tagline" type="Label" parent="Margin/VBox/Hero"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 26
-text = "Bronze league · play a game to join this round"
+theme_type_variation = &"LabelCaption"
+text = "One queen per row, column and colour. None may touch."
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="StreakChip" type="PanelContainer" parent="Margin/VBox/Hero"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"ChipWarning"
+
+[node name="HBox" type="HBoxContainer" parent="Margin/VBox/Hero/StreakChip"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icon" type="TextureRect" parent="Margin/VBox/Hero/StreakChip/HBox"]
+modulate = Color(0.960784, 0.647059, 0.141176, 1)
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("8_flame")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="StreakLabel" type="Label" parent="Margin/VBox/Hero/StreakChip/HBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaptionInk"
+text = "3 day streak"
+
+[node name="LeagueCard" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"ButtonCard"
+
+[node name="HBox" type="HBoxContainer" parent="Margin/VBox/LeagueCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="Medal" type="TextureRect" parent="Margin/VBox/LeagueCard/HBox"]
+modulate = Color(0.780392, 0.482353, 0.227451, 1)
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("5_medal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Text" type="VBoxContainer" parent="Margin/VBox/LeagueCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="LeagueTitle" type="Label" parent="Margin/VBox/LeagueCard/HBox/Text"]
+layout_mode = 2
+theme_type_variation = &"LabelBodyBold"
+text = "Bronze league"
+
+[node name="LeagueLine" type="Label" parent="Margin/VBox/LeagueCard/HBox/Text"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "Play a game to join this round"
+autowrap_mode = 3
+
+[node name="Chevron" type="TextureRect" parent="Margin/VBox/LeagueCard/HBox"]
+modulate = Color(0.603922, 0.588235, 0.705882, 1)
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_chev")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Spacer1" type="Control" parent="Margin/VBox"]
 layout_mode = 2
@@ -71,55 +160,172 @@ size_flags_vertical = 3
 
 [node name="LastGame" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 28
+theme_type_variation = &"LabelCaption"
 text = "Pick how hard you want to start"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="HarderButton" type="Button" parent="Margin/VBox"]
-custom_minimum_size = Vector2(0, 140)
+[node name="Options" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
-text = "Harder"
+theme_override_constants/separation = 12
 
-[node name="SameButton" type="Button" parent="Margin/VBox"]
-custom_minimum_size = Vector2(0, 140)
+[node name="Easier" type="Button" parent="Margin/VBox/Options"]
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
-text = "Same"
+size_flags_horizontal = 3
+theme_type_variation = &"ButtonCard"
 
-[node name="EasierButton" type="Button" parent="Margin/VBox"]
-custom_minimum_size = Vector2(0, 140)
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Options/Easier"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Name" type="Label" parent="Margin/VBox/Options/Easier/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_type_variation = &"LabelCaptionBold"
 text = "Easier"
+horizontal_alignment = 1
 
-[node name="Spacer2" type="Control" parent="Margin/VBox"]
+[node name="Size" type="Label" parent="Margin/VBox/Options/Easier/VBox"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_type_variation = &"LabelHeading"
+text = "6×6"
+horizontal_alignment = 1
+
+[node name="Stars" type="HBoxContainer" parent="Margin/VBox/Options/Easier/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("2_stars")
+icon_size = 16
+
+[node name="Diff" type="Label" parent="Margin/VBox/Options/Easier/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "diff 9"
+horizontal_alignment = 1
+
+[node name="Same" type="Button" parent="Margin/VBox/Options"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"ButtonCard"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Options/Same"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Name" type="Label" parent="Margin/VBox/Options/Same/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaptionBold"
+text = "Same"
+horizontal_alignment = 1
+
+[node name="Size" type="Label" parent="Margin/VBox/Options/Same/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelHeading"
+text = "7×7"
+horizontal_alignment = 1
+
+[node name="Stars" type="HBoxContainer" parent="Margin/VBox/Options/Same/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("2_stars")
+icon_size = 16
+
+[node name="Diff" type="Label" parent="Margin/VBox/Options/Same/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "diff 12"
+horizontal_alignment = 1
+
+[node name="Harder" type="Button" parent="Margin/VBox/Options"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"ButtonCard"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Options/Harder"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Name" type="Label" parent="Margin/VBox/Options/Harder/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaptionBold"
+text = "Harder"
+horizontal_alignment = 1
+
+[node name="Size" type="Label" parent="Margin/VBox/Options/Harder/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelHeading"
+text = "8×8"
+horizontal_alignment = 1
+
+[node name="Stars" type="HBoxContainer" parent="Margin/VBox/Options/Harder/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("2_stars")
+icon_size = 16
+
+[node name="Diff" type="Label" parent="Margin/VBox/Options/Harder/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "diff 20"
+horizontal_alignment = 1
+
+[node name="PlayButton" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"ButtonPrimary"
+text = "Play"
 
 [node name="Bottom" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 20
+alignment = 1
 
 [node name="OverviewButton" type="Button" parent="Margin/VBox/Bottom"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 30
+theme_type_variation = &"ButtonGhost"
 text = "All levels"
-
-[node name="LeagueButton" type="Button" parent="Margin/VBox/Bottom"]
-custom_minimum_size = Vector2(0, 90)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 30
-text = "League"
+icon = ExtResource("7_grid")
 
 [node name="Player" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 0.4, 0.45, 1)
-theme_override_font_sizes/font_size = 22
+theme_type_variation = &"LabelCaption"
 text = "Player"
 horizontal_alignment = 1

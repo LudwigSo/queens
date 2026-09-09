@@ -1,18 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/round_summary.gd" id="1_script"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(1, 1, 1, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.117647, 0.117647, 0.164706, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+[ext_resource type="Texture2D" path="res://assets/icons/line/medal.svg" id="2_medal"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/arrow_right.svg" id="3_arrow"]
 
 [node name="RoundSummary" type="Control"]
 visible = false
@@ -31,10 +21,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.45)
+color = Color(0.122, 0.106, 0.227, 0.55)
 
 [node name="Panel" type="PanelContainer" parent="."]
 layout_mode = 1
+theme_type_variation = &"CardElevated"
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -46,44 +37,68 @@ offset_right = 300.0
 offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Margin" type="MarginContainer" parent="Panel"]
+[node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
+theme_override_constants/separation = 14
 
-[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+[node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="Title" type="Label" parent="Panel/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 30
-text = "Last round"
+theme_type_variation = &"LabelCaptionBold"
+text = "LAST ROUND"
 horizontal_alignment = 1
 
-[node name="Headline" type="Label" parent="Panel/Margin/VBox"]
+[node name="Medals" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.772549, 0.560784, 0, 1)
-theme_override_font_sizes/font_size = 44
+size_flags_horizontal = 4
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Before" type="TextureRect" parent="Panel/VBox/Medals"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+texture = ExtResource("2_medal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Arrow" type="TextureRect" parent="Panel/VBox/Medals"]
+modulate = Color(0.603922, 0.588235, 0.705882, 1)
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("3_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="After" type="TextureRect" parent="Panel/VBox/Medals"]
+custom_minimum_size = Vector2(112, 112)
+layout_mode = 2
+texture = ExtResource("2_medal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Headline" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelTitle"
 text = "Promoted to Silver!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Body" type="Label" parent="Panel/Margin/VBox"]
+[node name="Chips" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 26
-text = "#4 of 30 · 4120 points"
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Body" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelMuted"
+text = "Best game: 210 points"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="OkButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 90)
+[node name="OkButton" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
+theme_type_variation = &"ButtonPrimary"
 text = "Continue"

@@ -1,6 +1,12 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/league_screen.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="2_segmented"]
+[ext_resource type="Script" path="res://scripts/ui/skeleton.gd" id="3_skeleton"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/chevron_left.svg" id="4_back"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/medal.svg" id="5_medal"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/copy.svg" id="6_copy"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/share.svg" id="7_share"]
 
 [node name="League" type="Control"]
 visible = false
@@ -14,15 +20,12 @@ script = ExtResource("1_script")
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
+theme_type_variation = &"ScreenMargin"
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
@@ -30,55 +33,75 @@ theme_override_constants/separation = 16
 
 [node name="TopBar" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 16
 
 [node name="BackButton" type="Button" parent="Margin/VBox/TopBar"]
-custom_minimum_size = Vector2(130, 90)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
-text = "< Home"
+theme_type_variation = &"ButtonIcon"
+icon = ExtResource("4_back")
+icon_alignment = 1
+expand_icon = true
 
 [node name="Title" type="Label" parent="Margin/VBox/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 46
-text = "Bronze league"
+size_flags_vertical = 4
+theme_type_variation = &"LabelTitle"
+text = "League"
 horizontal_alignment = 1
-autowrap_mode = 3
 
 [node name="Spacer" type="Control" parent="Margin/VBox/TopBar"]
-custom_minimum_size = Vector2(130, 0)
+custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
 
-[node name="InfoLabel" type="Label" parent="Margin/VBox"]
+[node name="TierCard" type="PanelContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 24
-text = "Top 30 % promote
-Best 15 games count · ends in 2d 14h"
-horizontal_alignment = 1
+theme_type_variation = &"Card"
+
+[node name="HBox" type="HBoxContainer" parent="Margin/VBox/TierCard"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Medal" type="TextureRect" parent="Margin/VBox/TierCard/HBox"]
+modulate = Color(0.780392, 0.482353, 0.227451, 1)
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("5_medal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Text" type="VBoxContainer" parent="Margin/VBox/TierCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="TierLabel" type="Label" parent="Margin/VBox/TierCard/HBox/Text"]
+layout_mode = 2
+theme_type_variation = &"LabelHeading"
+text = "Bronze league"
+
+[node name="InfoLabel" type="Label" parent="Margin/VBox/TierCard/HBox/Text"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "Top 30 % promote · best 15 games count
+Round ends in 2d 14h"
 autowrap_mode = 3
 
 [node name="Tabs" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
+script = ExtResource("2_segmented")
 
-[node name="StandingsButton" type="Button" parent="Margin/VBox/Tabs"]
-custom_minimum_size = Vector2(0, 70)
+[node name="standings" type="Button" parent="Margin/VBox/Tabs"]
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 26
-toggle_mode = true
-button_pressed = true
 text = "Standings"
 
-[node name="FriendsButton" type="Button" parent="Margin/VBox/Tabs"]
-custom_minimum_size = Vector2(0, 70)
+[node name="friends" type="Button" parent="Margin/VBox/Tabs"]
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 26
-toggle_mode = true
 text = "Friends"
 
 [node name="FriendsPanel" type="VBoxContainer" parent="Margin/VBox"]
@@ -86,56 +109,62 @@ visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="CodeLabel" type="Label" parent="Margin/VBox/FriendsPanel"]
+[node name="CodeRow" type="HBoxContainer" parent="Margin/VBox/FriendsPanel"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 26
-text = "Your code: QN-ABC234"
-horizontal_alignment = 1
+theme_override_constants/separation = 10
+
+[node name="CodeChip" type="PanelContainer" parent="Margin/VBox/FriendsPanel/CodeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardFlat"
+
+[node name="HBox" type="HBoxContainer" parent="Margin/VBox/FriendsPanel/CodeRow/CodeChip"]
+layout_mode = 2
+
+[node name="CodeCaption" type="Label" parent="Margin/VBox/FriendsPanel/CodeRow/CodeChip/HBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = "Your code"
+
+[node name="CodeLabel" type="Label" parent="Margin/VBox/FriendsPanel/CodeRow/CodeChip/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"LabelBodyBold"
+text = "QN-ABC234"
+horizontal_alignment = 2
+
+[node name="CopyButton" type="Button" parent="Margin/VBox/FriendsPanel/CodeRow"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_type_variation = &"ButtonIcon"
+icon = ExtResource("6_copy")
+icon_alignment = 1
+expand_icon = true
+
+[node name="ShareButton" type="Button" parent="Margin/VBox/FriendsPanel/CodeRow"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_type_variation = &"ButtonIcon"
+icon = ExtResource("7_share")
+icon_alignment = 1
+expand_icon = true
 
 [node name="AddRow" type="HBoxContainer" parent="Margin/VBox/FriendsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="CodeEdit" type="LineEdit" parent="Margin/VBox/FriendsPanel/AddRow"]
-custom_minimum_size = Vector2(0, 70)
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 26
 placeholder_text = "Friend code QN-..."
 max_length = 9
 
 [node name="AddButton" type="Button" parent="Margin/VBox/FriendsPanel/AddRow"]
-custom_minimum_size = Vector2(150, 70)
+custom_minimum_size = Vector2(130, 64)
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
+theme_type_variation = &"ButtonSecondary"
 text = "Add"
-
-[node name="NameRow" type="HBoxContainer" parent="Margin/VBox/FriendsPanel"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="NameEdit" type="LineEdit" parent="Margin/VBox/FriendsPanel/NameRow"]
-custom_minimum_size = Vector2(0, 70)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 26
-placeholder_text = "Your name"
-max_length = 16
-
-[node name="NameButton" type="Button" parent="Margin/VBox/FriendsPanel/NameRow"]
-custom_minimum_size = Vector2(150, 70)
-layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "Rename"
-
-[node name="StatusLabel" type="Label" parent="Margin/VBox/FriendsPanel"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 22
-text = " "
-horizontal_alignment = 1
-autowrap_mode = 3
 
 [node name="Scroll" type="ScrollContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -145,4 +174,12 @@ horizontal_scroll_mode = 0
 [node name="List" type="VBoxContainer" parent="Margin/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
+
+[node name="Skeleton" type="Control" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("3_skeleton")
+rows = 8
+row_height = 64.0

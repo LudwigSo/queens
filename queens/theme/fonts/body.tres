@@ -1,0 +1,9 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Nunito[wght].ttf" id="1_jrjug"]
+
+[resource]
+base_font = ExtResource("1_jrjug")
+variation_opentype = {
+2003265652: 600
+}

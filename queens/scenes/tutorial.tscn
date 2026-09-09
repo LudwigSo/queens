@@ -1,0 +1,77 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/tutorial.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/board.gd" id="2_board"]
+
+[node name="Tutorial" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+theme_type_variation = &"ScreenMargin"
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TopBar" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Margin/VBox/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"LabelTitle"
+text = "How to play"
+
+[node name="SkipButton" type="Button" parent="Margin/VBox/TopBar"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_type_variation = &"ButtonGhostMuted"
+text = "Skip"
+
+[node name="Progress" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+
+[node name="Board" type="Control" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_board")
+
+[node name="Coach" type="PanelContainer" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 190)
+layout_mode = 2
+theme_type_variation = &"CardElevated"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Coach"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Text" type="Label" parent="Margin/VBox/Coach/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"LabelBody"
+text = "One queen in every row, column and colour region. Queens never touch, not even diagonally."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="NextButton" type="Button" parent="Margin/VBox/Coach/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_type_variation = &"ButtonPrimary"
+text = "Next"

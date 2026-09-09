@@ -1,11 +1,13 @@
 class_name GameSession
 extends RefCounted
 ## One game in progress: a pausable stopwatch plus the move counters, fed by
-## the Board's signals. `finish()` turns it into a GameResult.
+## the BoardModel's signals. `finish()` turns it into a GameResult.
 ##
 ## The session is also written to the save file as a small marker while the
 ## game runs, so an app that is killed mid-game yields a forfeit on the next
 ## start (see `to_marker` / `forfeit_from_marker`).
+
+signal mistake(count: int)   ## A queen was placed on a non-solution cell.
 
 const MAX_TICK := 1.0  ## Frames longer than this (resume after background) are not counted.
 
@@ -13,7 +15,7 @@ var result: GameResult = GameResult.new()
 var running: bool = false
 var finished: bool = false
 
-var _board: Board = null
+var _board: BoardModel = null
 
 
 func start(level: Dictionary, player_id: String, now: int, client_version: String = "") -> void:
@@ -32,7 +34,7 @@ func start(level: Dictionary, player_id: String, now: int, client_version: Strin
 
 
 ## Connects to the board's signals. Only one session may be attached at a time.
-func attach(board: Board) -> void:
+func attach(board: BoardModel) -> void:
 	detach()
 	_board = board
 	board.tapped.connect(_on_tapped)
@@ -40,6 +42,8 @@ func attach(board: Board) -> void:
 	board.queen_removed.connect(_on_queen_removed)
 	board.undone.connect(_on_undone)
 	board.cleared.connect(_on_cleared)
+	board.stroke_ended.connect(_on_stroke_ended)
+	board.hint_applied.connect(_on_hint_applied)
 
 
 func detach() -> void:
@@ -50,6 +54,8 @@ func detach() -> void:
 	_board.queen_removed.disconnect(_on_queen_removed)
 	_board.undone.disconnect(_on_undone)
 	_board.cleared.disconnect(_on_cleared)
+	_board.stroke_ended.disconnect(_on_stroke_ended)
+	_board.hint_applied.disconnect(_on_hint_applied)
 	_board = null
 
 
@@ -95,6 +101,7 @@ func to_marker() -> Dictionary:
 		"queens_removed": result.queens_removed,
 		"undo_count": result.undo_count,
 		"clear_count": result.clear_count,
+		"hint_count": result.hint_count,
 		"taps": result.taps,
 	}
 
@@ -119,6 +126,7 @@ static func forfeit_from_marker(marker: Dictionary, level: Dictionary, player_id
 	r.queens_removed = int(marker.get("queens_removed", 0))
 	r.undo_count = int(marker.get("undo_count", 0))
 	r.clear_count = int(marker.get("clear_count", 0))
+	r.hint_count = int(marker.get("hint_count", 0))
 	r.taps = int(marker.get("taps", 0))
 	r.week_index = Scoring.week_index(r.finished_at)
 	r.client_version = client_version
@@ -133,6 +141,7 @@ func _on_queen_placed(_r: int, _c: int, correct: bool) -> void:
 	result.queens_placed += 1
 	if not correct:
 		result.wrong_placements += 1
+		mistake.emit(result.wrong_placements)
 
 
 func _on_queen_removed(_r: int, _c: int) -> void:
@@ -145,3 +154,11 @@ func _on_undone() -> void:
 
 func _on_cleared() -> void:
 	result.clear_count += 1
+
+
+func _on_stroke_ended(_cells_changed: int) -> void:
+	result.taps += 1
+
+
+func _on_hint_applied(_kind: String, _cells: Array) -> void:
+	result.hint_count += 1

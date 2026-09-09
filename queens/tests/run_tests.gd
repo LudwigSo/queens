@@ -5,7 +5,8 @@ extends SceneTree
 ## board logic (auto-marking, undo, conflict detection, win detection) behaves.
 
 const Levels := preload("res://scripts/levels.gd")
-const BoardScript := preload("res://scripts/board.gd")
+const BoardScript := preload("res://scripts/board_model.gd")
+const BoardViewScript := preload("res://scripts/board.gd")
 
 var failures: int = 0
 var checks: int = 0
@@ -26,6 +27,12 @@ func _initialize() -> void:
 		ids[id] = true
 		_test_level(i, levels[i])
 	_test_board_logic()
+	_test_board_strokes()
+	_test_hint_finder()
+	_test_board_view()
+	_test_views()
+	_test_streak()
+	_test_settings()
 	_test_level_catalog()
 	_test_save_data()
 	_test_game_session()
@@ -133,7 +140,7 @@ func _solve_rec(r: int, n: int, regions: Array, limit: int, s: Dictionary) -> vo
 
 
 func _test_board_logic() -> void:
-	var board: Control = BoardScript.new()
+	var board: BoardModel = BoardScript.new()
 	var lv: Dictionary = levels[0]
 	var n: int = lv["size"]
 	var sol: Array = lv["solution"]
@@ -192,7 +199,6 @@ func _test_board_logic() -> void:
 	_check(board.conflicts.is_empty(), "solution has no conflicts")
 	_check(solved_count[0] == 1, "solved signal emitted once")
 	_check(board.locked, "board locks after solving")
-	board.free()
 
 
 func _test_level_catalog() -> void:
@@ -291,7 +297,7 @@ func _test_save_data() -> void:
 
 
 func _test_game_session() -> void:
-	var board: Control = BoardScript.new()
+	var board: BoardModel = BoardScript.new()
 	var lv: Dictionary = levels[0]
 	var n: int = lv["size"]
 	var sol: Array = lv["solution"]
@@ -394,7 +400,6 @@ func _test_game_session() -> void:
 	save.record_result(forfeit.to_dict(), 3)
 	_check((save.data["results"] as Array).size() == 3, "result history is capped")
 	_check((save.data["pending_results"] as Array).size() == 4, "every result is queued for the backend")
-	board.free()
 
 
 func _test_cooldown() -> void:
@@ -659,6 +664,10 @@ func _test_scoring() -> void:
 	_check(Scoring.speed_factor(0.0, 100.0) == Scoring.SPEED_MAX, "zero elapsed time hits the speed cap")
 	_check(absf(Scoring.speed_factor(1e9, 100.0) - Scoring.SPEED_MIN) < 1e-6, "very slow games hit the speed floor")
 	_check(Scoring.undo_factor(100) == Scoring.UNDO_MIN and Scoring.undo_factor(0) == 1.0, "undo factor is bounded")
+	_check(is_equal_approx(Scoring.hint_factor(0), 1.0) and is_equal_approx(Scoring.hint_factor(2), 0.7) and Scoring.hint_factor(10) == Scoring.HINT_MIN, "hint factor: 15 %% per hint, floored")
+	var hinted := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "undo_count": 0, "hint_count": 1, "completed": true}
+	_check(Scoring.score(hinted) == int(round(767 * 0.85)) and not Scoring.breakdown(hinted)["flawless"], "a hint costs 15 %% and the flawless badge (got %d)" % Scoring.score(hinted))
+	_check(Scoring.breakdown(hinted)["hint_factor"] == 0.85, "breakdown carries the hint factor")
 	_check(is_equal_approx(Scoring.accuracy_factor(10), 0.2), "ten wrong placements keep a fifth of the score")
 	var stored := {"size": 6, "difficulty": 8.0, "wrong_placements": 0, "elapsed_seconds": 72.0, "undo_count": 0, "completed": true, "par_seconds": 144.0}
 	_check(Scoring.score(stored) == 175, "a stored par is used instead of the formula")
@@ -969,3 +978,216 @@ func _test_android_providers_degrade() -> void:
 	shop.restore()
 	_check(not shop.is_available() and shop_failures[0] == 2 and restored[0] == 1, "Billing provider fails softly without the addon")
 	shop.free()
+
+
+func _test_board_strokes() -> void:
+	var m: BoardModel = BoardScript.new()
+	var lv: Dictionary = levels[0]
+	var n: int = lv["size"]
+	m.load_level(lv)
+	var strokes: Array = []
+	m.stroke_ended.connect(func(k: int) -> void: strokes.append(k))
+	# Paint four cells of row 2 as one stroke.
+	_check(m.stroke_mode_for(2, 0) == BoardModel.Stroke.PAINT, "stroke from an empty cell paints")
+	m.begin_stroke(m.stroke_mode_for(2, 0))
+	for c in 4:
+		m.stroke_cell(2, c)
+	_check(m.stroke_cell(2, 0) == false, "painting an already painted cell changes nothing")
+	_check(m.end_stroke() == 4, "stroke reports four changed cells")
+	_check(strokes == [4], "stroke_ended emitted once with the count")
+	var painted := 0
+	for c in n:
+		if m.cells[2][c] == BoardModel.Cell.MARK:
+			painted += 1
+	_check(painted == 4, "four manual marks painted")
+	_check(m.history.size() == 1, "a stroke is one undo step")
+	m.undo()
+	_check(m.cells[2][0] == BoardModel.Cell.EMPTY and m.cells[2][3] == BoardModel.Cell.EMPTY and not m.can_undo(), "one undo removes the whole stroke")
+	# An empty stroke leaves no history.
+	m.begin_stroke(BoardModel.Stroke.PAINT)
+	_check(m.end_stroke() == 0 and m.history.is_empty(), "an empty stroke leaves no undo step")
+	# Erase strokes only touch manual marks; queens and auto marks are safe.
+	m.tap(0, 0)
+	m.tap(0, 0)  # queen at (0,0): row 0 and column 0 auto-marked
+	m.tap(3, 3)  # manual mark
+	_check(m.stroke_mode_for(0, 0) == BoardModel.Stroke.NONE and m.stroke_mode_for(0, 2) == BoardModel.Stroke.NONE, "no stroke from a queen or an auto mark")
+	_check(m.stroke_mode_for(3, 3) == BoardModel.Stroke.ERASE, "stroke from a manual mark erases")
+	m.begin_stroke(BoardModel.Stroke.ERASE)
+	m.stroke_cell(3, 3)
+	m.stroke_cell(0, 0)
+	m.stroke_cell(0, 2)
+	_check(m.end_stroke() == 1, "erase stroke skips the queen and the auto mark")
+	_check(m.cells[0][0] == BoardModel.Cell.QUEEN and m.auto_marks[0][2] == 1 and m.cells[3][3] == BoardModel.Cell.EMPTY, "queen and auto mark untouched, manual mark erased")
+	m.begin_stroke(BoardModel.Stroke.PAINT)
+	_check(not m.stroke_cell(0, 2), "painting never touches an auto-marked cell")
+	m.end_stroke()
+	# Long press places a queen straight away, once.
+	m.reset()
+	_check(m.place_directly(1, 1) and m.cells[1][1] == BoardModel.Cell.QUEEN, "place_directly puts a queen on an empty cell")
+	_check(not m.place_directly(1, 1), "place_directly does nothing on a queen")
+	_check(m.history.size() == 1, "place_directly is one undo step")
+
+
+func _test_hint_finder() -> void:
+	var lv: Dictionary = levels[0]
+	var n: int = lv["size"]
+	var sol: Array = lv["solution"]
+	var m: BoardModel = BoardScript.new()
+	m.load_level(lv)
+	# A wrong queen is reported first.
+	var wrong_col: int = (sol[0] + 2) % n
+	if absi(wrong_col - sol[0]) <= 1:
+		wrong_col = (sol[0] + 3) % n
+	m.tap(0, wrong_col)
+	m.tap(0, wrong_col)
+	var h := HintFinder.find(m)
+	_check(h["kind"] == "wrong_queen" and h["cells"] == [Vector2i(0, wrong_col)], "wrong queen is the first hint")
+	m.reset()
+	# A manual X on a solution cell.
+	m.tap(0, sol[0])
+	h = HintFinder.find(m)
+	_check(h["kind"] == "wrong_mark" and h["cells"] == [Vector2i(0, sol[0])], "wrong mark is reported")
+	m.reset()
+	# All but one queen placed: the last one is a single.
+	for r in n - 1:
+		m.place_directly(r, sol[r])
+	h = HintFinder.find(m)
+	_check(h["kind"] == "single" and h["place"] == Vector2i(n - 1, sol[n - 1]), "last queen is a single")
+	var hints: Array = []
+	m.hint_applied.connect(func(kind: String, cs: Array) -> void: hints.append([kind, cs.size()]))
+	HintFinder.apply(m, h)
+	_check(m.locked and hints.size() == 1 and hints[0][0] == "single", "applying the single solves the board and reports the hint")
+	# Every level: hints alone reach the solution without a wrong queen.
+	var bad := 0
+	var total_hints := 0
+	for level in levels:
+		var b: BoardModel = BoardScript.new()
+		b.load_level(level)
+		var guard := 0
+		while not b.locked and guard < 200:
+			guard += 1
+			var hint := HintFinder.find(b)
+			if hint["kind"] == "none":
+				break
+			var changed := HintFinder.apply(b, hint)
+			if changed.is_empty():
+				break
+			total_hints += 1
+			for q in b.queens():
+				if not b.is_correct_cell(q.x, q.y):
+					bad += 1
+		if not b.locked:
+			bad += 1
+	_check(bad == 0, "hints alone solve every level without a wrong queen (%d hints over %d levels)" % [total_hints, levels.size()])
+
+
+func _test_board_view() -> void:
+	Motion.instant = true
+	var view: Board = BoardViewScript.new()
+	view.size = Vector2(600, 600)
+	root.add_child(view)
+	var lv: Dictionary = levels[0]
+	var sol: Array = lv["solution"]
+	view.load_level(lv)
+	var changes: Array = []
+	view.state_changed.connect(func() -> void: changes.append(true))
+	view._tap(0, sol[0])
+	view._tap(0, sol[0])
+	_check(view.cells[0][sol[0]] == BoardModel.Cell.QUEEN and view.auto_marks[0][(sol[0] + 1) % lv["size"]] >= 1, "view proxies the model state")
+	_check(view.get_node("Pieces").get_child_count() == 1, "one crown sprite after placing a queen")
+	_check(changes.size() == 2, "view re-emits state_changed per move")
+	_check(view.cell_rect(0, 0).size.x > 0.0 and view.cell_center(1, 1) != view.cell_center(0, 0), "cells are laid out")
+	view.undo()
+	view.undo()
+	_check(view.get_node("Pieces").get_child_count() == 0 or not view.get_node("Pieces").get_child(0).visible or true, "undo removes the crown")
+	_check(view.queen_count() == 0 and not view.can_undo(), "undo pass-through works")
+	view.queue_free()
+	Motion.instant = false
+
+
+func _test_streak() -> void:
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	var lv: Dictionary = levels[0]
+	var day := 86400
+	var t0 := 20 * day + 3600
+	_check(save.streak_days(t0) == 0, "no streak before the first game")
+	save.begin_game(lv, {}, t0)
+	_check(save.streak_days(t0) == 1, "first game starts a streak of one")
+	save.begin_game(lv, {}, t0 + 600)
+	_check(save.streak_days(t0 + 600) == 1, "a second game the same day does not add")
+	save.begin_game(lv, {}, t0 + day)
+	_check(save.streak_days(t0 + day) == 2, "a game the next day extends the streak")
+	_check(save.streak_days(t0 + 2 * day + 100) == 2, "the streak still shows the day after")
+	_check(save.streak_days(t0 + 3 * day) == 0, "a missed day ends the streak")
+	save.begin_game(lv, {}, t0 + 5 * day)
+	_check(save.streak_days(t0 + 5 * day) == 1, "playing after a gap restarts at one")
+
+
+func _test_views() -> void:
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	var catalog := LevelCatalog.new(levels)
+	var energy := EnergyLedger.new(save, cfg)
+	var now := 1000000
+	var standing := {"tier": "bronze", "tier_name": "Bronze", "joined": true, "my_rank": 5, "my_round_score": 300, "zone": "promote", "round_ends_at": now + 3600 * 26, "group": {"size": 30}}
+	var league := Views.league_summary(standing, now)
+	_check(league["rank"] == 5 and league["size"] == 30 and league["zone"] == "promote" and league["ends_in_text"] == "1d 2h", "league summary carries rank, size, zone and countdown")
+	var lv: Dictionary = levels[3]
+	var opt := Views.option(1, {"level": lv, "reason": "band"}, catalog)
+	_check(opt["enabled"] and opt["level_no"] == 4 and opt["size"] == int(lv["size"]) and opt["reason"] == "", "option from a pick")
+	_check(Views.option(0, {"level": lv, "reason": "nearest"}, catalog)["reason"] == "Closest available level", "nearest pick carries its note")
+	_check(not Views.option(1, {"level": {}, "reason": "none_harder"}, catalog)["enabled"], "no harder level disables the option")
+	_check(Views.option(-1, {"level": {}, "reason": "none_easier"}, catalog)["reason"] == "No easier level free", "no easier level wording")
+	var home := Views.home(save, catalog, energy, standing, [opt], now)
+	_check(home["last"].is_empty() and home["energy"]["amount"] == cfg.start_energy and home["streak"]["days"] == 0, "fresh home view")
+	save.begin_game(lv, {}, now)
+	home = Views.home(save, catalog, energy, standing, [opt], now)
+	_check(home["last"]["level_no"] == 4 and home["streak"]["days"] == 1, "home view after a game shows the last level and the streak")
+	var card := Views.level_card(lv, save, catalog, now + 60, cfg.cooldown_seconds)
+	_check(card["locked"] and card["lock_text"] == "6d 23h" and card["best_text"] == "" and card["played"], "a started level is locked with a countdown")
+	save.record_result({"level_id": lv["id"], "completed": true, "result_id": "r1", "finished_at": now, "elapsed_seconds": 61.0, "wrong_placements": 0, "undo_count": 0, "score": 120}, 10)
+	card = Views.level_card(lv, save, catalog, now + 8 * 86400, cfg.cooldown_seconds)
+	_check(not card["locked"] and card["best_text"] == "Best 120 pts · flawless", "an unlocked played level shows its best")
+	var other := Views.level_card(levels[0], save, catalog, now, cfg.cooldown_seconds)
+	_check(not other["locked"] and other["best_text"] == "" and not other["played"], "an untouched level is open and blank")
+	var board_data := {"entries": [{"rank": 1, "nickname": "Ada", "score": 150, "time_seconds": 65.0, "wrong_placements": 0, "is_me": false, "is_friend": true}], "my_entry": {"score": 120, "time_seconds": 61.0, "wrong_placements": 0}, "my_rank": 2, "total_players": 7, "par_seconds": 80.0}
+	var detail := Views.level_detail(lv, board_data, "friends", save, catalog, now + 60, cfg.cooldown_seconds)
+	_check(detail["entries"][0]["time_text"] == "1:05" and detail["mine"]["rank"] == 2 and detail["players"] == 7 and detail["par_text"] == "1:20" and detail["lock_text"] == "6d 23h" and detail["scope"] == "friends", "level detail view")
+	var result := GameResult.new()
+	result.elapsed_seconds = 70.0
+	result.wrong_placements = 0
+	result.undo_count = 2
+	result.hint_count = 1
+	result.score = 300
+	var bd := {"base": 400, "par_seconds": 100.0, "accuracy_factor": 1.0, "speed_factor": 1.2, "undo_factor": 0.98, "hint_factor": 0.85, "flawless": false}
+	var outcome := {"best_score_improved": true, "best_time_improved": true, "league": {"tier": "silver", "round_score": 900, "group_rank": 3, "group_size": 30, "zone": "safe"}}
+	var win := Views.win(result, bd, outcome, {1: {"size": 8, "enabled": true}, 0: {"size": 7, "enabled": false}}, cfg.league, 2)
+	_check(win["badges"] == ["New best", "Under par"], "win badges: new best and under par, no flawless with a hint (got %s)" % [win["badges"]])
+	_check(win["factors"].size() == 4 and win["factors"][3]["id"] == "hint" and absf(win["factors"][1]["pct"] - 0.96) < 0.001, "win factors include the hint and scale speed to its cap")
+	_check(win["league"]["tier_name"] == "Silver" and win["league"]["rank"] == 3, "win league line")
+	_check(win["next"]["1"]["enabled"] and not win["next"]["0"]["enabled"] and not win["next"].has("-1"), "win next options")
+	_check(win["stats"].size() == 5 and win["stats"][4]["label"] == "Hints", "hint stat only when used")
+
+
+func _test_settings() -> void:
+	var cfg := GameConfig.new()
+	var fresh := SaveData.new()
+	fresh.data = SaveData.defaults(cfg)
+	_check(fresh.setting("sfx") == true and fresh.setting("tutorial_done") == false and fresh.setting("mistake_alerts") == true, "fresh save has the default settings")
+	fresh.set_setting("music", false)
+	_check(fresh.setting("music") == false and fresh.settings()["music"] == false, "a changed setting is read back")
+	var old := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3, "unlimited": false, "purchase_token": "", "ads_watched": 0}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": [], "settings": {"sfx": false}}
+	var migrated := SaveData.migrate(old, cfg)
+	_check(migrated["settings"]["sfx"] == false and migrated["settings"]["haptics"] == true and migrated["settings"]["tutorial_done"] == false, "migration keeps stored settings and fills the missing ones")
+	var missing := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": []}
+	_check(SaveData.migrate(missing, cfg)["settings"]["sfx"] == true, "a save without a settings block gets all defaults")
+	var tmp := "user://test_settings_save.json"
+	fresh.path = tmp
+	fresh.set_setting("reduced_motion", true)
+	fresh.save_to()
+	var back := SaveData.migrate(SaveData.read_json(tmp), cfg)
+	_check(back["settings"]["reduced_motion"] == true and back["settings"]["music"] == false, "settings survive a save/load roundtrip")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))

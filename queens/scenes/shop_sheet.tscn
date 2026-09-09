@@ -1,0 +1,131 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/shop_sheet.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/bolt.svg" id="2_bolt"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/video.svg" id="3_video"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/infinity.svg" id="4_inf"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/close.svg" id="5_close"]
+
+[node name="EnergyDialog" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+metadata/sheet = true
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.122, 0.106, 0.227, 0.55)
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+theme_type_variation = &"Sheet"
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Handle" type="Panel" parent="Panel/VBox"]
+custom_minimum_size = Vector2(56, 6)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"Skeleton"
+
+[node name="TopRow" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/VBox/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"LabelTitle"
+text = "Energy"
+
+[node name="CloseButton" type="Button" parent="Panel/VBox/TopRow"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+theme_type_variation = &"ButtonIconGhost"
+icon = ExtResource("5_close")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Hero" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Bolt" type="TextureRect" parent="Panel/VBox/Hero"]
+modulate = Color(1, 0.713726, 0.152941, 1)
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_bolt")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EnergyLabel" type="Label" parent="Panel/VBox/Hero"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"LabelScore"
+text = "10"
+
+[node name="Explain" type="Label" parent="Panel/VBox/Hero"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"LabelCaption"
+text = "Every game you start costs one energy."
+autowrap_mode = 3
+
+[node name="HintBanner" type="PanelContainer" parent="Panel/VBox"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"Banner"
+
+[node name="HintLabel" type="Label" parent="Panel/VBox/HintBanner"]
+layout_mode = 2
+theme_type_variation = &"LabelError"
+text = "You need 1 energy to play. Watch an ad or go unlimited."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="WatchAdButton" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"ButtonPrimary"
+text = "Watch an ad · +10"
+icon = ExtResource("3_video")
+
+[node name="BuyButton" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"ButtonGold"
+text = "Unlimited · 2.99 €"
+icon = ExtResource("4_inf")
+
+[node name="RestoreButton" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_type_variation = &"ButtonGhostMuted"
+text = "Restore purchase"
+
+[node name="StatusLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaption"
+text = " "
+horizontal_alignment = 1
+autowrap_mode = 3

@@ -1,0 +1,59 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/splash.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/board/crown_gold.svg" id="2_crown"]
+
+[node name="Splash" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.419608, 0.305882, 1, 1)
+
+[node name="Center" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -160.0
+offset_right = 200.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Crown" type="TextureRect" parent="Center"]
+custom_minimum_size = Vector2(160, 160)
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("2_crown")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Center"]
+layout_mode = 2
+theme_type_variation = &"LabelTitleOnDark"
+text = "Queens"
+horizontal_alignment = 1
+
+[node name="Sub" type="Label" parent="Center"]
+layout_mode = 2
+theme_type_variation = &"LabelCaptionOnDark"
+text = "a logic puzzle"
+horizontal_alignment = 1

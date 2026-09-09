@@ -22,6 +22,7 @@ var wrong_placements: int = 0          ## Queens placed on a non-solution cell.
 var queens_removed: int = 0
 var undo_count: int = 0
 var clear_count: int = 0
+var hint_count: int = 0                ## Hints used; free, but they cost score.
 var taps: int = 0
 var week_index: int = 0
 var score: int = 0                     ## Scoring.score(); 0 for a forfeit.
@@ -47,6 +48,7 @@ func to_dict() -> Dictionary:
 		"queens_removed": queens_removed,
 		"undo_count": undo_count,
 		"clear_count": clear_count,
+		"hint_count": hint_count,
 		"taps": taps,
 		"week_index": week_index,
 		"score": score,
@@ -72,6 +74,7 @@ static func from_dict(d: Dictionary) -> GameResult:
 	r.queens_removed = int(d.get("queens_removed", 0))
 	r.undo_count = int(d.get("undo_count", 0))
 	r.clear_count = int(d.get("clear_count", 0))
+	r.hint_count = int(d.get("hint_count", 0))
 	r.taps = int(d.get("taps", 0))
 	r.week_index = int(d.get("week_index", 0))
 	r.score = int(d.get("score", 0))
