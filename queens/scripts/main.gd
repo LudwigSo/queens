@@ -1,6 +1,7 @@
 extends Control
 ## Screen flow: level select -> game -> solved overlay.
-## Progress lives in the App autoload's save file.
+## Progress lives in the App autoload's save file; a running game is tracked
+## by a GameSession (stopwatch + move counters) that becomes a GameResult.
 
 const BoardScript := preload("res://scripts/board.gd")
 
@@ -15,13 +16,13 @@ const BoardScript := preload("res://scripts/board.gd")
 @onready var back_button: Button = $Game/Margin/VBox/Header/BackButton
 @onready var win_overlay: Control = $WinOverlay
 @onready var win_time_label: Label = $WinOverlay/Panel/Margin/VBox/TimeLabel
+@onready var win_stats_label: Label = $WinOverlay/Panel/Margin/VBox/StatsLabel
 @onready var next_button: Button = $WinOverlay/Panel/Margin/VBox/NextButton
 @onready var levels_button: Button = $WinOverlay/Panel/Margin/VBox/LevelsButton
 
 var levels: Array = []          ## Level dictionaries, see scripts/levels.gd.
 var current_level: int = -1
-var elapsed: float = 0.0
-var running: bool = false
+var session: GameSession = null ## The running game, null between games.
 
 
 func _ready() -> void:
@@ -29,17 +30,28 @@ func _ready() -> void:
 	board.state_changed.connect(_on_board_changed)
 	board.solved.connect(_on_solved)
 	undo_button.pressed.connect(board.undo)
-	clear_button.pressed.connect(board.reset)
-	back_button.pressed.connect(_show_level_select)
+	clear_button.pressed.connect(board.clear)
+	back_button.pressed.connect(_on_back)
 	next_button.pressed.connect(_on_next)
 	levels_button.pressed.connect(_show_level_select)
 	_show_level_select()
 
 
 func _process(delta: float) -> void:
-	if running:
-		elapsed += delta
-		timer_label.text = _format_time(elapsed)
+	if session != null and session.running:
+		session.tick(delta)
+		timer_label.text = _format_time(session.elapsed_seconds())
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+			_pause_game(true)
+		NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_WM_WINDOW_FOCUS_IN:
+			_resume_game()
+		NOTIFICATION_WM_GO_BACK_REQUEST:
+			if game.visible and not win_overlay.visible:
+				_on_back()
 
 
 func _build_level_buttons() -> void:
@@ -63,7 +75,7 @@ func _build_level_buttons() -> void:
 
 
 func _show_level_select() -> void:
-	running = false
+	_pause_game(false)
 	_build_level_buttons()
 	win_overlay.visible = false
 	game.visible = false
@@ -71,16 +83,57 @@ func _show_level_select() -> void:
 
 
 func _start_level(index: int) -> void:
-	current_level = index
-	var lv: Dictionary = levels[index]
-	board.load_level(lv)
-	level_label.text = "Level %d  (%d x %d)" % [index + 1, lv["size"], lv["size"]]
-	elapsed = 0.0
+	start_game(levels[index])
+
+
+## Starts a game on `level`: records the start in the save, loads the board
+## and runs the stopwatch. A game still running is forfeited first.
+func start_game(level: Dictionary) -> void:
+	if session != null and not session.finished:
+		end_game(false)
+	current_level = levels.find(level)
+	session = GameSession.new()
+	session.start(level, App.save.player_id(), App.now(), App.config.client_version)
+	session.attach(board)
+	App.save.begin_game(level["id"], session.to_marker())
+	App.save_now()
+	board.load_level(level)
+	level_label.text = "Level %d  (%d x %d)" % [current_level + 1, level["size"], level["size"]]
 	timer_label.text = _format_time(0.0)
-	running = true
 	win_overlay.visible = false
 	level_select.visible = false
 	game.visible = true
+	session.resume()
+
+
+## Ends the running game as completed or forfeited and stores the result.
+func end_game(completed: bool) -> GameResult:
+	if session == null or session.finished:
+		return null
+	var result := session.finish(completed, App.now())
+	App.record_result(result)
+	return result
+
+
+func _pause_game(persist: bool) -> void:
+	if session == null or session.finished:
+		return
+	session.pause()
+	if persist:
+		App.save.update_marker(session.to_marker())
+		App.save_now()
+
+
+func _resume_game() -> void:
+	if session == null or session.finished:
+		return
+	if game.visible and not win_overlay.visible:
+		session.resume()
+
+
+func _on_back() -> void:
+	end_game(false)
+	_show_level_select()
 
 
 func _on_board_changed() -> void:
@@ -88,10 +141,12 @@ func _on_board_changed() -> void:
 
 
 func _on_solved() -> void:
-	running = false
 	undo_button.disabled = true
-	App.save.update_best_time(levels[current_level]["id"], elapsed)
-	win_time_label.text = "Time: %s" % _format_time(elapsed)
+	var result := end_game(true)
+	if result == null:
+		return
+	win_time_label.text = "Time: %s" % _format_time(result.elapsed_seconds)
+	win_stats_label.text = "Mistakes %d · Undos %d" % [result.wrong_placements, result.undo_count]
 	next_button.visible = current_level + 1 < levels.size()
 	win_overlay.visible = true
 

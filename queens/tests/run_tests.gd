@@ -28,6 +28,7 @@ func _initialize() -> void:
 	_test_board_logic()
 	_test_level_catalog()
 	_test_save_data()
+	_test_game_session()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -279,3 +280,104 @@ func _test_save_data() -> void:
 		if FileAccess.file_exists(f):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(f))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(dir))
+
+
+func _test_game_session() -> void:
+	var board: Control = BoardScript.new()
+	var lv: Dictionary = levels[0]
+	var n: int = lv["size"]
+	var sol: Array = lv["solution"]
+	board.load_level(lv)
+	var session := GameSession.new()
+	session.start(lv, "player-1", 1000, "test")
+	session.attach(board)
+	_check(session.result.level_id == lv["id"] and session.result.size == n, "session copies level id and size")
+	_check(session.result.result_id.length() == 36, "session has a result id")
+	_check(not session.running, "session starts paused")
+
+	# Stopwatch rules.
+	session.tick(0.5)
+	_check(session.elapsed_seconds() == 0.0, "no time counted while paused")
+	session.resume()
+	session.tick(0.5)
+	session.tick(0.25)
+	_check(is_equal_approx(session.elapsed_seconds(), 0.75), "time counted while running")
+	session.tick(5.0)
+	_check(is_equal_approx(session.elapsed_seconds(), 0.75), "frames longer than a second are ignored")
+	session.pause()
+	session.tick(0.5)
+	_check(is_equal_approx(session.elapsed_seconds(), 0.75), "pause stops the clock")
+	session.resume()
+
+	# Counters from board signals.
+	var wrong_col: int = (sol[0] + 2) % n
+	if absi(wrong_col - sol[0]) <= 1:
+		wrong_col = (sol[0] + 3) % n
+	board._tap(0, wrong_col)  # mark
+	board._tap(0, wrong_col)  # wrong queen
+	_check(session.result.taps == 2, "taps are counted")
+	_check(session.result.queens_placed == 1 and session.result.wrong_placements == 1, "wrong queen counted")
+	board._tap(0, wrong_col)  # remove
+	_check(session.result.queens_removed == 1 and session.result.wrong_placements == 1, "removal keeps the mistake")
+	board.undo()
+	_check(session.result.undo_count == 1, "undo counted")
+	board.undo()
+	board.undo()
+	board.undo()  # history exhausted: only three real undos in total
+	_check(session.result.undo_count == 3, "only effective undos are counted")
+	board._tap(0, sol[0])
+	board._tap(0, sol[0])
+	_check(session.result.queens_placed == 2 and session.result.wrong_placements == 1, "correct queen is not a mistake")
+	board.clear()
+	_check(session.result.clear_count == 1, "clear counted")
+	board.reset()
+	_check(session.result.clear_count == 1, "reset does not count as clear")
+
+	# Marker round trip.
+	var marker := session.to_marker()
+	_check(marker["result_id"] == session.result.result_id and marker["wrong_placements"] == 1, "marker carries id and counters")
+	var forfeit := GameSession.forfeit_from_marker(marker, lv, "player-1", 2000, "test")
+	_check(not forfeit.completed and forfeit.result_id == session.result.result_id, "marker forfeit keeps the id")
+	_check(forfeit.finished_at == 2000 and forfeit.started_at == 1000 and forfeit.wrong_placements == 1, "marker forfeit carries times and counters")
+	_check(forfeit.size == n and forfeit.level_id == lv["id"], "marker forfeit resolves the level")
+
+	# Solving completes the session and detaches it from the board.
+	for r in n:
+		if board.auto_marks[r][sol[r]] == 0:
+			board._tap(r, sol[r])
+		board._tap(r, sol[r])
+	_check(board.locked, "board solved")
+	var result := session.finish(true, 1500)
+	_check(result.completed and result.finished_at == 1500 and session.finished, "finish marks completion")
+	_check(result.wrong_placements == 1 and result.queens_placed == 2 + n, "result carries the counters")
+	session.resume()
+	session.tick(0.5)
+	_check(not session.running and is_equal_approx(result.elapsed_seconds, 0.75), "finished session cannot resume")
+	board.reset()
+	board._tap(0, wrong_col)
+	board._tap(0, wrong_col)
+	_check(result.queens_placed == 2 + n, "finished session no longer counts board moves")
+	var forfeit2 := GameSession.new()
+	forfeit2.start(lv, "p", 10, "")
+	_check(not forfeit2.finish(false, 5).completed and forfeit2.result.finished_at == 10, "forfeit result; finished_at never precedes started_at")
+
+	# Dictionary round trip.
+	var back := GameResult.from_dict(result.to_dict())
+	_check(back.to_dict() == result.to_dict(), "GameResult survives to_dict/from_dict")
+
+	# Recording into the save file.
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	save.begin_game(lv["id"], marker)
+	_check(save.has_running_game() and save.level_entry(lv["id"])["plays"] == 1, "begin_game stores marker and play")
+	_check(save.record_result(result.to_dict(), 3), "completed result becomes the best time")
+	_check(not save.has_running_game(), "record_result clears the marker")
+	_check(save.level_entry(lv["id"])["completions"] == 1 and save.best_time(lv["id"]) == result.elapsed_seconds, "record_result updates the level entry")
+	_check(not save.record_result(forfeit.to_dict(), 3), "forfeit is no best")
+	_check(save.level_entry(lv["id"])["completions"] == 1, "forfeit does not count as completion")
+	save.record_result(forfeit.to_dict(), 3)
+	save.record_result(forfeit.to_dict(), 3)
+	_check((save.data["results"] as Array).size() == 3, "result history is capped")
+	_check((save.data["pending_results"] as Array).size() == 4, "every result is queued for the backend")
+	board.free()

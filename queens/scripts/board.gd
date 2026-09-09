@@ -12,6 +12,11 @@ extends Control
 
 signal state_changed
 signal solved
+signal tapped(r: int, c: int)                    ## Every player tap on a cell.
+signal queen_placed(r: int, c: int, correct: bool)  ## correct = the cell is in the solution.
+signal queen_removed(r: int, c: int)
+signal undone                                   ## A successful undo.
+signal cleared                                  ## The player pressed Clear.
 
 enum Cell { EMPTY, MARK, QUEEN }
 
@@ -69,6 +74,13 @@ func reset() -> void:
 	state_changed.emit()
 
 
+## Player action: wipe the board. `reset()` does the same silently (used when
+## a level is loaded); this one also reports the action.
+func clear() -> void:
+	reset()
+	cleared.emit()
+
+
 func can_undo() -> bool:
 	return not history.is_empty() and not locked
 
@@ -82,6 +94,7 @@ func undo() -> void:
 	_recompute_conflicts()
 	queue_redraw()
 	state_changed.emit()
+	undone.emit()
 
 
 func queen_count() -> int:
@@ -120,6 +133,7 @@ func _cell_at(pos: Vector2) -> Vector2i:
 
 func _tap(r: int, c: int) -> void:
 	history.append(_snapshot())
+	tapped.emit(r, c)
 	match cells[r][c]:
 		Cell.EMPTY:
 			if auto_marks[r][c] > 0:
@@ -141,12 +155,14 @@ func _place_queen(r: int, c: int) -> void:
 	cells[r][c] = Cell.QUEEN
 	for p in _affected_cells(r, c):
 		auto_marks[p.x][p.y] += 1
+	queen_placed.emit(r, c, int(solution[r]) == c)
 
 
 func _remove_queen(r: int, c: int) -> void:
 	cells[r][c] = Cell.EMPTY
 	for p in _affected_cells(r, c):
 		auto_marks[p.x][p.y] = maxi(0, auto_marks[p.x][p.y] - 1)
+	queen_removed.emit(r, c)
 
 
 ## Every cell (other than the queen cell itself) that cannot hold a queen once

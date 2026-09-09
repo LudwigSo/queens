@@ -212,3 +212,37 @@ func update_best_time(level_id: String, seconds: float) -> bool:
 		entry["best_time"] = seconds
 	mark_changed()
 	return improved
+
+
+## Marks a game as started: bumps the play count and stores the running-game
+## marker so a killed app yields a forfeit next time.
+func begin_game(level_id: String, marker: Dictionary) -> void:
+	var entry := level_entry(level_id)
+	entry["plays"] = int(entry["plays"]) + 1
+	data["current_game"] = marker
+	mark_changed()
+
+
+func update_marker(marker: Dictionary) -> void:
+	data["current_game"] = marker
+	mark_changed()
+
+
+func has_running_game() -> bool:
+	return not (data["current_game"] as Dictionary).is_empty()
+
+
+## Stores a finished game: history (capped), the backend queue and, for a
+## completed game, the level's best time. Returns true on a new best time.
+func record_result(result: Dictionary, history_cap: int) -> bool:
+	var improved := false
+	if bool(result["completed"]):
+		improved = update_best_time(str(result["level_id"]), float(result["elapsed_seconds"]))
+	var results: Array = data["results"]
+	results.append(result)
+	while results.size() > history_cap:
+		results.pop_front()
+	(data["pending_results"] as Array).append(result)
+	data["current_game"] = {}
+	mark_changed()
+	return improved

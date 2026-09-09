@@ -23,6 +23,24 @@ func _ready() -> void:
 	save = SaveData.load_or_create(config)
 	catalog = LevelCatalog.new(Levels.load_all())
 	save.changed.connect(_queue_save)
+	_forfeit_dangling_game()
+
+
+## A game that was running when the app was killed counts as forfeited.
+func _forfeit_dangling_game() -> void:
+	if not save.has_running_game():
+		return
+	var marker: Dictionary = save.data["current_game"]
+	var level := catalog.get_level(str(marker.get("level_id", "")))
+	var result := GameSession.forfeit_from_marker(marker, level, save.player_id(), now(), config.client_version)
+	record_result(result)
+
+
+## Stores a finished game and writes the save immediately.
+func record_result(result: GameResult) -> bool:
+	var improved := save.record_result(result.to_dict(), config.result_history_cap)
+	save_now()
+	return improved
 
 
 ## Wall-clock unix time. The single place to swap in server time later.
