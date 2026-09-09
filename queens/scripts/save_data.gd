@@ -214,11 +214,12 @@ func update_best_time(level_id: String, seconds: float) -> bool:
 	return improved
 
 
-## Marks a game as started: bumps the play count and stores the running-game
-## marker so a killed app yields a forfeit next time.
-func begin_game(level_id: String, marker: Dictionary) -> void:
+## Marks a game as started: bumps the play count, starts the replay cooldown
+## and stores the running-game marker so a killed app yields a forfeit next time.
+func begin_game(level_id: String, marker: Dictionary, now: int) -> void:
 	var entry := level_entry(level_id)
 	entry["plays"] = int(entry["plays"]) + 1
+	entry["last_started_at"] = now
 	data["current_game"] = marker
 	mark_changed()
 

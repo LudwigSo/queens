@@ -29,6 +29,7 @@ func _initialize() -> void:
 	_test_level_catalog()
 	_test_save_data()
 	_test_game_session()
+	_test_cooldown()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -369,8 +370,9 @@ func _test_game_session() -> void:
 	var cfg := GameConfig.new()
 	var save := SaveData.new()
 	save.data = SaveData.defaults(cfg)
-	save.begin_game(lv["id"], marker)
+	save.begin_game(lv["id"], marker, 1000)
 	_check(save.has_running_game() and save.level_entry(lv["id"])["plays"] == 1, "begin_game stores marker and play")
+	_check(save.level_entry(lv["id"])["last_started_at"] == 1000, "begin_game starts the cooldown")
 	_check(save.record_result(result.to_dict(), 3), "completed result becomes the best time")
 	_check(not save.has_running_game(), "record_result clears the marker")
 	_check(save.level_entry(lv["id"])["completions"] == 1 and save.best_time(lv["id"]) == result.elapsed_seconds, "record_result updates the level entry")
@@ -381,3 +383,25 @@ func _test_game_session() -> void:
 	_check((save.data["results"] as Array).size() == 3, "result history is capped")
 	_check((save.data["pending_results"] as Array).size() == 4, "every result is queued for the backend")
 	board.free()
+
+
+func _test_cooldown() -> void:
+	var week := 7 * 86400
+	var entry := {"last_started_at": 1000}
+	_check(Cooldown.is_locked(entry, 1000, week), "locked right after start")
+	_check(Cooldown.is_locked(entry, 1000 + week - 1, week), "locked one second before the period ends")
+	_check(not Cooldown.is_locked(entry, 1000 + week, week), "unlocked when the period ends")
+	_check(Cooldown.remaining(entry, 1000 + 3600, week) == week - 3600, "remaining counts down")
+	_check(Cooldown.remaining(entry, 500, week) == week, "a clock moved backwards never locks longer than one period")
+	_check(Cooldown.remaining(entry, 1000 + 2 * week, week) == 0, "remaining never goes negative")
+	_check(not Cooldown.is_locked({"last_started_at": 0}, 5000, week), "never started (or migrated) is unlocked")
+	_check(not Cooldown.is_locked({}, 5000, week), "missing field is unlocked")
+	_check(not Cooldown.is_locked(entry, 1001, 0), "zero cooldown never locks")
+	_check(Cooldown.format_remaining(6 * 86400 + 23 * 3600 + 59 * 60) == "6d 23h", "format days and hours")
+	_check(Cooldown.format_remaining(3 * 3600 + 12 * 60 + 5) == "3h 12m", "format hours and minutes")
+	_check(Cooldown.format_remaining(45 * 60) == "45m", "format minutes")
+	_check(Cooldown.format_remaining(30) == "<1m", "format under a minute")
+	_check(Cooldown.format_remaining(-5) == "<1m", "negative formats as under a minute")
+	_check(Cooldown.format_period(week) == "7 days" and Cooldown.format_period(86400) == "1 day", "format period in days")
+	_check(Cooldown.format_period(12 * 3600) == "12 hours" and Cooldown.format_period(3600) == "1 hour", "format period in hours")
+	_check(Cooldown.format_period(90) == "1 minute" and Cooldown.format_period(1800) == "30 minutes", "format period in minutes")

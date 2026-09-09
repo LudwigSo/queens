@@ -1,9 +1,11 @@
 extends Node
 ## Visual smoke test: instantiates the main scene, plays part of a level and
-## writes screenshots. Run with:
+## writes screenshots. Uses its own save file so real progress is untouched.
+## Run with:
 ##   godot --path queens res://tests/screenshot.tscn -- <output_dir>
 
 const MainScene := preload("res://scenes/main.tscn")
+const SAVE_PATH := "user://screenshot_save.json"
 
 
 func _ready() -> void:
@@ -11,6 +13,10 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		out_dir = args[0].trim_suffix("/").trim_suffix("\\") + "/"
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	App.use_save_path(SAVE_PATH)
+
 	var main: Control = MainScene.instantiate()
 	add_child(main)
 	await _frames(3)
@@ -48,13 +54,30 @@ func _ready() -> void:
 	await _frames(2)
 	_save(out_dir + "02_game_conflict.png")
 
+	# Give-up dialog, then keep playing.
+	main._on_give_up()
+	await _frames(2)
+	print("give up dialog visible = %s, timer paused = %s" % [main.message_dialog.visible, not main.session.running])
+	_save(out_dir + "03_give_up_dialog.png")
+	main.message_dialog.cancel()
+	await _frames(1)
+	print("after cancel: timer running = %s" % main.session.running)
+
 	board.reset()
 	for r in sol.size():
 		if board.auto_marks[r][sol[r]] == 0:
 			board._tap(r, sol[r])
 		board._tap(r, sol[r])
 	await _frames(2)
-	_save(out_dir + "03_solved.png")
+	_save(out_dir + "04_solved.png")
+
+	main._show_level_select()
+	await _frames(2)
+	var played: Button = main.level_select.grid.get_child(index)
+	print("played level button: disabled = %s, shows lock = %s" % [played.disabled, played.text.contains("Locked")])
+	main.level_select.grid.get_parent().scroll_vertical = int(played.position.y)
+	await _frames(2)
+	_save(out_dir + "05_level_select_locked.png")
 	get_tree().quit()
 
 

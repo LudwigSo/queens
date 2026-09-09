@@ -1,19 +1,10 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="Script" path="res://scripts/board.gd" id="2_board"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_win"]
-bg_color = Color(1, 1, 1, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.117647, 0.117647, 0.164706, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+[ext_resource type="PackedScene" path="res://scenes/level_select.tscn" id="2_level_select"]
+[ext_resource type="PackedScene" path="res://scenes/game_screen.tscn" id="3_game"]
+[ext_resource type="PackedScene" path="res://scenes/win_overlay.tscn" id="4_win"]
+[ext_resource type="PackedScene" path="res://scenes/message_dialog.tscn" id="5_message"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -33,214 +24,14 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.960784, 0.956863, 0.94902, 1)
 
-[node name="LevelSelect" type="Control" parent="."]
+[node name="LevelSelect" parent="." instance=ExtResource("2_level_select")]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="LevelSelect"]
+[node name="Game" parent="." instance=ExtResource("3_game")]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 60
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
 
-[node name="VBox" type="VBoxContainer" parent="LevelSelect/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 30
-
-[node name="Title" type="Label" parent="LevelSelect/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 72
-text = "Queens"
-horizontal_alignment = 1
-
-[node name="Rules" type="Label" parent="LevelSelect/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 26
-text = "One queen in every row, column and colour region.
-Queens may not touch, not even diagonally."
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="Scroll" type="ScrollContainer" parent="LevelSelect/Margin/VBox"]
-layout_mode = 2
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="Grid" type="GridContainer" parent="LevelSelect/Margin/VBox/Scroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/h_separation = 20
-theme_override_constants/v_separation = 20
-columns = 2
-
-[node name="Game" type="Control" parent="."]
-visible = false
+[node name="WinOverlay" parent="." instance=ExtResource("4_win")]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="Game"]
+[node name="MessageDialog" parent="." instance=ExtResource("5_message")]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 40
-
-[node name="VBox" type="VBoxContainer" parent="Game/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="Header" type="HBoxContainer" parent="Game/Margin/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="BackButton" type="Button" parent="Game/Margin/VBox/Header"]
-custom_minimum_size = Vector2(130, 90)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "< Back"
-
-[node name="LevelLabel" type="Label" parent="Game/Margin/VBox/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 34
-text = "Level 1"
-horizontal_alignment = 1
-
-[node name="TimerLabel" type="Label" parent="Game/Margin/VBox/Header"]
-custom_minimum_size = Vector2(130, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 34
-text = "0:00"
-horizontal_alignment = 2
-
-[node name="Board" type="Control" parent="Game/Margin/VBox"]
-layout_mode = 2
-size_flags_vertical = 3
-script = ExtResource("2_board")
-
-[node name="Hint" type="Label" parent="Game/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 0.4, 0.45, 1)
-theme_override_font_sizes/font_size = 24
-text = "Tap once to mark X, tap again to place a queen, tap again to clear."
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="Actions" type="HBoxContainer" parent="Game/Margin/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="UndoButton" type="Button" parent="Game/Margin/VBox/Actions"]
-custom_minimum_size = Vector2(0, 100)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 34
-disabled = true
-text = "Undo"
-
-[node name="ClearButton" type="Button" parent="Game/Margin/VBox/Actions"]
-custom_minimum_size = Vector2(0, 100)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 34
-text = "Clear"
-
-[node name="WinOverlay" type="Control" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Dim" type="ColorRect" parent="WinOverlay"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.45)
-
-[node name="Panel" type="PanelContainer" parent="WinOverlay"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -260.0
-offset_top = -230.0
-offset_right = 260.0
-offset_bottom = 230.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_win")
-
-[node name="Margin" type="MarginContainer" parent="WinOverlay/Panel"]
-layout_mode = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
-
-[node name="VBox" type="VBoxContainer" parent="WinOverlay/Panel/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="Title" type="Label" parent="WinOverlay/Panel/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.772549, 0.560784, 0, 1)
-theme_override_font_sizes/font_size = 56
-text = "Solved!"
-horizontal_alignment = 1
-
-[node name="TimeLabel" type="Label" parent="WinOverlay/Panel/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 32
-text = "Time: 0:00"
-horizontal_alignment = 1
-
-[node name="StatsLabel" type="Label" parent="WinOverlay/Panel/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 26
-text = "Mistakes 0 · Undos 0"
-horizontal_alignment = 1
-
-[node name="NextButton" type="Button" parent="WinOverlay/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 100)
-layout_mode = 2
-theme_override_font_sizes/font_size = 34
-text = "Next level"
-
-[node name="LevelsButton" type="Button" parent="WinOverlay/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 100)
-layout_mode = 2
-theme_override_font_sizes/font_size = 34
-text = "Level select"

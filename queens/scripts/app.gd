@@ -43,6 +43,17 @@ func record_result(result: GameResult) -> bool:
 	return improved
 
 
+## Switches to another save file (used by the screenshot test so it does not
+## touch the real progress).
+func use_save_path(path: String) -> void:
+	if save != null:
+		save.changed.disconnect(_queue_save)
+	config.save_path = path
+	save = SaveData.load_or_create(config)
+	save.changed.connect(_queue_save)
+	_forfeit_dangling_game()
+
+
 ## Wall-clock unix time. The single place to swap in server time later.
 func now() -> int:
 	return int(Time.get_unix_time_from_system())
