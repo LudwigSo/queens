@@ -1,52 +1,12 @@
 # Queens
 
-A mobile-first Godot 4 implementation of the *Queens* logic puzzle.
+A mobile-first Godot 4 implementation of the *Queens* logic puzzle: place one
+queen in every row, column and colour region, and no two queens may touch.
 
-## Rules
+## Running locally
 
-* Place exactly one queen in every row, every column and every colour region.
-* Queens may not touch each other, not even diagonally.
-
-## Controls
-
-* Tap an empty cell once to mark it with an **X** (cannot hold a queen).
-* Tap again to place a **queen**. Tap a queen to remove it.
-* Placing a queen automatically X-marks every cell that can no longer hold a
-  queen: its row, its column, its colour region and the eight surrounding
-  cells. Removing the queen removes those automatic marks again; your own
-  manual marks stay.
-* Queens that break a rule are drawn in red.
-* **Undo** reverts the last tap, **Clear** resets the board.
-* The puzzle is solved when all queens are placed without conflicts. Best
-  times are stored per level in `user://progress.cfg`.
-
-## Levels
-
-`scripts/levels.gd` holds 10 boards (5x5 up to 9x9). Every board has exactly
-one solution, verified both by the generator and by the test suite. Regenerate
-them with:
-
-```bash
-python tools/gen_boards.py queens/scripts/levels.gd
-```
-
-Change the seeds or the `SIZES` list in the script for different boards.
-
-## Project layout
-
-| Path | Purpose |
-| --- | --- |
-| `scenes/main.tscn` | Level select, game screen and "solved" overlay |
-| `scripts/main.gd` | Screen flow, timer, progress saving |
-| `scripts/board.gd` | Board rendering, tap handling, auto-marking, conflict and win detection |
-| `scripts/levels.gd` | Generated level data |
-| `tests/run_tests.gd` | Headless tests (uniqueness of every level, board logic) |
-| `tests/screenshot.tscn` | Visual smoke test that writes PNG screenshots |
-| `export_presets.cfg` | Android export preset (arm64-v8a, portrait) |
-
-## Running
-
-Open the `queens` folder in Godot 4.7 (or newer) and press Play, or run:
+Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press
+Play, or from the command line:
 
 ```bash
 godot --path queens
@@ -58,26 +18,61 @@ Tests:
 godot --headless --path queens --script tests/run_tests.gd
 ```
 
-Screenshots (written to the given directory):
+Levels live in `levels/queens.json` and are produced by the tools in
+`../tools` (see `tools/README.md`).
 
-```bash
-godot --path queens res://tests/screenshot.tscn -- /path/to/output
-```
+## Building the Android APK
 
-## Building the Android app
+One-time setup in the Godot editor:
 
-1. In the Godot editor install the export templates
-   (**Editor > Manage Export Templates**).
-2. Set up the Android SDK and a debug keystore under
+1. Install the export templates (**Editor > Manage Export Templates**).
+2. Point the editor to your Android SDK and Java under
    **Editor > Editor Settings > Export > Android** (see the Godot docs
    "Exporting for Android").
-3. **Project > Export**, select the *Android* preset and export an APK, or
-   from the command line:
+
+The *Android* preset in `export_presets.cfg` targets arm64-v8a, portrait, GL
+Compatibility, so it runs on practically any device.
+
+### Debug build
+
+Uses the debug keystore Godot creates for you:
 
 ```bash
 godot --headless --path queens --export-debug Android build/queens.apk
 ```
 
-The preset targets arm64-v8a only and uses the GL Compatibility renderer, so
-it runs on practically any Android device. Change `package/unique_name` in
-`export_presets.cfg` before publishing.
+### Release build
+
+A release APK must be signed with your own key. Generate one yourself (once,
+outside this repository) and keep it safe; the store will only accept updates
+signed with the same key:
+
+```bash
+keytool -genkeypair -v -keystore queens-release.keystore -alias queens -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Do not commit the keystore (`*.keystore` and `*.jks` are ignored by git). Hand
+it to the exporter either in the editor under the preset's **Keystore >
+Release**, **Release User** and **Release Password** fields, or via
+environment variables so the preset file stays free of secrets:
+
+```bash
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=/path/to/queens-release.keystore
+```
+
+```bash
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER=queens
+```
+
+```bash
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=your-password
+```
+
+Then export the release APK:
+
+```bash
+godot --headless --path queens --export-release Android build/queens-release.apk
+```
+
+Before publishing, bump `version/code` and `version/name` in
+`export_presets.cfg` and change `package/unique_name` to your own domain.

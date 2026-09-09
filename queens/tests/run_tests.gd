@@ -1,8 +1,8 @@
 extends SceneTree
 ## Headless test runner. Run with:
 ##   godot --headless --path queens --script tests/run_tests.gd
-## Checks that every level has exactly one solution and that the board logic
-## (auto-marking, undo, conflict detection, win detection) behaves.
+## Checks that every level has a unique id and exactly one solution and that the
+## board logic (auto-marking, undo, conflict detection, win detection) behaves.
 
 const Levels := preload("res://scripts/levels.gd")
 const BoardScript := preload("res://scripts/board.gd")
@@ -11,9 +11,20 @@ var failures: int = 0
 var checks: int = 0
 
 
+var levels: Array = []
+
+
 func _initialize() -> void:
-	for i in Levels.LEVELS.size():
-		_test_level(i, Levels.LEVELS[i])
+	levels = Levels.load_all()
+	_check(levels.size() > 0, "level file has levels")
+	var ids: Dictionary = {}
+	var uuid := RegEx.create_from_string("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+	for i in levels.size():
+		var id: String = str(levels[i].get("id", ""))
+		_check(uuid.search(id) != null, "level %d: id %s is a uuid" % [i + 1, id])
+		_check(not ids.has(id), "level %d: id %s is unique" % [i + 1, id])
+		ids[id] = true
+		_test_level(i, levels[i])
 	_test_board_logic()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -112,7 +123,7 @@ func _solve_rec(r: int, n: int, regions: Array, limit: int, s: Dictionary) -> vo
 
 func _test_board_logic() -> void:
 	var board: Control = BoardScript.new()
-	var lv: Dictionary = Levels.LEVELS[0]
+	var lv: Dictionary = levels[0]
 	var n: int = lv["size"]
 	var sol: Array = lv["solution"]
 	var solved_count := [0]

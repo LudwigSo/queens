@@ -1,3 +1,5 @@
 queens/.godot/
 queens/build/
 __pycache__/
+*.keystore
+*.jks
