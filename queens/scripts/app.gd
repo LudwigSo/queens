@@ -100,11 +100,12 @@ func _forfeit_dangling_game() -> void:
 	record_result(result)
 
 
-## Stores a finished game and writes the save immediately.
-func record_result(result: GameResult) -> bool:
-	var improved := save.record_result(result.to_dict(), config.result_history_cap)
+## Stores a finished game and writes the save immediately. Returns the
+## save's outcome: {score, best_time_improved, best_score_improved}.
+func record_result(result: GameResult) -> Dictionary:
+	var outcome := save.record_result(result.to_dict(), config.result_history_cap)
 	save_now()
-	return improved
+	return outcome
 
 
 ## Switches to another save file (used by the screenshot test so it does not

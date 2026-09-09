@@ -198,6 +198,8 @@ func _level_rows() -> Array:
 		var remaining := Cooldown.remaining(entry, now, App.config.cooldown_seconds)
 		if remaining > 0:
 			text += "\nLocked · %s" % Cooldown.format_remaining(remaining)
+		elif App.save.has_best_score(lv["id"]):
+			text += "\nBest %d pts · %s" % [int(entry["best_score"]), "flawless" if int(entry["best_wrong"]) == 0 else _format_time(App.save.best_time(lv["id"]))]
 		elif App.save.has_best(lv["id"]):
 			text += "\nBest %s" % _format_time(App.save.best_time(lv["id"]))
 		rows.append({"id": lv["id"], "text": text, "locked": remaining > 0})
@@ -298,12 +300,21 @@ func _on_dialog_closed(_confirmed: bool) -> void:
 
 
 func _on_solved() -> void:
-	var result := end_game(true)
-	if result == null:
+	if session == null or session.finished:
 		return
-	win_overlay.show_result(
-		"Time: %s" % _format_time(result.elapsed_seconds),
-		"Mistakes %d · Undos %d" % [result.wrong_placements, result.undo_count])
+	var result := session.finish(true, App.now())
+	var outcome := App.record_result(result)
+	var bd := Scoring.breakdown(result.to_dict())
+	var badges: Array = []
+	if bd["flawless"]:
+		badges.append("Flawless")
+	if outcome["best_score_improved"] and int(App.save.level_entry(result.level_id)["completions"]) > 1:
+		badges.append("New best")
+	var detail := "Time %s · par %s\nMistakes %d · Undos %d\nLevel %d × accuracy %.2f × speed %.2f × undo %.2f" % [
+		_format_time(result.elapsed_seconds), _format_time(bd["par_seconds"]),
+		result.wrong_placements, result.undo_count,
+		bd["base"], bd["accuracy_factor"], bd["speed_factor"], bd["undo_factor"]]
+	win_overlay.show_result("%d points" % result.score, " · ".join(badges), detail)
 
 
 func _format_time(seconds: float) -> String:

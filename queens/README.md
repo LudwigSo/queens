@@ -24,6 +24,24 @@ fakes (`scripts/providers/fake_*.gd`) that always succeed after a short
 delay; the real AdMob and Google Play Billing providers are only used on
 Android when their plugins are installed.
 
+### Score
+
+Every solved game gets a score (`scripts/scoring.gd`):
+
+```
+base     = 10 * difficulty + 10 * size
+par      = 30 + 3 * difficulty + 0.5 * size^2   seconds
+accuracy = 1 / (1 + 0.4 * wrong placements)     the dominant factor
+speed    = clamp(0.5 + 0.5 * par / time, 0.5, 1.25)
+undo     = clamp(1 - 0.01 * undos, 0.85, 1)
+score    = round(base * accuracy * speed * undo)
+```
+
+A wrong placement is a queen put on a cell that is not part of the
+solution; it counts the moment it is placed, so marking with X first and
+placing queens only when sure is the rewarded style. Giving up scores 0.
+The level overview shows the best score per level.
+
 ## Running locally
 
 Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press

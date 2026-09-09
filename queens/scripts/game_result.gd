@@ -24,6 +24,7 @@ var undo_count: int = 0
 var clear_count: int = 0
 var taps: int = 0
 var week_index: int = 0
+var score: int = 0                     ## Scoring.score(); 0 for a forfeit.
 var client_version: String = ""
 
 
@@ -48,6 +49,7 @@ func to_dict() -> Dictionary:
 		"clear_count": clear_count,
 		"taps": taps,
 		"week_index": week_index,
+		"score": score,
 		"client_version": client_version,
 	}
 
@@ -72,5 +74,6 @@ static func from_dict(d: Dictionary) -> GameResult:
 	r.clear_count = int(d.get("clear_count", 0))
 	r.taps = int(d.get("taps", 0))
 	r.week_index = int(d.get("week_index", 0))
+	r.score = int(d.get("score", 0))
 	r.client_version = str(d.get("client_version", ""))
 	return r

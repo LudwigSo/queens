@@ -24,6 +24,7 @@ func start(level: Dictionary, player_id: String, now: int, client_version: Strin
 	result.size = int(level["size"])
 	result.difficulty = float(level["difficulty"])
 	result.stars = int(level.get("stars", 0))
+	result.par_seconds = Scoring.par_seconds(result.difficulty, result.size)
 	result.started_at = now
 	result.client_version = client_version
 	running = false
@@ -77,6 +78,8 @@ func finish(completed: bool, now: int) -> GameResult:
 	detach()
 	result.completed = completed
 	result.finished_at = maxi(now, result.started_at)
+	result.week_index = Scoring.week_index(result.finished_at)
+	result.score = Scoring.score(result.to_dict())
 	return result
 
 
@@ -106,6 +109,7 @@ static func forfeit_from_marker(marker: Dictionary, level: Dictionary, player_id
 		r.size = int(level["size"])
 		r.difficulty = float(level["difficulty"])
 		r.stars = int(level.get("stars", 0))
+		r.par_seconds = Scoring.par_seconds(r.difficulty, r.size)
 	r.started_at = int(marker.get("started_at", now))
 	r.finished_at = maxi(now, r.started_at)
 	r.elapsed_seconds = float(marker.get("elapsed_seconds", 0.0))
@@ -116,6 +120,7 @@ static func forfeit_from_marker(marker: Dictionary, level: Dictionary, player_id
 	r.undo_count = int(marker.get("undo_count", 0))
 	r.clear_count = int(marker.get("clear_count", 0))
 	r.taps = int(marker.get("taps", 0))
+	r.week_index = Scoring.week_index(r.finished_at)
 	r.client_version = client_version
 	return r
 

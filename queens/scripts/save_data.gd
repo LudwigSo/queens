@@ -7,8 +7,9 @@ extends RefCounted
 ##   energy        amount, unlimited, purchase_token, ads_watched
 ##   last_game     {level_id, difficulty, started_at} or {} - the last game *started*
 ##   current_game  marker of a running game (so a killed app yields a forfeit) or {}
-##   levels        level id -> {last_started_at, plays, completions, best_score,
-##                 best_time, best_wrong, best_undo, best_result_id, best_at}
+##   levels        level id -> {last_started_at, plays, completions, best_time (fastest),
+##                 best_score, best_score_time, best_wrong, best_undo, best_result_id,
+##                 best_at (all of the highest-scoring run)}
 ##   results       finished games, newest last, capped
 ##   pending_results  results not yet accepted by the backend
 ##   settings      free-form
@@ -55,6 +56,7 @@ static func level_defaults() -> Dictionary:
 		"completions": 0,
 		"best_score": 0,
 		"best_time": 0.0,
+		"best_score_time": 0.0,
 		"best_wrong": 0,
 		"best_undo": 0,
 		"best_result_id": "",
@@ -245,11 +247,14 @@ func has_running_game() -> bool:
 
 
 ## Stores a finished game: history (capped), the backend queue and, for a
-## completed game, the level's best time. Returns true on a new best time.
-func record_result(result: Dictionary, history_cap: int) -> bool:
-	var improved := false
+## completed game, the level's best time and best score. Returns
+## {score, best_time_improved, best_score_improved}.
+func record_result(result: Dictionary, history_cap: int) -> Dictionary:
+	var outcome := {"score": int(result.get("score", 0)), "best_time_improved": false, "best_score_improved": false}
 	if bool(result["completed"]):
-		improved = update_best_time(str(result["level_id"]), float(result["elapsed_seconds"]))
+		var level_id := str(result["level_id"])
+		outcome["best_time_improved"] = update_best_time(level_id, float(result["elapsed_seconds"]))
+		outcome["best_score_improved"] = update_best_score(level_id, result)
 	var results: Array = data["results"]
 	results.append(result)
 	while results.size() > history_cap:
@@ -257,4 +262,37 @@ func record_result(result: Dictionary, history_cap: int) -> bool:
 	(data["pending_results"] as Array).append(result)
 	data["current_game"] = {}
 	mark_changed()
-	return improved
+	return outcome
+
+
+## Keeps the highest-scoring completed game per level (ties: fewer wrong
+## placements, then faster). Returns true when the record changed.
+func update_best_score(level_id: String, result: Dictionary) -> bool:
+	var entry := level_entry(level_id)
+	var score := int(result.get("score", 0))
+	var wrong := int(result.get("wrong_placements", 0))
+	var time := float(result.get("elapsed_seconds", 0.0))
+	var better := false
+	if str(entry["best_result_id"]) == "":
+		better = true
+	elif score != int(entry["best_score"]):
+		better = score > int(entry["best_score"])
+	elif wrong != int(entry["best_wrong"]):
+		better = wrong < int(entry["best_wrong"])
+	else:
+		better = time < float(entry["best_score_time"])
+	if not better:
+		return false
+	entry["best_score"] = score
+	entry["best_wrong"] = wrong
+	entry["best_score_time"] = time
+	entry["best_undo"] = int(result.get("undo_count", 0))
+	entry["best_result_id"] = str(result.get("result_id", ""))
+	entry["best_at"] = int(result.get("finished_at", 0))
+	mark_changed()
+	return true
+
+
+func has_best_score(level_id: String) -> bool:
+	var levels: Dictionary = data["levels"]
+	return levels.has(level_id) and str(levels[level_id]["best_result_id"]) != ""

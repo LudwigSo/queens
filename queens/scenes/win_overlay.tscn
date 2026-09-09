@@ -40,9 +40,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -290.0
+offset_left = -310.0
 offset_top = 0.0
-offset_right = 290.0
+offset_right = 310.0
 offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -57,28 +57,38 @@ theme_override_constants/margin_bottom = 30
 
 [node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.772549, 0.560784, 0, 1)
-theme_override_font_sizes/font_size = 56
+theme_override_font_sizes/font_size = 52
 text = "Solved!"
 horizontal_alignment = 1
 
-[node name="TimeLabel" type="Label" parent="Panel/Margin/VBox"]
+[node name="ScoreLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
-theme_override_font_sizes/font_size = 32
-text = "Time: 0:00"
+theme_override_font_sizes/font_size = 72
+text = "767"
 horizontal_alignment = 1
 
-[node name="StatsLabel" type="Label" parent="Panel/Margin/VBox"]
+[node name="BadgeLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.772549, 0.560784, 0, 1)
+theme_override_font_sizes/font_size = 28
+text = "Flawless · New best"
+horizontal_alignment = 1
+
+[node name="DetailLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
-theme_override_font_sizes/font_size = 26
-text = "Mistakes 0 · Undos 0"
+theme_override_font_sizes/font_size = 24
+text = "Time 3:03 · par 4:05
+Mistakes 0 · Undos 1
+Level 650 × accuracy 1.00 × speed 1.18 × undo 1.00"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="NextLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
@@ -88,25 +98,25 @@ text = "Next game"
 horizontal_alignment = 1
 
 [node name="HarderButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Harder"
 
 [node name="SameButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Same"
 
 [node name="EasierButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Easier"
 
 [node name="HomeButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Home"

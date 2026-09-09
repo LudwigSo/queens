@@ -1,11 +1,13 @@
 extends Control
-## "Solved!" panel shown over the game, with the next-game choice.
+## "Solved!" panel shown over the game: score, badges, breakdown and the
+## next-game choice.
 
 signal next_requested(step: int)   ## -1 easier, 0 same, +1 harder
 signal home_requested
 
-@onready var time_label: Label = $Panel/Margin/VBox/TimeLabel
-@onready var stats_label: Label = $Panel/Margin/VBox/StatsLabel
+@onready var score_label: Label = $Panel/Margin/VBox/ScoreLabel
+@onready var badge_label: Label = $Panel/Margin/VBox/BadgeLabel
+@onready var detail_label: Label = $Panel/Margin/VBox/DetailLabel
 @onready var harder_button: Button = $Panel/Margin/VBox/HarderButton
 @onready var same_button: Button = $Panel/Margin/VBox/SameButton
 @onready var easier_button: Button = $Panel/Margin/VBox/EasierButton
@@ -19,7 +21,10 @@ func _ready() -> void:
 	home_button.pressed.connect(home_requested.emit)
 
 
-func show_result(time_text: String, stats_text: String) -> void:
-	time_label.text = time_text
-	stats_label.text = stats_text
+## `badge_text` may be empty (the line is hidden then).
+func show_result(score_text: String, badge_text: String, detail_text: String) -> void:
+	score_label.text = score_text
+	badge_label.text = badge_text
+	badge_label.visible = badge_text != ""
+	detail_label.text = detail_text
 	visible = true

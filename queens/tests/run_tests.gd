@@ -33,6 +33,7 @@ func _initialize() -> void:
 	_test_level_picker()
 	_test_energy()
 	_test_fake_providers()
+	_test_scoring()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -353,6 +354,8 @@ func _test_game_session() -> void:
 	_check(board.locked, "board solved")
 	var result := session.finish(true, 1500)
 	_check(result.completed and result.finished_at == 1500 and session.finished, "finish marks completion")
+	_check(result.par_seconds == Scoring.par_seconds(result.difficulty, result.size) and result.week_index == Scoring.week_index(1500), "finish fills par and week")
+	_check(result.score == Scoring.score(result.to_dict()) and result.score > 0, "finish computes the score")
 	_check(result.wrong_placements == 1 and result.queens_placed == 2 + n, "result carries the counters")
 	session.resume()
 	session.tick(0.5)
@@ -377,10 +380,12 @@ func _test_game_session() -> void:
 	_check(save.has_running_game() and save.level_entry(lv["id"])["plays"] == 1, "begin_game stores marker and play")
 	_check(save.level_entry(lv["id"])["last_started_at"] == 1000, "begin_game starts the cooldown")
 	_check(save.last_game()["level_id"] == lv["id"] and save.last_game()["difficulty"] == float(lv["difficulty"]), "begin_game remembers the last game")
-	_check(save.record_result(result.to_dict(), 3), "completed result becomes the best time")
+	var outcome := save.record_result(result.to_dict(), 3)
+	_check(outcome["best_time_improved"] and outcome["best_score_improved"] and outcome["score"] == result.score, "completed result becomes the best time and score")
 	_check(not save.has_running_game(), "record_result clears the marker")
 	_check(save.level_entry(lv["id"])["completions"] == 1 and save.best_time(lv["id"]) == result.elapsed_seconds, "record_result updates the level entry")
-	_check(not save.record_result(forfeit.to_dict(), 3), "forfeit is no best")
+	var forfeit_outcome := save.record_result(forfeit.to_dict(), 3)
+	_check(not forfeit_outcome["best_time_improved"] and not forfeit_outcome["best_score_improved"] and forfeit_outcome["score"] == 0, "forfeit is no best and scores 0")
 	_check(save.level_entry(lv["id"])["completions"] == 1, "forfeit does not count as completion")
 	save.record_result(forfeit.to_dict(), 3)
 	save.record_result(forfeit.to_dict(), 3)
@@ -623,3 +628,61 @@ func _test_fake_providers() -> void:
 	ads2.show_rewarded()
 	_check(ledger.amount() == cfg.ad_reward_energy, "a rewarded ad grants ad_reward_energy regardless of ad units")
 	ads2.free()
+
+
+func _test_scoring() -> void:
+	# The fixture rows from the design: (size, difficulty, wrong, seconds, undos, expected score).
+	var rows := [
+		[6, 8.0, 0, 45.0, 0, 175],
+		[6, 8.0, 0, 72.0, 0, 140],
+		[6, 8.0, 3, 150.0, 4, 45],
+		[10, 55.0, 0, 180.0, 0, 767],
+		[10, 55.0, 0, 245.0, 0, 650],
+		[10, 55.0, 5, 600.0, 8, 140],
+		[10, 55.0, 12, 900.0, 15, 61],
+	]
+	for row in rows:
+		var d := {"size": row[0], "difficulty": row[1], "wrong_placements": row[2], "elapsed_seconds": row[3],
+			"undo_count": row[4], "completed": true}
+		_check(Scoring.score(d) == row[5], "score %dx%d diff %d w=%d t=%d u=%d is %d (got %d)" % [row[0], row[0], row[1], row[2], row[3], row[4], row[5], Scoring.score(d)])
+	_check(Scoring.par_seconds(8.0, 6) == 72.0 and Scoring.par_seconds(55.0, 10) == 245.0, "par times of the fixtures")
+	_check(Scoring.base(8.0, 6) == 140 and Scoring.base(55.0, 10) == 650, "base points of the fixtures")
+	var forfeit := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 10.0, "undo_count": 0, "completed": false}
+	_check(Scoring.score(forfeit) == 0, "forfeit scores 0")
+	var bd := Scoring.breakdown({"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "undo_count": 0, "completed": true})
+	_check(bd["flawless"] and bd["base"] == 650 and bd["par_seconds"] == 245.0, "breakdown carries base, par and flawless")
+	_check(is_equal_approx(bd["accuracy_factor"], 1.0) and is_equal_approx(bd["undo_factor"], 1.0) and absf(bd["speed_factor"] - 1.1806) < 0.001, "breakdown factors")
+	_check(not Scoring.breakdown({"size": 6, "difficulty": 8.0, "wrong_placements": 1, "elapsed_seconds": 10.0, "undo_count": 0, "completed": true})["flawless"], "a wrong placement is not flawless")
+	_check(Scoring.speed_factor(0.0, 100.0) == Scoring.SPEED_MAX, "zero elapsed time hits the speed cap")
+	_check(absf(Scoring.speed_factor(1e9, 100.0) - Scoring.SPEED_MIN) < 1e-6, "very slow games hit the speed floor")
+	_check(Scoring.undo_factor(100) == Scoring.UNDO_MIN and Scoring.undo_factor(0) == 1.0, "undo factor is bounded")
+	_check(is_equal_approx(Scoring.accuracy_factor(10), 0.2), "ten wrong placements keep a fifth of the score")
+	var stored := {"size": 6, "difficulty": 8.0, "wrong_placements": 0, "elapsed_seconds": 72.0, "undo_count": 0, "completed": true, "par_seconds": 144.0}
+	_check(Scoring.score(stored) == 175, "a stored par is used instead of the formula")
+	# Weeks: Monday 2026-09-07 00:00 UTC starts a week; the second before belongs to the previous one.
+	var monday := 1788739200
+	var w := Scoring.week_index(monday)
+	_check(Scoring.week_index(monday - 1) == w - 1 and Scoring.week_index(monday + 6 * 86400 + 86399) == w, "week boundaries are Monday 00:00 UTC")
+	_check(Scoring.week_start(w) == monday and Scoring.week_end(w) == monday + 7 * 86400, "week start and end")
+	_check(Scoring.week_index(Scoring.WEEK_EPOCH_OFFSET) == 0 and Scoring.week_index(0) == -1, "week 0 starts on 1970-01-05")
+
+	# Best score per level: higher score wins, then fewer mistakes, then time.
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	var base := {"level_id": "L", "completed": true, "result_id": "r1", "finished_at": 100, "elapsed_seconds": 60.0, "wrong_placements": 1, "undo_count": 0, "score": 100}
+	_check(save.record_result(base, 10)["best_score_improved"], "first completion sets the best score")
+	var worse := base.duplicate()
+	worse.merge({"result_id": "r2", "score": 90}, true)
+	_check(not save.record_result(worse, 10)["best_score_improved"] and save.level_entry("L")["best_result_id"] == "r1", "lower score keeps the record")
+	var cleaner := base.duplicate()
+	cleaner.merge({"result_id": "r3", "wrong_placements": 0, "elapsed_seconds": 70.0}, true)
+	_check(save.record_result(cleaner, 10)["best_score_improved"] and save.level_entry("L")["best_wrong"] == 0, "same score with fewer mistakes wins")
+	var faster := cleaner.duplicate()
+	faster.merge({"result_id": "r4", "elapsed_seconds": 50.0}, true)
+	_check(save.record_result(faster, 10)["best_score_improved"] and save.level_entry("L")["best_result_id"] == "r4", "same score and mistakes, faster wins")
+	var higher := base.duplicate()
+	higher.merge({"result_id": "r5", "score": 150, "wrong_placements": 3, "elapsed_seconds": 200.0}, true)
+	_check(save.record_result(higher, 10)["best_score_improved"] and save.level_entry("L")["best_score"] == 150, "higher score wins despite more mistakes")
+	_check(save.best_time("L") == 50.0, "best time is tracked separately from best score")
+	_check(save.has_best_score("L") and not save.has_best_score("M"), "has_best_score")
