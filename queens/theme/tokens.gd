@@ -49,10 +49,11 @@ const TIER_COLORS := {
 	"challenger": Color("b07cff"),
 }
 
-## Board region palette: mid-saturation, neighbours differ in luminance.
+## Board region palette: flat pastels (lifted 10 % toward white) so an ink
+## crown and the marks keep high contrast; neighbours differ in luminance.
 const REGIONS: Array[Color] = [
-	Color("ff8a80"), Color("7cc4ff"), Color("ffe566"), Color("c39bff"), Color("7fe3a3"),
-	Color("ffb870"), Color("6fe0dc"), Color("ffa3d1"), Color("cbd86a"), Color("b8bcd0"),
+	Color("ff968d"), Color("89caff"), Color("ffe875"), Color("c9a5ff"), Color("8ce6ac"),
+	Color("ffbf7e"), Color("7de3e0"), Color("ffacd6"), Color("d0dc79"), Color("bfc3d5"),
 ]
 
 # --- type scale (px at the 720-wide viewport) ---------------------------------

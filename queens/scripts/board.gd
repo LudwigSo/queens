@@ -15,8 +15,6 @@ signal state_changed
 signal solved
 signal celebration_finished
 
-const TILE_PATH := "res://assets/board/tile.svg"
-const GLOSS_PATH := "res://assets/board/gloss.svg"
 const MARK_PATH := "res://assets/board/mark.svg"
 const CROWN_PATHS := {
 	"ink": "res://assets/board/crown_ink.svg",
@@ -57,9 +55,8 @@ var conflicts: Dictionary:
 var locked: bool:
 	get: return model.locked
 
-var _tile: Texture2D
-var _gloss: Texture2D
 var _mark: Texture2D
+var _tile_style: StyleBoxFlat
 var _crown_tex: Dictionary = {}
 var _plate_style: StyleBoxFlat
 
@@ -115,9 +112,10 @@ func _setup() -> void:
 	if _setup_done:
 		return
 	_setup_done = true
-	_tile = _load_tex(TILE_PATH)
-	_gloss = _load_tex(GLOSS_PATH)
 	_mark = _load_tex(MARK_PATH)
+	_tile_style = StyleBoxFlat.new()
+	_tile_style.anti_aliasing = true
+	_tile_style.corner_detail = 6
 	for key in CROWN_PATHS:
 		_crown_tex[key] = _load_tex(CROWN_PATHS[key])
 	_plate_style = StyleBoxFlat.new()
@@ -289,7 +287,7 @@ func _draw() -> void:
 	for r in n:
 		for c in n:
 			var col := Ui.region_color(int(model.regions[r][c]))
-			draw_rect(_cell_rect(r, c), col.darkened(0.28))
+			draw_rect(_cell_rect(r, c), col.darkened(0.22))
 
 	# Grooves between regions, in the plate colour.
 	var groove := _gap * 2.0
@@ -301,7 +299,7 @@ func _draw() -> void:
 			if r + 1 < n and model.regions[r][c] != model.regions[r + 1][c]:
 				draw_line(Vector2(rect.position.x - 1, rect.end.y), Vector2(rect.end.x + 1, rect.end.y), Ui.PLATE, groove)
 
-	# Tiles.
+	# Tiles: flat colour, rounded corners, no gloss.
 	for r in n:
 		for c in n:
 			var p := Vector2i(r, c)
@@ -310,17 +308,12 @@ func _draw() -> void:
 			if p == _pressed_cell:
 				rect = rect.grow(-_cell_size * 0.03)
 				col = col.darkened(0.10)
-			if _tile != null:
-				draw_texture_rect(_tile, rect, false, col)
-				if _gloss != null:
-					draw_texture_rect(_gloss, rect, false)
-			else:
-				draw_rect(rect, col)
+			_draw_tile(rect, col)
 			if region_patterns:
 				_draw_pattern(rect, int(model.regions[r][c]))
 			var bright: float = _bright.get(p, 0.0)
 			if bright > 0.0:
-				draw_texture_rect(_tile, rect, false, Color(1, 1, 1, bright)) if _tile != null else draw_rect(rect, Color(1, 1, 1, bright))
+				_draw_overlay(rect, Color(1, 1, 1, bright))
 			var glow: float = _glow.get(p, 0.0)
 			if glow > 0.0:
 				_draw_overlay(rect, Color(Ui.HINT_GLOW, glow))
@@ -362,11 +355,14 @@ func _draw() -> void:
 		draw_rect(_cell_rect(_last_cell.x, _last_cell.y).grow(-_gap), Color(Ui.INK, _ring * 0.35), false, 2.0)
 
 
+func _draw_tile(rect: Rect2, color: Color) -> void:
+	_tile_style.bg_color = color
+	_tile_style.set_corner_radius_all(int(maxf(4.0, rect.size.x * 0.16)))
+	draw_style_box(_tile_style, rect)
+
+
 func _draw_overlay(rect: Rect2, color: Color) -> void:
-	if _tile != null:
-		draw_texture_rect(_tile, rect, false, color)
-	else:
-		draw_rect(rect, color)
+	_draw_tile(rect, color)
 
 
 ## Colour-vision aid: a distinct line pattern per region at low contrast.
