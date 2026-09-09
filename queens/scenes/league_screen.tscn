@@ -1,0 +1,148 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/league_screen.gd" id="1_script"]
+
+[node name="League" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TopBar" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="Margin/VBox/TopBar"]
+custom_minimum_size = Vector2(130, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "< Home"
+
+[node name="Title" type="Label" parent="Margin/VBox/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
+theme_override_font_sizes/font_size = 46
+text = "Bronze league"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Spacer" type="Control" parent="Margin/VBox/TopBar"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+
+[node name="InfoLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
+theme_override_font_sizes/font_size = 24
+text = "Top 30 % promote
+Best 15 games count · ends in 2d 14h"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Tabs" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="StandingsButton" type="Button" parent="Margin/VBox/Tabs"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+toggle_mode = true
+button_pressed = true
+text = "Standings"
+
+[node name="FriendsButton" type="Button" parent="Margin/VBox/Tabs"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+toggle_mode = true
+text = "Friends"
+
+[node name="FriendsPanel" type="VBoxContainer" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CodeLabel" type="Label" parent="Margin/VBox/FriendsPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
+theme_override_font_sizes/font_size = 26
+text = "Your code: QN-ABC234"
+horizontal_alignment = 1
+
+[node name="AddRow" type="HBoxContainer" parent="Margin/VBox/FriendsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CodeEdit" type="LineEdit" parent="Margin/VBox/FriendsPanel/AddRow"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+placeholder_text = "Friend code QN-..."
+max_length = 9
+
+[node name="AddButton" type="Button" parent="Margin/VBox/FriendsPanel/AddRow"]
+custom_minimum_size = Vector2(150, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Add"
+
+[node name="NameRow" type="HBoxContainer" parent="Margin/VBox/FriendsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="NameEdit" type="LineEdit" parent="Margin/VBox/FriendsPanel/NameRow"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+placeholder_text = "Your name"
+max_length = 16
+
+[node name="NameButton" type="Button" parent="Margin/VBox/FriendsPanel/NameRow"]
+custom_minimum_size = Vector2(150, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Rename"
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/FriendsPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
+theme_override_font_sizes/font_size = 22
+text = " "
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="List" type="VBoxContainer" parent="Margin/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6

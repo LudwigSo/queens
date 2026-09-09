@@ -28,6 +28,25 @@ var result_history_cap: int = 500
 
 var save_path: String = "user://save.json"
 var legacy_cfg_path: String = "user://progress.cfg"
+var backend_path: String = "user://backend_local.json"
+
+## Weekly league (see scripts/league_rules.gd). Weekly score is the sum of
+## the best `weekly_best_n` games ("best_n") or of all games ("sum").
+## Per tier: share promoted / relegated at the end of the week, what happens
+## in a week without a game, and the score a leader of a tiny group needs.
+var league: Dictionary = {
+	"group_size": 30,
+	"min_group_size": 5,
+	"weekly_mode": "best_n",
+	"weekly_best_n": 15,
+	"tiers": [
+		{"id": "bronze", "name": "Bronze", "up_pct": 30, "down_pct": 0, "inactive": "stay", "min_promo_score": 500},
+		{"id": "silver", "name": "Silver", "up_pct": 25, "down_pct": 10, "inactive": "stay", "min_promo_score": 1000},
+		{"id": "gold", "name": "Gold", "up_pct": 20, "down_pct": 20, "inactive": "relegate", "min_promo_score": 1500},
+		{"id": "platinum", "name": "Platinum", "up_pct": 15, "down_pct": 30, "inactive": "relegate", "min_promo_score": 2500},
+		{"id": "diamond", "name": "Diamond", "up_pct": 0, "down_pct": 40, "inactive": "relegate", "min_promo_score": 0, "global": true},
+	],
+}
 
 ## AdMob test unit id for rewarded ads; replace with the real one for release.
 var admob_rewarded_unit_id: String = "ca-app-pub-3940256099942544/5224354917"

@@ -90,6 +90,14 @@ Level 650 × accuracy 1.00 × speed 1.18 × undo 1.00"
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="LeagueLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
+theme_override_font_sizes/font_size = 24
+text = "Bronze league · 2010 pts · #5 of 30 · safe"
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="NextLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)

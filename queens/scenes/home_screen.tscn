@@ -57,6 +57,14 @@ Queens may not touch, not even diagonally."
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="LeagueLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
+theme_override_font_sizes/font_size = 26
+text = "Bronze league · play a game to join this week"
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="Spacer1" type="Control" parent="Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -91,11 +99,23 @@ text = "Easier"
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="OverviewButton" type="Button" parent="Margin/VBox"]
+[node name="Bottom" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="OverviewButton" type="Button" parent="Margin/VBox/Bottom"]
 custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 30
 text = "All levels"
+
+[node name="LeagueButton" type="Button" parent="Margin/VBox/Bottom"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 30
+text = "League"
 
 [node name="Player" type="Label" parent="Margin/VBox"]
 layout_mode = 2

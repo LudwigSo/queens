@@ -1,28 +1,34 @@
 extends Control
-## Screen router: home -> game -> solved overlay, with the level overview
-## and the message dialog on the side. Screens are sub-scenes that only emit
-## intents; this script talks to the App autoload (save, config, catalog,
-## picker) and owns the running GameSession.
+## Screen router: home -> game -> solved overlay, with the level overview,
+## level detail, league screen and the dialogs on the side. Screens are
+## sub-scenes that only emit intents; this script talks to the App autoload
+## (save, config, catalog, picker, energy, backend) and owns the running
+## GameSession.
 
 const DEFAULT_HINT := "Tap once to mark X, tap again to place a queen, tap again to clear."
 
 @onready var home: Control = $Home
 @onready var level_select: Control = $LevelSelect
+@onready var level_detail: Control = $LevelDetail
+@onready var league: Control = $League
 @onready var game_screen: Control = $Game
 @onready var board: Board = game_screen.board
 @onready var win_overlay: Control = $WinOverlay
+@onready var week_summary: Control = $WeekSummary
 @onready var energy_dialog: Control = $EnergyDialog
 @onready var message_dialog: Control = $MessageDialog
 
 var levels: Array = []          ## Level dictionaries, see scripts/levels.gd.
 var current_level: int = -1
 var session: GameSession = null ## The running game, null between games.
+var detail_scope: String = "global"
 
 
 func _ready() -> void:
 	levels = App.catalog.levels
 	home.play_requested.connect(_play_step)
 	home.overview_requested.connect(_show_level_select)
+	home.league_requested.connect(_show_league)
 	home.energy_pressed.connect(_open_energy_dialog.bind(false))
 	energy_dialog.watch_ad_pressed.connect(_on_watch_ad)
 	energy_dialog.buy_pressed.connect(_on_buy_unlimited)
@@ -38,12 +44,21 @@ func _ready() -> void:
 	App.purchases.purchase_completed.connect(func(_id: String, _token: String) -> void: energy_dialog.set_status("Unlimited energy unlocked."))
 	App.purchases.restore_completed.connect(func(owned: Array) -> void: energy_dialog.set_status("Purchase restored." if not owned.is_empty() else "Nothing to restore."))
 	level_select.level_chosen.connect(_on_level_chosen)
+	level_select.detail_requested.connect(_show_level_detail)
 	level_select.back_requested.connect(_show_home)
 	level_select.set_back_visible(true)
+	level_detail.back_requested.connect(_show_level_select)
+	level_detail.play_requested.connect(_on_level_chosen)
+	level_detail.scope_requested.connect(func(scope: String) -> void: _show_level_detail(level_detail.level_id, scope))
+	league.back_requested.connect(_show_home)
+	league.add_friend_requested.connect(_on_add_friend)
+	league.remove_friend_requested.connect(_on_remove_friend)
+	league.rename_requested.connect(_on_rename)
 	game_screen.give_up_requested.connect(_on_give_up)
 	board.solved.connect(_on_solved)
 	win_overlay.next_requested.connect(_play_step)
 	win_overlay.home_requested.connect(_show_home)
+	week_summary.closed.connect(_on_week_summary_closed)
 	message_dialog.closed.connect(_on_dialog_closed)
 	_show_home()
 
@@ -65,20 +80,57 @@ func _notification(what: int) -> void:
 				message_dialog.cancel()
 			elif energy_dialog.visible:
 				energy_dialog.close()
+			elif week_summary.visible:
+				week_summary.close()
 			elif game_screen.visible and not win_overlay.visible:
 				_on_give_up()
-			elif level_select.visible:
+			elif level_detail.visible:
+				_show_level_select()
+			elif level_select.visible or league.visible:
 				_show_home()
+
+
+func _hide_all() -> void:
+	win_overlay.visible = false
+	game_screen.visible = false
+	level_select.visible = false
+	level_detail.visible = false
+	league.visible = false
+	home.visible = false
 
 
 # --- home -------------------------------------------------------------------
 
-func _home_view() -> Dictionary:
+func _league_line(standing: Dictionary) -> String:
+	var tier_name := str(standing.get("tier_name", ""))
+	if not standing.get("joined", false):
+		return "%s league · play a game to join this week" % tier_name
+	return "%s league · %d pts · #%d of %d · %s\nWeek ends in %s" % [
+		tier_name, int(standing.get("my_weekly_score", 0)), int(standing.get("my_rank", 0)),
+		int(standing.get("group", {}).get("size", 0)), _zone_text(str(standing.get("zone", ""))),
+		_week_left_text(standing)]
+
+
+func _zone_text(zone: String) -> String:
+	match zone:
+		"promote":
+			return "promotion zone"
+		"relegate":
+			return "relegation zone"
+	return "safe"
+
+
+func _week_left_text(standing: Dictionary) -> String:
+	return Cooldown.format_remaining(int(standing.get("week_ends_at", 0)) - App.now())
+
+
+func _home_view(standing: Dictionary) -> Dictionary:
 	var last := App.save.last_game()
 	var view := {
 		"has_last": not last.is_empty(),
 		"nickname": App.save.nickname(),
 		"energy_text": App.energy.display_text(),
+		"league_text": _league_line(standing),
 		"last_text": "Pick how hard you want to start",
 	}
 	if not last.is_empty():
@@ -93,11 +145,20 @@ func _home_view() -> Dictionary:
 
 func _show_home() -> void:
 	_pause_game(false)
-	home.refresh(_home_view())
-	win_overlay.visible = false
-	game_screen.visible = false
-	level_select.visible = false
+	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
+	home.refresh(_home_view(standing))
+	_hide_all()
 	home.visible = true
+	var summary: Dictionary = (await App.backend.get_week_summary())["data"]
+	if not summary.is_empty() and not week_summary.visible:
+		var cfg: Dictionary = App.config.league
+		week_summary.open(summary,
+			LeagueRules.tier_name(cfg, str(summary.get("tier_before", ""))),
+			LeagueRules.tier_name(cfg, str(summary.get("tier_after", ""))))
+
+
+func _on_week_summary_closed(week_index: int) -> void:
+	App.backend.ack_week_summary(week_index)
 
 
 # --- energy -----------------------------------------------------------------
@@ -142,6 +203,8 @@ func _on_restore_purchase() -> void:
 	App.purchases.restore()
 
 
+# --- picker -----------------------------------------------------------------
+
 func _locked_ids() -> Dictionary:
 	var ids := {}
 	var now := App.now()
@@ -184,7 +247,11 @@ func _play_step(step: int) -> void:
 			start_game(pick["level"], "Closest available level" if pick["reason"] == "nearest" else "")
 
 
-# --- level overview ---------------------------------------------------------
+# --- level overview and detail ------------------------------------------------
+
+func _level_title(lv: Dictionary) -> String:
+	return "Level %d · %dx%d · diff %d" % [App.catalog.display_index(lv["id"]) + 1, lv["size"], lv["size"], int(lv["difficulty"])]
+
 
 func _level_rows() -> Array:
 	var rows: Array = []
@@ -209,10 +276,41 @@ func _level_rows() -> Array:
 func _show_level_select() -> void:
 	_pause_game(false)
 	level_select.refresh(_level_rows())
-	win_overlay.visible = false
-	game_screen.visible = false
-	home.visible = false
+	_hide_all()
 	level_select.visible = true
+
+
+func _show_level_detail(level_id: String, scope: String = "global") -> void:
+	var lv := App.catalog.get_level(level_id)
+	if lv.is_empty():
+		return
+	detail_scope = scope
+	var res: Dictionary = await App.backend.get_level_leaderboard(level_id, scope, 25)
+	var board_data: Dictionary = res["data"] if res["ok"] else {"entries": [], "my_entry": {}, "my_rank": 0, "total_players": 0, "par_seconds": Scoring.par_seconds(lv["difficulty"], lv["size"])}
+	var entries: Array = []
+	for e in board_data["entries"]:
+		var row: Dictionary = e.duplicate()
+		row["time_text"] = _format_time(float(e.get("time_seconds", 0.0)))
+		entries.append(row)
+	var mine: Dictionary = board_data.get("my_entry", {})
+	var mine_text := "Not played yet"
+	if not mine.is_empty():
+		var wrong := int(mine.get("wrong_placements", 0))
+		mine_text = "Your best: %d pts · %s · %s · #%d" % [int(mine.get("score", 0)), _format_time(float(mine.get("time_seconds", 0.0))),
+			"flawless" if wrong == 0 else ("%d mistake" % wrong if wrong == 1 else "%d mistakes" % wrong), int(board_data.get("my_rank", 0))]
+	var remaining := Cooldown.remaining(App.save.level_entry(level_id), App.now(), App.config.cooldown_seconds)
+	level_detail.refresh({
+		"level_id": level_id,
+		"title": _level_title(lv),
+		"par_text": "Par %s · %d players" % [_format_time(float(board_data.get("par_seconds", 0.0))), int(board_data.get("total_players", 0))],
+		"mine_text": mine_text,
+		"scope": scope,
+		"entries": entries,
+		"play_text": "Play this level" if remaining <= 0 else "Locked · %s" % Cooldown.format_remaining(remaining),
+		"play_enabled": remaining <= 0,
+	})
+	_hide_all()
+	level_detail.visible = true
 
 
 func _on_level_chosen(level_id: String) -> void:
@@ -225,6 +323,49 @@ func _start_level(index: int) -> void:
 
 func _is_locked(level: Dictionary) -> bool:
 	return Cooldown.is_locked(App.save.level_entry(level["id"]), App.now(), App.config.cooldown_seconds)
+
+
+# --- league -------------------------------------------------------------------
+
+func _show_league() -> void:
+	_pause_game(false)
+	await _refresh_league()
+	_hide_all()
+	league.visible = true
+
+
+func _refresh_league() -> void:
+	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
+	var friends: Array = (await App.backend.get_friends())["data"]
+	var profile: Dictionary = (await App.backend.get_profile())["data"]
+	league.refresh(standing, friends, str(profile.get("friend_code", "")), App.save.nickname(), _week_left_text(standing))
+
+
+func _on_add_friend(code: String) -> void:
+	var res: Dictionary = await App.backend.add_friend(code)
+	if res["ok"]:
+		league.clear_code()
+		league.set_status("Added %s" % res["data"]["nickname"])
+		await _refresh_league()
+	else:
+		league.set_status(res["error"])
+
+
+func _on_remove_friend(player_id: String) -> void:
+	await App.backend.remove_friend(player_id)
+	league.set_status("Friend removed")
+	await _refresh_league()
+
+
+func _on_rename(nickname: String) -> void:
+	var res: Dictionary = await App.backend.set_nickname(nickname)
+	if res["ok"]:
+		App.save.data["player"]["nickname"] = res["data"]["nickname"]
+		App.save.mark_changed()
+		league.set_status("You are now %s" % res["data"]["nickname"])
+		await _refresh_league()
+	else:
+		league.set_status(res["error"])
 
 
 # --- game -------------------------------------------------------------------
@@ -248,13 +389,12 @@ func start_game(level: Dictionary, note: String = "") -> void:
 	session.attach(board)
 	App.save.begin_game(level, session.to_marker(), App.now())
 	App.save_now()
+	App.backend.start_game(level["id"])
 	board.load_level(level)
-	game_screen.set_level_text("Level %d · %dx%d · diff %d" % [current_level + 1, level["size"], level["size"], int(level["difficulty"])])
+	game_screen.set_level_text(_level_title(level))
 	game_screen.set_timer_text(_format_time(0.0))
 	game_screen.set_hint(note if note != "" else DEFAULT_HINT)
-	win_overlay.visible = false
-	level_select.visible = false
-	home.visible = false
+	_hide_all()
 	game_screen.visible = true
 	session.resume()
 
@@ -303,7 +443,7 @@ func _on_solved() -> void:
 	if session == null or session.finished:
 		return
 	var result := session.finish(true, App.now())
-	var outcome := App.record_result(result)
+	var outcome: Dictionary = await App.record_result(result)
 	var bd := Scoring.breakdown(result.to_dict())
 	var badges: Array = []
 	if bd["flawless"]:
@@ -314,7 +454,13 @@ func _on_solved() -> void:
 		_format_time(result.elapsed_seconds), _format_time(bd["par_seconds"]),
 		result.wrong_placements, result.undo_count,
 		bd["base"], bd["accuracy_factor"], bd["speed_factor"], bd["undo_factor"]]
-	win_overlay.show_result("%d points" % result.score, " · ".join(badges), detail)
+	var league_text := ""
+	var lg: Dictionary = outcome.get("league", {})
+	if not lg.is_empty():
+		league_text = "%s league · %d pts · #%d of %d · %s" % [
+			LeagueRules.tier_name(App.config.league, str(lg.get("tier", ""))), int(lg.get("weekly_score", 0)),
+			int(lg.get("group_rank", 0)), int(lg.get("group_size", 0)), _zone_text(str(lg.get("zone", "")))]
+	win_overlay.show_result("%d points" % result.score, " · ".join(badges), detail, league_text)
 
 
 func _format_time(seconds: float) -> String:

@@ -18,6 +18,7 @@ var picker: LevelPicker
 var energy: EnergyLedger
 var ads: AdsProvider
 var purchases: PurchaseProvider
+var backend: Backend
 
 var product_prices: Dictionary = {}   ## product id -> price text from the store
 
@@ -33,7 +34,9 @@ func _ready() -> void:
 	picker = LevelPicker.new(catalog, config, rng)
 	energy = EnergyLedger.new(save, config)
 	save.changed.connect(_queue_save)
+	_start_backend()
 	_forfeit_dangling_game()
+	flush_pending_results()
 	_select_providers()
 	ads.reward_earned.connect(_on_reward_earned)
 	purchases.products_updated.connect(_on_products_updated)
@@ -90,6 +93,33 @@ func unlimited_price_text() -> String:
 	return str(product_prices.get(config.unlimited_product_id, config.unlimited_price_fallback))
 
 
+## Creates the backend for the current save. Only the local stub exists so
+## far; a networked one would be chosen here.
+func _start_backend() -> void:
+	if backend != null:
+		remove_child(backend)
+		backend.queue_free()
+	backend = LocalBackend.new(config, catalog, now)
+	backend.name = "Backend"
+	add_child(backend)
+	backend.init()
+	backend.register_player(save.player_id(), save.nickname())
+
+
+## Sends results the backend has not accepted yet (offline, crash, ...).
+func flush_pending_results() -> void:
+	var pending: Array = save.data["pending_results"]
+	if pending.is_empty():
+		return
+	var kept: Array = []
+	for r in pending:
+		var res: Dictionary = await backend.submit_result(r)
+		if not res["ok"]:
+			kept.append(r)
+	save.data["pending_results"] = kept
+	save.mark_changed()
+
+
 ## A game that was running when the app was killed counts as forfeited.
 func _forfeit_dangling_game() -> void:
 	if not save.has_running_game():
@@ -100,10 +130,21 @@ func _forfeit_dangling_game() -> void:
 	record_result(result)
 
 
-## Stores a finished game and writes the save immediately. Returns the
-## save's outcome: {score, best_time_improved, best_score_improved}.
+## Stores a finished game, hands it to the backend and writes the save.
+## Returns {score, best_time_improved, best_score_improved, league} where
+## league is the backend's submit response ({} when it failed).
 func record_result(result: GameResult) -> Dictionary:
-	var outcome := save.record_result(result.to_dict(), config.result_history_cap)
+	var dict := result.to_dict()
+	var outcome := save.record_result(dict, config.result_history_cap)
+	outcome["league"] = {}
+	if backend != null:
+		var res: Dictionary = await backend.submit_result(dict)
+		if res["ok"]:
+			outcome["league"] = res["data"]
+			var pending: Array = save.data["pending_results"]
+			for i in range(pending.size() - 1, -1, -1):
+				if str(pending[i].get("result_id", "")) == result.result_id:
+					pending.remove_at(i)
 	save_now()
 	return outcome
 
@@ -114,9 +155,13 @@ func use_save_path(path: String) -> void:
 	if save != null:
 		save.changed.disconnect(_queue_save)
 	config.save_path = path
+	config.backend_path = path.get_basename() + "_backend.json"
+	if FileAccess.file_exists(config.backend_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(config.backend_path))
 	save = SaveData.load_or_create(config)
 	save.changed.connect(_queue_save)
 	energy.bind_save(save)
+	_start_backend()
 	_forfeit_dangling_game()
 
 

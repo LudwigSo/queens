@@ -107,11 +107,38 @@ func _ready() -> void:
 
 	main._show_level_select()
 	await _frames(2)
-	var played: Button = main.level_select.grid.get_child(index)
+	var played: Button = main.level_select.grid.get_child(index).get_child(0)
 	print("played level button: disabled = %s, shows lock = %s" % [played.disabled, played.text.contains("Locked")])
 	main.level_select.grid.get_parent().scroll_vertical = int(played.position.y)
 	await _frames(2)
 	_save(out_dir + "10_level_select_locked.png")
+
+	# League: standings with bots, friends tab, adding a friend.
+	main._show_league()
+	await _frames(2)
+	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
+	print("league: joined = %s, rank %d of %d, weekly %d, zone %s" % [standing["joined"], standing["my_rank"], standing["group"]["size"], standing["my_weekly_score"], standing["zone"]])
+	_save(out_dir + "11_league_standings.png")
+	main.league.show_tab("friends")
+	main._on_add_friend("QN-ABC234")
+	await _frames(2)
+	print("friends after add: %d" % (await App.backend.get_friends())["data"].size())
+	_save(out_dir + "12_league_friends.png")
+
+	# Level detail with the leaderboard of the level just played.
+	main._show_level_detail(main.levels[index]["id"])
+	await _frames(2)
+	var lb: Dictionary = (await App.backend.get_level_leaderboard(main.levels[index]["id"], "global", 25))["data"]
+	print("level board: %d players, my rank %d" % [lb["total_players"], lb["my_rank"]])
+	_save(out_dir + "13_level_detail.png")
+
+	# Week summary modal (fabricated: the real one only appears after a week).
+	main._show_home()
+	await _frames(1)
+	main.week_summary.open({"week_index": 1, "outcome": "promoted", "rank": 4, "group_size": 30, "weekly_score": 4120, "best_game": {"score": 540}}, "Bronze", "Silver")
+	await _frames(2)
+	_save(out_dir + "14_week_summary.png")
+	main.week_summary.close()
 	get_tree().quit()
 
 

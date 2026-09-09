@@ -3,6 +3,7 @@ extends Control
 ## Only emits intents; the main script builds the rows and starts games.
 
 signal level_chosen(level_id: String)
+signal detail_requested(level_id: String)
 signal back_requested
 
 @onready var grid: GridContainer = $Margin/VBox/Scroll/Grid
@@ -25,6 +26,9 @@ func refresh(rows: Array) -> void:
 		grid.remove_child(child)
 		child.queue_free()
 	for row in rows:
+		var cell := VBoxContainer.new()
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cell.add_theme_constant_override("separation", 4)
 		var btn := Button.new()
 		btn.text = row["text"]
 		btn.disabled = row["locked"]
@@ -32,4 +36,12 @@ func refresh(rows: Array) -> void:
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.add_theme_font_size_override("font_size", 28)
 		btn.pressed.connect(level_chosen.emit.bind(row["id"]))
-		grid.add_child(btn)
+		cell.add_child(btn)
+		var detail := Button.new()
+		detail.text = "Leaderboard"
+		detail.flat = true
+		detail.custom_minimum_size = Vector2(0, 44)
+		detail.add_theme_font_size_override("font_size", 22)
+		detail.pressed.connect(detail_requested.emit.bind(row["id"]))
+		cell.add_child(detail)
+		grid.add_child(cell)

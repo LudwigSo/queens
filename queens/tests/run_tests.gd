@@ -34,6 +34,8 @@ func _initialize() -> void:
 	_test_energy()
 	_test_fake_providers()
 	_test_scoring()
+	_test_league_rules()
+	_test_local_backend()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -686,3 +688,185 @@ func _test_scoring() -> void:
 	_check(save.record_result(higher, 10)["best_score_improved"] and save.level_entry("L")["best_score"] == 150, "higher score wins despite more mistakes")
 	_check(save.best_time("L") == 50.0, "best time is tracked separately from best score")
 	_check(save.has_best_score("L") and not save.has_best_score("M"), "has_best_score")
+
+
+func _league_member(id: String, score: int, games: int = 5, last: int = 100) -> Dictionary:
+	return {"player_id": id, "nickname": id, "weekly_score": score, "games": games, "last_submit_at": last, "is_me": id == "me", "is_friend": false, "is_bot": id != "me"}
+
+
+func _test_league_rules() -> void:
+	var cfg := GameConfig.new().league
+	_check(LeagueRules.weekly_score([100, 50, 200], cfg) == 350, "weekly score sums the games")
+	var many: Array = []
+	for i in 20:
+		many.append(10 * (i + 1))
+	_check(LeagueRules.weekly_score(many, cfg) == 1950, "weekly score keeps only the best 15")
+	var sum_cfg := cfg.duplicate(true)
+	sum_cfg["weekly_mode"] = "sum"
+	_check(LeagueRules.weekly_score(many, sum_cfg) == 2100, "sum mode counts every game")
+	_check(LeagueRules.promote_tier(cfg, "bronze") == "silver" and LeagueRules.promote_tier(cfg, "diamond") == "diamond", "promotion goes one tier up and stops at the top")
+	_check(LeagueRules.relegate_tier(cfg, "gold") == "silver" and LeagueRules.relegate_tier(cfg, "bronze") == "bronze", "relegation goes one tier down and stops at the bottom")
+	_check(LeagueRules.is_global(cfg, "diamond") and not LeagueRules.is_global(cfg, "gold"), "diamond is the global tier")
+
+	# Sorting: score desc, then fewer games, then earlier submit.
+	var sorted := LeagueRules.sort_members([
+		_league_member("late", 100, 5, 300), _league_member("top", 200), _league_member("early", 100, 5, 100), _league_member("busy", 100, 9, 50)])
+	_check(sorted[0]["player_id"] == "top" and sorted[1]["player_id"] == "early" and sorted[2]["player_id"] == "late" and sorted[3]["player_id"] == "busy", "members sort by score, games, submit time")
+
+	# A full Gold group of 30: 6 up, 6 down.
+	var members: Array = []
+	for i in 30:
+		members.append(_league_member("p%d" % i, 1000 - i * 10))
+	var ev := LeagueRules.evaluate(members, "gold", cfg)
+	_check(ev["promote_count"] == 6 and ev["relegate_count"] == 6, "gold: 20 % up and down of 30")
+	_check(ev["members"][0]["zone"] == "promote" and ev["members"][5]["zone"] == "promote" and ev["members"][6]["zone"] == "safe", "top six promote")
+	_check(ev["members"][23]["zone"] == "safe" and ev["members"][24]["zone"] == "relegate" and ev["members"][29]["zone"] == "relegate", "bottom six relegate")
+	_check(ev["members"][0]["rank"] == 1 and ev["members"][29]["rank"] == 30, "ranks are assigned")
+	var bronze := LeagueRules.evaluate(members, "bronze", cfg)
+	_check(bronze["promote_count"] == 9 and bronze["relegate_count"] == 0, "bronze: 30 % up, nobody down")
+	var diamond := LeagueRules.evaluate(members, "diamond", cfg)
+	_check(diamond["promote_count"] == 0 and diamond["relegate_count"] == 12, "diamond: nobody up, 40 % down")
+	# Zero scores never promote.
+	var idle: Array = []
+	for i in 10:
+		idle.append(_league_member("z%d" % i, 0))
+	var idle_ev := LeagueRules.evaluate(idle, "bronze", cfg)
+	_check(idle_ev["promote_count"] == 0 and idle_ev["members"][0]["zone"] == "safe", "a zero score never promotes")
+	# Tiny groups: nobody down, leader up only above the threshold.
+	var tiny := [_league_member("a", 600), _league_member("b", 100), _league_member("c", 50)]
+	var tiny_ev := LeagueRules.evaluate(tiny, "gold", cfg)
+	_check(tiny_ev["promote_count"] == 0 and tiny_ev["relegate_count"] == 0, "tiny gold group: leader below 1500 stays")
+	tiny[0]["weekly_score"] = 1600
+	tiny_ev = LeagueRules.evaluate(tiny, "gold", cfg)
+	_check(tiny_ev["promote_count"] == 1 and tiny_ev["members"][0]["zone"] == "promote" and tiny_ev["relegate_count"] == 0, "tiny gold group: strong leader promotes alone")
+	_check(LeagueRules.evaluate([], "gold", cfg)["members"].is_empty(), "empty group evaluates")
+	# Outcomes and transitions.
+	_check(LeagueRules.outcome_for_zone("promote") == "promoted" and LeagueRules.outcome_for_zone("safe") == "stayed" and LeagueRules.outcome_for_zone("relegate") == "relegated", "zones map to outcomes")
+	_check(LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "silver")) == "inactive_frozen" and LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "gold")) == "inactive_relegated", "inactive rule per tier")
+	_check(LeagueRules.apply(cfg, "silver", "promoted") == "gold" and LeagueRules.apply(cfg, "silver", "relegated") == "bronze", "apply moves tiers")
+	_check(LeagueRules.apply(cfg, "gold", "inactive_relegated") == "silver" and LeagueRules.apply(cfg, "gold", "stayed") == "gold" and LeagueRules.apply(cfg, "gold", "inactive_frozen") == "gold", "apply handles inactivity")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "gold")) == "Top 20 % promote · bottom 20 % relegate", "rules text")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "bronze")) == "Top 30 % promote", "rules text without relegation")
+
+
+func _test_local_backend() -> void:
+	var cfg := GameConfig.new()
+	var catalog := LevelCatalog.new(levels)
+	var path := "user://test_tmp/backend.json"
+	DirAccess.make_dir_recursive_absolute("user://test_tmp")
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var clock := [Scoring.week_start(2957) + 2 * 86400]   # a Wednesday
+	var now_fn := func() -> int: return clock[0]
+	var backend := LocalBackend.new(cfg, catalog, now_fn, path)
+	backend.init()
+	var reg := backend.register_player("player-1", "Ludwig")
+	_check(reg["ok"] and reg["data"]["tier"] == "bronze" and reg["data"]["nickname"] == "Ludwig", "register creates a bronze profile")
+	var code: String = reg["data"]["friend_code"]
+	_check(LocalBackend.is_valid_code(code) and code == LocalBackend.friend_code_for("player-1"), "friend code is derived from the player id")
+	_check(not LocalBackend.is_valid_code("QN-abc"), "malformed friend codes are rejected")
+
+	var standing: Dictionary = backend.get_league_standing()["data"]
+	_check(not standing["joined"] and standing["my_rank"] == 0 and standing["week_index"] == 2957, "not in a group before the first game")
+	_check(standing["week_ends_at"] == Scoring.week_end(2957) and standing["rules_text"] == "Top 30 % promote", "standing carries week end and rules")
+
+	var lv: Dictionary = levels[0]
+	var start := backend.start_game(lv["id"])
+	_check(start["ok"] and start["data"]["joined"] and start["data"]["week_index"] == 2957, "start_game joins the week")
+	standing = backend.get_league_standing()["data"]
+	_check(standing["joined"] and standing["group"]["size"] == cfg.league["group_size"], "group has group_size members including me")
+	_check(standing["my_weekly_score"] == 0 and standing["my_rank"] > 0, "joined with zero points")
+	var bots_playing := 0
+	for m in standing["group"]["members"]:
+		if m["is_bot"] and int(m["weekly_score"]) > 0:
+			bots_playing += 1
+	_check(bots_playing > 10, "bots have played by Wednesday")
+
+	var result := {"result_id": "r-1", "player_id": "player-1", "level_id": lv["id"], "size": lv["size"], "difficulty": lv["difficulty"],
+		"completed": true, "elapsed_seconds": 40.0, "wrong_placements": 0, "undo_count": 0, "started_at": clock[0] - 60,
+		"finished_at": clock[0], "week_index": 2957}
+	var sub := backend.submit_result(result)
+	_check(sub["ok"] and sub["data"]["breakdown"]["score"] == Scoring.score(result), "submit computes the score")
+	_check(sub["data"]["weekly_score"] == Scoring.score(result) and sub["data"]["group_rank"] > 0 and sub["data"]["group_size"] == 30, "submit reports weekly score and rank")
+	var again := backend.submit_result(result)
+	_check(again["ok"] and again["data"]["weekly_score"] == sub["data"]["weekly_score"], "submit is idempotent per result id")
+	_check(backend.get_profile()["data"]["stats"]["games"] == 1 and backend.get_profile()["data"]["stats"]["flawless"] == 1, "profile stats count the game once")
+	var forfeit := result.duplicate()
+	forfeit.merge({"result_id": "r-2", "completed": false}, true)
+	var sub2 := backend.submit_result(forfeit)
+	_check(sub2["ok"] and sub2["data"]["breakdown"]["score"] == 0 and sub2["data"]["weekly_score"] == sub["data"]["weekly_score"], "a forfeit scores 0 and changes nothing")
+	_check(backend.submit_result({})["ok"] == false, "missing result id fails")
+
+	# Level leaderboard: bots, me, scopes.
+	var board: Dictionary = backend.get_level_leaderboard(lv["id"], "global", 10)["data"]
+	_check(board["my_rank"] > 0 and board["my_entry"]["score"] == Scoring.score(result) and board["total_players"] > 5, "level board includes my best")
+	_check(board["entries"].size() <= 10 and board["entries"][0]["rank"] == 1, "level board is limited and ranked")
+	var ordered := true
+	for i in range(1, board["entries"].size()):
+		if LocalBackend._entry_before(board["entries"][i], board["entries"][i - 1]):
+			ordered = false
+	_check(ordered, "level board is sorted")
+	var flawless: Dictionary = backend.get_level_leaderboard(lv["id"], "flawless", 50)["data"]
+	var all_flawless := true
+	for e in flawless["entries"]:
+		if int(e["wrong_placements"]) != 0:
+			all_flawless = false
+	_check(all_flawless and flawless["my_rank"] > 0, "flawless board only has clean runs")
+	_check(backend.get_level_leaderboard("nope")["ok"] == false, "unknown level fails")
+	_check(backend.get_level_meta()["data"][lv["id"]]["par_seconds"] == Scoring.par_seconds(lv["difficulty"], lv["size"]), "level meta gives par")
+
+	# Friends.
+	_check(not backend.add_friend("hello")["ok"] and not backend.add_friend(code)["ok"], "bad or own code is refused")
+	var added := backend.add_friend("QN-ABC234")
+	_check(added["ok"] and added["data"]["nickname"] == "Player-ABC2", "friend added from a code")
+	_check(not backend.add_friend("qn-abc234")["ok"], "adding twice is refused (case-insensitive)")
+	_check(backend.get_friends()["data"].size() == 1, "friend list has one entry")
+	_check(backend.remove_friend("friend:QN-ABC234")["ok"] and backend.get_friends()["data"].is_empty(), "friend removed")
+	_check(not backend.remove_friend("nobody")["ok"], "removing a stranger fails")
+	_check(backend.set_nickname("Q")["ok"] == false and backend.set_nickname("Queen Bee")["ok"], "nickname validation")
+
+	# Bots are stable across instances, and everything persists.
+	var backend2 := LocalBackend.new(cfg, catalog, now_fn, path)
+	backend2.init()
+	var standing2: Dictionary = backend2.get_league_standing()["data"]
+	_check(standing2["joined"] and standing2["my_weekly_score"] == Scoring.score(result) and standing2["group"]["members"][0]["nickname"] == standing["group"]["members"][0]["nickname"], "standing survives a restart")
+	var same_scores := true
+	var fresh: Dictionary = backend.get_league_standing()["data"]
+	for i in fresh["group"]["members"].size():
+		if fresh["group"]["members"][i]["weekly_score"] != standing2["group"]["members"][i]["weekly_score"]:
+			same_scores = false
+	_check(same_scores, "bot scores are deterministic")
+	_check(backend2.get_profile()["data"]["nickname"] == "Queen Bee", "nickname persisted")
+
+	# Rollover: a strong week in bronze promotes; an idle week in gold relegates.
+	for i in 15:
+		var r := result.duplicate()
+		r.merge({"result_id": "big-%d" % i, "size": 10, "difficulty": 55.0, "elapsed_seconds": 100.0, "wrong_placements": 0}, true)
+		backend2.submit_result(r)
+	_check(backend2.get_league_standing()["data"]["my_rank"] == 1, "fifteen perfect hard games lead the bronze group")
+	clock[0] = Scoring.week_start(2958) + 3600
+	var backend3 := LocalBackend.new(cfg, catalog, now_fn, path)
+	backend3.init()
+	var summary: Dictionary = backend3.get_week_summary()["data"]
+	_check(summary["week_index"] == 2957 and summary["outcome"] == "promoted" and summary["tier_after"] == "silver" and summary["rank"] <= 9, "week summary reports the promotion")
+	_check(summary["best_game"]["score"] == Scoring.score({"size": 10, "difficulty": 55.0, "completed": true, "elapsed_seconds": 100.0, "wrong_placements": 0, "undo_count": 0}), "summary names the best game")
+	_check(backend3.get_profile()["data"]["tier"] == "silver", "profile moved to silver")
+	_check(not backend3.get_league_standing()["data"]["joined"], "new week starts unjoined")
+	backend3.ack_week_summary(2957)
+	_check(backend3.get_week_summary()["data"].is_empty(), "summary acknowledged")
+	# Two idle weeks: silver freezes, then (after a manual bump to gold) relegates.
+	backend3.data["profile"]["tier"] = "gold"
+	backend3._save()
+	clock[0] = Scoring.week_start(2960) + 10
+	var backend4 := LocalBackend.new(cfg, catalog, now_fn, path)
+	backend4.init()
+	var s2: Dictionary = backend4.get_week_summary()["data"]
+	_check(s2["week_index"] == 2959 and s2["outcome"] == "inactive_frozen" and backend4.data["history"][1]["outcome"] == "inactive_relegated", "idle weeks: gold relegates, silver freezes")
+	_check(backend4.get_profile()["data"]["tier"] == "silver", "two idle weeks: gold -> silver, then silver freezes")
+	_check(backend4.data["history"].size() == 3, "history keeps every closed week")
+
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	backend.free()
+	backend2.free()
+	backend3.free()
+	backend4.free()

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/home_screen.tscn" id="6_home"]
@@ -7,6 +7,9 @@
 [ext_resource type="PackedScene" path="res://scenes/win_overlay.tscn" id="4_win"]
 [ext_resource type="PackedScene" path="res://scenes/message_dialog.tscn" id="5_message"]
 [ext_resource type="PackedScene" path="res://scenes/energy_dialog.tscn" id="7_energy"]
+[ext_resource type="PackedScene" path="res://scenes/league_screen.tscn" id="8_league"]
+[ext_resource type="PackedScene" path="res://scenes/level_detail.tscn" id="9_detail"]
+[ext_resource type="PackedScene" path="res://scenes/week_summary.tscn" id="10_week"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -33,10 +36,19 @@ layout_mode = 1
 visible = false
 layout_mode = 1
 
+[node name="League" parent="." instance=ExtResource("8_league")]
+layout_mode = 1
+
+[node name="LevelDetail" parent="." instance=ExtResource("9_detail")]
+layout_mode = 1
+
 [node name="Game" parent="." instance=ExtResource("3_game")]
 layout_mode = 1
 
 [node name="WinOverlay" parent="." instance=ExtResource("4_win")]
+layout_mode = 1
+
+[node name="WeekSummary" parent="." instance=ExtResource("10_week")]
 layout_mode = 1
 
 [node name="EnergyDialog" parent="." instance=ExtResource("7_energy")]

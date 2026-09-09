@@ -42,6 +42,34 @@ solution; it counts the moment it is placed, so marking with X first and
 placing queens only when sure is the rewarded style. Giving up scores 0.
 The level overview shows the best score per level.
 
+### League and leaderboards
+
+Every solved game also counts for the weekly league (Monday to Sunday,
+UTC). Your weekly score is the sum of your best 15 games of the week, so
+grinding beyond that only helps by replacing a weaker game. You play in a
+group of up to 30 players of the same tier; at the end of the week the top
+share moves up a tier and, from Silver on, the bottom share moves down:
+
+| Tier | up | down | week without a game |
+| --- | --- | --- | --- |
+| Bronze | 30 % | 0 % | stay |
+| Silver | 25 % | 10 % | stay |
+| Gold | 20 % | 20 % | relegate |
+| Platinum | 15 % | 30 % | relegate |
+| Diamond | 0 % | 40 % | relegate |
+
+Diamond is one global standing. The rules live in `GameConfig.league`
+(`scripts/config.gd`) and the maths in `scripts/league_rules.gd`. Each
+level also has its own leaderboard (best score per player, plus a "fastest
+flawless" view), reachable from the level overview.
+
+There is no server yet. `scripts/backend/backend.gd` is the contract and
+`scripts/backend/local_backend.gd` an offline stand-in that fills the group
+with deterministic bots anchored to your own scores, simulates the weekly
+rollover on start, and fabricates friends from friend codes. A real backend
+(for example Supabase) implements the same contract; the client does not
+change.
+
 ## Running locally
 
 Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press
