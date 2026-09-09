@@ -26,6 +26,8 @@ func _initialize() -> void:
 		ids[id] = true
 		_test_level(i, levels[i])
 	_test_board_logic()
+	_test_level_catalog()
+	_test_save_data()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -182,3 +184,98 @@ func _test_board_logic() -> void:
 	_check(solved_count[0] == 1, "solved signal emitted once")
 	_check(board.locked, "board locks after solving")
 	board.free()
+
+
+func _test_level_catalog() -> void:
+	var catalog := LevelCatalog.new(levels)
+	_check(catalog.size() == levels.size(), "catalog holds every level")
+	_check(catalog.ranked.size() == levels.size(), "ranking holds every level")
+	var monotone := true
+	for i in range(1, catalog.ranked.size()):
+		if float(catalog.ranked[i - 1]["difficulty"]) > float(catalog.ranked[i]["difficulty"]):
+			monotone = false
+	_check(monotone, "ranking is sorted by difficulty")
+	var first: Dictionary = levels[0]
+	_check(catalog.get_level(first["id"]) == first, "lookup by id")
+	_check(catalog.display_index(first["id"]) == 0, "display index follows game order")
+	_check(catalog.rank_of(first["id"]) == catalog.ranked.find(first), "rank_of matches ranked position")
+	_check(catalog.rank_of("missing") == -1, "unknown id has rank -1")
+	_check(catalog.rank_for_difficulty(0.0) == 0, "rank for difficulty below all is 0")
+	_check(catalog.rank_for_difficulty(1e9) == levels.size(), "rank for difficulty above all is size")
+	var easiest: float = float(catalog.ranked[0]["difficulty"])
+	_check(catalog.rank_for_difficulty(easiest) == 0, "rank for the easiest difficulty is 0")
+	_check(catalog.rank_for_difficulty(easiest + 0.5) >= 1, "rank just above the easiest is at least 1")
+	# Same input always gives the same ranking.
+	var again := LevelCatalog.new(levels)
+	var same := true
+	for i in catalog.ranked.size():
+		if catalog.ranked[i]["id"] != again.ranked[i]["id"]:
+			same = false
+	_check(same, "ranking is deterministic")
+
+
+func _test_save_data() -> void:
+	var dir := "user://test_tmp"
+	DirAccess.make_dir_recursive_absolute(dir)
+	var cfg := GameConfig.new()
+	cfg.save_path = dir + "/save.json"
+	cfg.legacy_cfg_path = dir + "/progress.cfg"
+	for f in [cfg.save_path, cfg.legacy_cfg_path, cfg.legacy_cfg_path + ".migrated"]:
+		if FileAccess.file_exists(f):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(f))
+	var uuid := RegEx.create_from_string("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+
+	# Fresh install.
+	var fresh := SaveData.load_or_create(cfg)
+	_check(FileAccess.file_exists(cfg.save_path), "fresh save is written")
+	_check(uuid.search(fresh.player_id()) != null, "fresh save has a uuid4 player id")
+	_check(fresh.nickname().begins_with("Player-"), "fresh save has a default nickname")
+	_check(int(fresh.data["energy"]["amount"]) == cfg.start_energy, "fresh save starts with start_energy")
+	_check(not fresh.has_best("x"), "unknown level has no best")
+	_check(fresh.level_entry("x")["plays"] == 0, "level_entry creates defaults")
+	_check(fresh.update_best_time("x", 30.0), "first completion is a best")
+	_check(not fresh.update_best_time("x", 40.0), "slower completion is not a best")
+	_check(fresh.update_best_time("x", 20.0), "faster completion is a best")
+	_check(fresh.best_time("x") == 20.0 and fresh.level_entry("x")["completions"] == 3, "best time and completions recorded")
+	var changed := [0]
+	fresh.changed.connect(func() -> void: changed[0] += 1)
+	fresh.update_best_time("x", 50.0)
+	_check(changed[0] == 1, "update_best_time emits changed")
+
+	# Round trip through the file.
+	fresh.save_to()
+	var again := SaveData.load_or_create(cfg)
+	_check(again.player_id() == fresh.player_id(), "player id survives a round trip")
+	_check(again.best_time("x") == 20.0, "best time survives a round trip")
+	_check(not FileAccess.file_exists(cfg.save_path + ".tmp"), "temp file is renamed away")
+
+	# Legacy ConfigFile import.
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(cfg.save_path))
+	var legacy := ConfigFile.new()
+	legacy.set_value("best_times", "level-a", 83.5)
+	legacy.set_value("best_times", "level-b", 12.0)
+	legacy.save(cfg.legacy_cfg_path)
+	var migrated := SaveData.load_or_create(cfg)
+	_check(migrated.best_time("level-a") == 83.5 and migrated.best_time("level-b") == 12.0, "legacy best times imported")
+	_check(migrated.level_entry("level-a")["last_started_at"] == 0, "imported levels carry no cooldown")
+	_check(migrated.level_entry("level-a")["completions"] == 1 and migrated.level_entry("level-a")["plays"] == 1, "imported levels count one play")
+	_check(uuid.search(migrated.player_id()) != null, "migrated save gets a player id")
+	_check(int(migrated.data["energy"]["amount"]) == cfg.start_energy, "migrated save starts with start_energy")
+	_check(FileAccess.file_exists(cfg.save_path), "migrated save is written")
+	_check(not FileAccess.file_exists(cfg.legacy_cfg_path), "legacy file is renamed")
+	_check(FileAccess.file_exists(cfg.legacy_cfg_path + ".migrated"), "legacy file kept as .migrated")
+
+	# Version handling.
+	var v0 := SaveData.migrate({"levels": {"old": {"best_time": 5.0}}}, cfg)
+	_check(int(v0["version"]) == SaveData.VERSION, "version 0 dict is migrated to current")
+	_check(v0.has("player") and v0.has("energy"), "migration fills missing sections")
+	_check(v0["levels"]["old"]["plays"] == 0 and v0["levels"]["old"]["best_time"] == 5.0, "migration fills missing level fields")
+	var newer := {"version": SaveData.VERSION + 1, "player": {"id": "keep"}, "levels": {}}
+	var kept := SaveData.migrate(newer, cfg)
+	_check(int(kept["version"]) == SaveData.VERSION + 1 and kept["player"]["id"] == "keep", "newer version loads untouched")
+
+	# Clean up.
+	for f in [cfg.save_path, cfg.legacy_cfg_path + ".migrated"]:
+		if FileAccess.file_exists(f):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(f))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(dir))

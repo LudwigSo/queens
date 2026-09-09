@@ -12,11 +12,19 @@ Play, or from the command line:
 godot --path queens
 ```
 
-Tests:
+Tests (the first command refreshes the `.godot/` class cache, which the
+headless runner needs after a clean checkout or after adding scripts):
+
+```bash
+godot --headless --path queens --import
+```
 
 ```bash
 godot --headless --path queens --script tests/run_tests.gd
 ```
+
+Progress is stored in `user://save.json` (see `scripts/save_data.gd`); a
+`progress.cfg` from older builds is imported on first start.
 
 Levels live in `levels/queens.json` and are produced by the tools in
 `../tools` (see `tools/README.md`).

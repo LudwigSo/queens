@@ -38,4 +38,5 @@ static func _normalize(raw: Dictionary) -> Dictionary:
 		solution.append(int(v))
 	lv["solution"] = solution
 	lv["stars"] = int(raw.get("stars", 0))
+	lv["difficulty"] = float(raw.get("difficulty", 0))
 	return lv

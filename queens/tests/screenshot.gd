@@ -16,7 +16,12 @@ func _ready() -> void:
 	await _frames(3)
 	_save(out_dir + "01_level_select.png")
 
-	main._start_level(3)  # 7x7 board
+	var index := 0  # first 7x7 board
+	for i in main.levels.size():
+		if int(main.levels[i]["size"]) == 7:
+			index = i
+			break
+	main._start_level(index)
 	await _frames(2)
 	var board: Control = main.board
 	var sol: Array = board.solution

@@ -1,8 +1,7 @@
 extends Control
 ## Screen flow: level select -> game -> solved overlay.
+## Progress lives in the App autoload's save file.
 
-const SAVE_PATH := "user://progress.cfg"
-const Levels := preload("res://scripts/levels.gd")
 const BoardScript := preload("res://scripts/board.gd")
 
 @onready var level_select: Control = $LevelSelect
@@ -23,12 +22,10 @@ var levels: Array = []          ## Level dictionaries, see scripts/levels.gd.
 var current_level: int = -1
 var elapsed: float = 0.0
 var running: bool = false
-var best_times: Dictionary = {}  ## Level id -> best time in seconds.
 
 
 func _ready() -> void:
-	levels = Levels.load_all()
-	_load_progress()
+	levels = App.catalog.levels
 	board.state_changed.connect(_on_board_changed)
 	board.solved.connect(_on_solved)
 	undo_button.pressed.connect(board.undo)
@@ -55,8 +52,8 @@ func _build_level_buttons() -> void:
 		var text := "Level %d\n%d x %d" % [i + 1, lv["size"], lv["size"]]
 		if lv["stars"] > 0:
 			text += "\n" + "★".repeat(lv["stars"])
-		if best_times.has(lv["id"]):
-			text += "\nBest %s" % _format_time(best_times[lv["id"]])
+		if App.save.has_best(lv["id"]):
+			text += "\nBest %s" % _format_time(App.save.best_time(lv["id"]))
 		btn.text = text
 		btn.custom_minimum_size = Vector2(0, 150)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -93,10 +90,7 @@ func _on_board_changed() -> void:
 func _on_solved() -> void:
 	running = false
 	undo_button.disabled = true
-	var id: String = levels[current_level]["id"]
-	if not best_times.has(id) or elapsed < float(best_times[id]):
-		best_times[id] = elapsed
-		_save_progress()
+	App.save.update_best_time(levels[current_level]["id"], elapsed)
 	win_time_label.text = "Time: %s" % _format_time(elapsed)
 	next_button.visible = current_level + 1 < levels.size()
 	win_overlay.visible = true
@@ -111,18 +105,3 @@ func _format_time(seconds: float) -> String:
 	var total := int(seconds)
 	@warning_ignore("integer_division")
 	return "%d:%02d" % [total / 60, total % 60]
-
-
-func _load_progress() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK or not cfg.has_section("best_times"):
-		return
-	for key in cfg.get_section_keys("best_times"):
-		best_times[key] = cfg.get_value("best_times", key)
-
-
-func _save_progress() -> void:
-	var cfg := ConfigFile.new()
-	for key in best_times:
-		cfg.set_value("best_times", key, best_times[key])
-	cfg.save(SAVE_PATH)
