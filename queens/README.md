@@ -108,6 +108,32 @@ One-time setup in the Godot editor:
 The *Android* preset in `export_presets.cfg` targets arm64-v8a, portrait, GL
 Compatibility, so it runs on practically any device.
 
+### Ads and purchases (plugins)
+
+The Android build uses two plugins that are not part of this repository:
+
+* **AdMob** by Poing Studios (`godot-admob-plugin`, Godot 4.2+). Install
+  the addon into `queens/addons/admob/`, enable it under **Project >
+  Project Settings > Plugins**, and enter your AdMob App ID under
+  **Project Settings > Admob**. The rewarded ad unit id is
+  `admob_rewarded_unit_id` in `scripts/config.gd`; it ships with Google's
+  test unit, replace it for release.
+* **Google Play Billing** (`godot-google-play-billing`, Godot 4.2+).
+  Install the addon into `queens/addons/GodotGooglePlayBilling/` and enable
+  it under **Plugins**. Create a non-consumable product with the id
+  `queens_unlimited_energy` (see `unlimited_product_id`) in the Play
+  Console and add license testers to try it without paying.
+
+Both plugins need the Gradle build (`gradle_build/use_gradle_build=true`
+in the preset, already set; install the build template via **Project >
+Install Android Build Template**) and the INTERNET permission (set).
+Without the addons the game falls back to the fake providers, also on
+Android, so a debug APK still runs. `scripts/providers/admob_ads_provider.gd`
+and `play_billing_provider.gd` look the plugin classes up at runtime and
+print which provider was chosen at start. For the store, switch the
+preset's `gradle_build/export_format` to AAB and make sure
+`package/unique_name` matches your Play Console app.
+
 ### Debug build
 
 Uses the debug keystore Godot creates for you:

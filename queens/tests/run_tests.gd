@@ -36,6 +36,7 @@ func _initialize() -> void:
 	_test_scoring()
 	_test_league_rules()
 	_test_local_backend()
+	_test_android_providers_degrade()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -870,3 +871,32 @@ func _test_local_backend() -> void:
 	backend2.free()
 	backend3.free()
 	backend4.free()
+
+
+## Without the addons the Android providers must still load and fail softly.
+func _test_android_providers_degrade() -> void:
+	var admob_script: GDScript = load("res://scripts/providers/admob_ads_provider.gd")
+	_check(admob_script != null and not admob_script.has_plugin(), "AdMob provider parses without the addon")
+	var ads: Node = admob_script.new()
+	var failures_seen := [0]
+	ads.ad_failed.connect(func(_reason: String) -> void: failures_seen[0] += 1)
+	ads.initialize()
+	ads.preload_ad()
+	_check(not ads.is_ready(), "AdMob provider is not ready without the addon")
+	ads.show_rewarded()
+	_check(failures_seen[0] == 2 and ads.provider_name() == "admob", "AdMob provider reports failures instead of crashing")
+	ads.free()
+
+	var billing_script: GDScript = load("res://scripts/providers/play_billing_provider.gd")
+	_check(billing_script != null and not billing_script.has_plugin(), "Billing provider parses without the addon")
+	var shop: Node = billing_script.new()
+	var shop_failures := [0]
+	var restored := [0]
+	shop.purchase_failed.connect(func(_reason: String) -> void: shop_failures[0] += 1)
+	shop.restore_completed.connect(func(owned: Array) -> void: restored[0] += 1 if owned.is_empty() else 0)
+	shop.start()
+	shop.query_products(["x"])
+	shop.purchase("x")
+	shop.restore()
+	_check(not shop.is_available() and shop_failures[0] == 2 and restored[0] == 1, "Billing provider fails softly without the addon")
+	shop.free()

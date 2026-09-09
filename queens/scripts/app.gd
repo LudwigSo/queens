@@ -53,16 +53,18 @@ func _ready() -> void:
 ## loaded by path so the project parses without the addons installed.
 func _select_providers() -> void:
 	var android := OS.has_feature("android")
-	var admob_script := "res://scripts/providers/admob_ads_provider.gd"
-	if android and ResourceLoader.exists(admob_script) and ResourceLoader.exists("res://addons/admob/plugin.cfg"):
-		ads = load(admob_script).new()
+	var admob_script: GDScript = load("res://scripts/providers/admob_ads_provider.gd")
+	if android and admob_script.has_plugin():
+		ads = admob_script.new()
+		ads.unit_id = config.admob_rewarded_unit_id
 	else:
 		ads = FakeAdsProvider.new()
-	var billing_script := "res://scripts/providers/play_billing_provider.gd"
-	if android and ResourceLoader.exists(billing_script) and Engine.has_singleton("GodotGooglePlayBilling"):
-		purchases = load(billing_script).new()
+	var billing_script: GDScript = load("res://scripts/providers/play_billing_provider.gd")
+	if android and billing_script.has_plugin():
+		purchases = billing_script.new()
 	else:
 		purchases = FakePurchaseProvider.new()
+	print("providers: ads=%s purchases=%s" % [ads.provider_name(), purchases.provider_name()])
 	ads.name = "Ads"
 	purchases.name = "Purchases"
 	add_child(ads)
