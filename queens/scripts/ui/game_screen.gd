@@ -7,6 +7,7 @@ signal give_up_requested
 @onready var board: Board = $Margin/VBox/Board
 @onready var level_label: Label = $Margin/VBox/Header/LevelLabel
 @onready var timer_label: Label = $Margin/VBox/Header/TimerLabel
+@onready var hint_label: Label = $Margin/VBox/Hint
 @onready var give_up_button: Button = $Margin/VBox/Header/GiveUpButton
 @onready var undo_button: Button = $Margin/VBox/Actions/UndoButton
 @onready var clear_button: Button = $Margin/VBox/Actions/ClearButton
@@ -25,6 +26,10 @@ func set_level_text(text: String) -> void:
 
 func set_timer_text(text: String) -> void:
 	timer_label.text = text
+
+
+func set_hint(text: String) -> void:
+	hint_label.text = text
 
 
 func _on_board_changed() -> void:

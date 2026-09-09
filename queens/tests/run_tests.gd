@@ -30,6 +30,7 @@ func _initialize() -> void:
 	_test_save_data()
 	_test_game_session()
 	_test_cooldown()
+	_test_level_picker()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -370,9 +371,10 @@ func _test_game_session() -> void:
 	var cfg := GameConfig.new()
 	var save := SaveData.new()
 	save.data = SaveData.defaults(cfg)
-	save.begin_game(lv["id"], marker, 1000)
+	save.begin_game(lv, marker, 1000)
 	_check(save.has_running_game() and save.level_entry(lv["id"])["plays"] == 1, "begin_game stores marker and play")
 	_check(save.level_entry(lv["id"])["last_started_at"] == 1000, "begin_game starts the cooldown")
+	_check(save.last_game()["level_id"] == lv["id"] and save.last_game()["difficulty"] == float(lv["difficulty"]), "begin_game remembers the last game")
 	_check(save.record_result(result.to_dict(), 3), "completed result becomes the best time")
 	_check(not save.has_running_game(), "record_result clears the marker")
 	_check(save.level_entry(lv["id"])["completions"] == 1 and save.best_time(lv["id"]) == result.elapsed_seconds, "record_result updates the level entry")
@@ -405,3 +407,110 @@ func _test_cooldown() -> void:
 	_check(Cooldown.format_period(week) == "7 days" and Cooldown.format_period(86400) == "1 day", "format period in days")
 	_check(Cooldown.format_period(12 * 3600) == "12 hours" and Cooldown.format_period(3600) == "1 hour", "format period in hours")
 	_check(Cooldown.format_period(90) == "1 minute" and Cooldown.format_period(1800) == "30 minutes", "format period in minutes")
+
+
+func _test_level_picker() -> void:
+	var catalog := LevelCatalog.new(levels)
+	var cfg := GameConfig.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 12345
+	var picker := LevelPicker.new(catalog, cfg, rng)
+	var n := catalog.ranked.size()
+	var step_ranks := ceili(n * cfg.step_fraction)
+	var half := ceili(n * cfg.band_fraction)
+	@warning_ignore("integer_division")
+	var median: Dictionary = catalog.ranked[n / 2]
+	var last := {"level_id": median["id"], "difficulty": median["difficulty"]}
+	var i0 := catalog.rank_of(median["id"])
+
+	# First launch: an easy level from the low end of the ranking.
+	var first := picker.pick(1, {}, {})
+	var first_center := int(floor(n * cfg.initial_quartile / 2.0))
+	_check(first["reason"] == "band" and first["step"] == 0, "first launch picks from the band and ignores the step")
+	var first_rank := catalog.rank_of(first["level"]["id"])
+	_check(first_rank >= first_center - half and first_rank <= first_center + half, "first launch picks near the easy quantile")
+
+	# Stepping from the median level.
+	var harder := picker.pick(1, last, {})
+	var hr := catalog.rank_of(harder["level"]["id"])
+	_check(harder["reason"] == "band", "harder finds a band level")
+	_check(hr >= i0 + step_ranks - half and hr <= i0 + step_ranks + half, "harder lands one step up")
+	_check(float(harder["level"]["difficulty"]) > float(median["difficulty"]), "harder is strictly harder")
+	var easier := picker.pick(-1, last, {})
+	var er := catalog.rank_of(easier["level"]["id"])
+	_check(er >= i0 - step_ranks - half and er <= i0 - step_ranks + half, "easier lands one step down")
+	_check(float(easier["level"]["difficulty"]) < float(median["difficulty"]), "easier is strictly easier")
+	var same := picker.pick(0, last, {})
+	var sr := catalog.rank_of(same["level"]["id"])
+	_check(same["level"]["id"] != median["id"], "same never repeats the last level")
+	_check(sr >= i0 - half and sr <= i0 + half, "same stays in the band")
+
+	# Band fully locked: nearest allowed level on the right side.
+	var locked := {}
+	for i in range(i0 + step_ranks - half, i0 + step_ranks + half + 1):
+		locked[catalog.ranked[i]["id"]] = true
+	var nearest := picker.pick(1, last, locked)
+	_check(nearest["reason"] == "nearest", "locked band falls back to nearest")
+	_check(not locked.has(nearest["level"]["id"]), "nearest is not locked")
+	_check(float(nearest["level"]["difficulty"]) > float(median["difficulty"]), "nearest keeps the side rule")
+	var nr := catalog.rank_of(nearest["level"]["id"])
+	_check(absi(nr - (i0 + step_ranks)) <= half + 3, "nearest is adjacent to the band")
+
+	# No level on that side at all.
+	var hardest: Dictionary = catalog.ranked[n - 1]
+	var none_harder := picker.pick(1, {"level_id": hardest["id"]}, {})
+	_check(none_harder["level"].is_empty() and none_harder["reason"] == "none_harder", "nothing harder than the hardest level")
+	var easiest: Dictionary = catalog.ranked[0]
+	var none_easier := picker.pick(-1, {"level_id": easiest["id"]}, {})
+	_check(none_easier["level"].is_empty() and none_easier["reason"] == "none_easier", "nothing easier than the easiest level")
+	var all_locked := {}
+	for lv in levels:
+		all_locked[lv["id"]] = true
+	var none := picker.pick(0, last, all_locked)
+	_check(none["level"].is_empty() and none["reason"] == "none", "everything locked gives none")
+	_check(picker.pick(0, {}, all_locked)["reason"] == "none", "first launch with everything locked gives none")
+
+	# Locked levels are never returned, whatever the seed.
+	var violations := 0
+	var random_rng := RandomNumberGenerator.new()
+	random_rng.seed = 777
+	for trial in 500:
+		var some_locked := {}
+		for lv in levels:
+			if random_rng.randf() < 0.6:
+				some_locked[lv["id"]] = true
+		var anchor: Dictionary = catalog.ranked[random_rng.randi_range(0, n - 1)]
+		var res := picker.pick(random_rng.randi_range(-1, 1), {"level_id": anchor["id"]}, some_locked)
+		if not res["level"].is_empty() and some_locked.has(res["level"]["id"]):
+			violations += 1
+	_check(violations == 0, "500 random picks never return a locked level")
+
+	# A last level that vanished from the file still anchors by difficulty.
+	var gone := picker.pick(1, {"level_id": "gone", "difficulty": median["difficulty"]}, {})
+	_check(float(gone["level"]["difficulty"]) > float(median["difficulty"]), "missing last level anchors by difficulty")
+
+	# Never-played levels are preferred within a band.
+	var played := {}
+	for i in range(i0 - half, i0 + half + 1):
+		if i % 2 == 0:
+			played[catalog.ranked[i]["id"]] = true
+	var unplayed_hits := 0
+	for trial in 400:
+		var res := picker.pick(0, last, {}, played)
+		if not played.has(res["level"]["id"]):
+			unplayed_hits += 1
+	_check(unplayed_hits > 220, "unplayed levels are picked more often (%d of 400)" % unplayed_hits)
+
+	# Tiny synthetic catalog: edge clamps.
+	var tiny := LevelCatalog.new([
+		{"id": "a", "size": 6, "difficulty": 1.0, "stars": 1},
+		{"id": "b", "size": 6, "difficulty": 2.0, "stars": 1},
+		{"id": "c", "size": 6, "difficulty": 3.0, "stars": 1},
+	])
+	var tiny_picker := LevelPicker.new(tiny, cfg, rng)
+	_check(tiny_picker.pick(1, {"level_id": "b"}, {})["level"]["id"] == "c", "tiny: harder from the middle")
+	_check(tiny_picker.pick(-1, {"level_id": "b"}, {})["level"]["id"] == "a", "tiny: easier from the middle")
+	_check(tiny_picker.pick(1, {"level_id": "c"}, {})["reason"] == "none_harder", "tiny: nothing above the top")
+	_check(tiny_picker.pick(0, {"level_id": "b"}, {"a": true, "c": true})["reason"] == "none", "tiny: same with everything else locked")
+	_check(tiny_picker.pick(1, {"level_id": "a"}, {"b": true})["level"]["id"] == "c", "tiny: harder skips a locked level")
+	_check(tiny_picker.pick(0, {}, {})["reason"] == "band", "tiny: first launch works")

@@ -40,10 +40,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -280.0
-offset_top = -240.0
-offset_right = 280.0
-offset_bottom = 240.0
+offset_left = -290.0
+offset_top = -330.0
+offset_right = 290.0
+offset_bottom = 330.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
@@ -57,7 +57,7 @@ theme_override_constants/margin_bottom = 30
 
 [node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="Title" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
@@ -80,14 +80,33 @@ theme_override_font_sizes/font_size = 26
 text = "Mistakes 0 · Undos 0"
 horizontal_alignment = 1
 
-[node name="NextButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 100)
+[node name="NextLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 34
-text = "Next level"
+theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
+theme_override_font_sizes/font_size = 24
+text = "Next game"
+horizontal_alignment = 1
 
-[node name="LevelsButton" type="Button" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 100)
+[node name="HarderButton" type="Button" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 34
-text = "All levels"
+theme_override_font_sizes/font_size = 32
+text = "Harder"
+
+[node name="SameButton" type="Button" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Same"
+
+[node name="EasierButton" type="Button" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Easier"
+
+[node name="HomeButton" type="Button" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Home"

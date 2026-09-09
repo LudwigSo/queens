@@ -14,6 +14,7 @@ const Levels := preload("res://scripts/levels.gd")
 var config: GameConfig
 var save: SaveData
 var catalog: LevelCatalog
+var picker: LevelPicker
 
 var _save_queued: bool = false
 
@@ -22,6 +23,9 @@ func _ready() -> void:
 	config = GameConfig.new()
 	save = SaveData.load_or_create(config)
 	catalog = LevelCatalog.new(Levels.load_all())
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Time.get_ticks_usec()
+	picker = LevelPicker.new(catalog, config, rng)
 	save.changed.connect(_queue_save)
 	_forfeit_dangling_game()
 

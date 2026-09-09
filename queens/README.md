@@ -3,6 +3,16 @@
 A mobile-first Godot 4 implementation of the *Queens* logic puzzle: place one
 queen in every row, column and colour region, and no two queens may touch.
 
+## How it plays
+
+The home screen offers three buttons: **Easier**, **Same** and **Harder**.
+Each picks a level whose solver difficulty is stepped relative to the last
+game you started, finished or not (see `scripts/level_picker.gd`). The full
+level list is still available under *All levels*. A level you started stays
+locked for seven days (`cooldown_seconds` in `scripts/config.gd`), so a time
+cannot be improved by replaying a solution you remember. Giving up counts as
+a played game.
+
 ## Running locally
 
 Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press

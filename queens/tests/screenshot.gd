@@ -20,7 +20,7 @@ func _ready() -> void:
 	var main: Control = MainScene.instantiate()
 	add_child(main)
 	await _frames(3)
-	_save(out_dir + "01_level_select.png")
+	_save(out_dir + "01_home_fresh.png")
 
 	var index := 0  # first 7x7 board
 	for i in main.levels.size():
@@ -71,13 +71,24 @@ func _ready() -> void:
 	await _frames(2)
 	_save(out_dir + "04_solved.png")
 
+	# Easier / Same / Harder: a harder level than the one just played.
+	var last_difficulty: float = main.levels[index]["difficulty"]
+	main._play_step(1)
+	await _frames(2)
+	print("harder pick: diff %d after diff %d, game visible = %s" % [main.levels[main.current_level]["difficulty"], last_difficulty, main.game_screen.visible])
+	_save(out_dir + "05_game_harder.png")
+	main.end_game(false)
+	main._show_home()
+	await _frames(2)
+	_save(out_dir + "06_home_after_game.png")
+
 	main._show_level_select()
 	await _frames(2)
 	var played: Button = main.level_select.grid.get_child(index)
 	print("played level button: disabled = %s, shows lock = %s" % [played.disabled, played.text.contains("Locked")])
 	main.level_select.grid.get_parent().scroll_vertical = int(played.position.y)
 	await _frames(2)
-	_save(out_dir + "05_level_select_locked.png")
+	_save(out_dir + "07_level_select_locked.png")
 	get_tree().quit()
 
 
