@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/week_summary.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/round_summary.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(1, 1, 1, 1)
@@ -14,7 +14,7 @@ corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
-[node name="WeekSummary" type="Control"]
+[node name="RoundSummary" type="Control"]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -63,7 +63,7 @@ theme_override_constants/separation = 20
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
 theme_override_font_sizes/font_size = 30
-text = "Last week"
+text = "Last round"
 horizontal_alignment = 1
 
 [node name="Headline" type="Label" parent="Panel/Margin/VBox"]

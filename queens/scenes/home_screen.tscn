@@ -61,7 +61,7 @@ autowrap_mode = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.117647, 0.117647, 0.164706, 1)
 theme_override_font_sizes/font_size = 26
-text = "Bronze league · play a game to join this week"
+text = "Bronze league · play a game to join this round"
 horizontal_alignment = 1
 autowrap_mode = 3
 

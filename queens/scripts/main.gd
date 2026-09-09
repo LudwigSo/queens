@@ -14,7 +14,7 @@ const DEFAULT_HINT := "Tap once to mark X, tap again to place a queen, tap again
 @onready var game_screen: Control = $Game
 @onready var board: Board = game_screen.board
 @onready var win_overlay: Control = $WinOverlay
-@onready var week_summary: Control = $WeekSummary
+@onready var round_summary: Control = $RoundSummary
 @onready var energy_dialog: Control = $EnergyDialog
 @onready var message_dialog: Control = $MessageDialog
 
@@ -58,7 +58,7 @@ func _ready() -> void:
 	board.solved.connect(_on_solved)
 	win_overlay.next_requested.connect(_play_step)
 	win_overlay.home_requested.connect(_show_home)
-	week_summary.closed.connect(_on_week_summary_closed)
+	round_summary.closed.connect(_on_round_summary_closed)
 	message_dialog.closed.connect(_on_dialog_closed)
 	_show_home()
 
@@ -80,8 +80,8 @@ func _notification(what: int) -> void:
 				message_dialog.cancel()
 			elif energy_dialog.visible:
 				energy_dialog.close()
-			elif week_summary.visible:
-				week_summary.close()
+			elif round_summary.visible:
+				round_summary.close()
 			elif game_screen.visible and not win_overlay.visible:
 				_on_give_up()
 			elif level_detail.visible:
@@ -104,11 +104,11 @@ func _hide_all() -> void:
 func _league_line(standing: Dictionary) -> String:
 	var tier_name := str(standing.get("tier_name", ""))
 	if not standing.get("joined", false):
-		return "%s league · play a game to join this week" % tier_name
-	return "%s league · %d pts · #%d of %d · %s\nWeek ends in %s" % [
-		tier_name, int(standing.get("my_weekly_score", 0)), int(standing.get("my_rank", 0)),
+		return "%s league · play a game to join this round" % tier_name
+	return "%s league · %d pts · #%d of %d · %s\nRound ends in %s" % [
+		tier_name, int(standing.get("my_round_score", 0)), int(standing.get("my_rank", 0)),
 		int(standing.get("group", {}).get("size", 0)), _zone_text(str(standing.get("zone", ""))),
-		_week_left_text(standing)]
+		_round_left_text(standing)]
 
 
 func _zone_text(zone: String) -> String:
@@ -120,8 +120,8 @@ func _zone_text(zone: String) -> String:
 	return "safe"
 
 
-func _week_left_text(standing: Dictionary) -> String:
-	return Cooldown.format_remaining(int(standing.get("week_ends_at", 0)) - App.now())
+func _round_left_text(standing: Dictionary) -> String:
+	return Cooldown.format_remaining(int(standing.get("round_ends_at", 0)) - App.now())
 
 
 func _home_view(standing: Dictionary) -> Dictionary:
@@ -149,16 +149,16 @@ func _show_home() -> void:
 	home.refresh(_home_view(standing))
 	_hide_all()
 	home.visible = true
-	var summary: Dictionary = (await App.backend.get_week_summary())["data"]
-	if not summary.is_empty() and not week_summary.visible:
+	var summary: Dictionary = (await App.backend.get_round_summary())["data"]
+	if not summary.is_empty() and not round_summary.visible:
 		var cfg: Dictionary = App.config.league
-		week_summary.open(summary,
+		round_summary.open(summary,
 			LeagueRules.tier_name(cfg, str(summary.get("tier_before", ""))),
 			LeagueRules.tier_name(cfg, str(summary.get("tier_after", ""))))
 
 
-func _on_week_summary_closed(week_index: int) -> void:
-	App.backend.ack_week_summary(week_index)
+func _on_round_summary_closed(round_index: int) -> void:
+	App.backend.ack_round_summary(round_index)
 
 
 # --- energy -----------------------------------------------------------------
@@ -338,7 +338,7 @@ func _refresh_league() -> void:
 	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
 	var friends: Array = (await App.backend.get_friends())["data"]
 	var profile: Dictionary = (await App.backend.get_profile())["data"]
-	league.refresh(standing, friends, str(profile.get("friend_code", "")), App.save.nickname(), _week_left_text(standing))
+	league.refresh(standing, friends, str(profile.get("friend_code", "")), App.save.nickname(), _round_left_text(standing))
 
 
 func _on_add_friend(code: String) -> void:
@@ -458,7 +458,7 @@ func _on_solved() -> void:
 	var lg: Dictionary = outcome.get("league", {})
 	if not lg.is_empty():
 		league_text = "%s league · %d pts · #%d of %d · %s" % [
-			LeagueRules.tier_name(App.config.league, str(lg.get("tier", ""))), int(lg.get("weekly_score", 0)),
+			LeagueRules.tier_name(App.config.league, str(lg.get("tier", ""))), int(lg.get("round_score", 0)),
 			int(lg.get("group_rank", 0)), int(lg.get("group_size", 0)), _zone_text(str(lg.get("zone", "")))]
 	win_overlay.show_result("%d points" % result.score, " · ".join(badges), detail, league_text)
 

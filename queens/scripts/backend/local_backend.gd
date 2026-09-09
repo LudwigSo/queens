@@ -1,16 +1,21 @@
 class_name LocalBackend
 extends Backend
 ## Offline stand-in for the server: everything lives in one JSON file under
-## user://, the other players are deterministic bots and the weekly rollover
-## runs on init() whenever the calendar week has moved on.
+## user://, the other players are deterministic bots and the round rollover
+## runs on init() whenever the player's current round has ended.
 ##
 ## Bots are anchored to the player: their per-game score is the player's
 ## median game score times a fixed skill (0.5..1.4), so the group always
-## straddles the player. They "play" through the week, so the standings
+## straddles the player. They "play" through the round, so the standings
 ## move even when the player does not, and everything is derived from hashes
 ## so it is stable across restarts.
+##
+## The global tiers are simulated as populations: Diamond starts at
+## DIAMOND_BASE players and grows by DIAMOND_GROWTH_PER_WEEK every calendar
+## week since LAUNCH_WEEK, Challenger is always full at its slot count, so
+## the Challenger slots (and with them the Diamond promotions) grow slowly.
 
-const FORMAT := 1
+const FORMAT := 2
 const BOT_NAMES := [
 	"Mira", "Jonas", "Aiko", "Luca", "Priya", "Noah", "Zara", "Elias", "Ines", "Theo",
 	"Nadia", "Oskar", "Lena", "Mateo", "Sofia", "Emil", "Yara", "Finn", "Alma", "Kai",
@@ -20,7 +25,10 @@ const BOT_NAMES := [
 const HISTORY_CAP := 20
 const ANCHOR_GAMES := 15
 const ANCHOR_DEFAULT := 150
-const DIAMOND_POOL := 99
+const DIAMOND_BASE := 60
+const DIAMOND_GROWTH_PER_WEEK := 3
+const DIAMOND_MAX := 1000
+const LAUNCH_WEEK := 2957   ## calendar week of Monday 2026-09-07
 const LEVEL_BOT_POOL := 50
 const LEVEL_BOT_SHARE := 0.4
 const CODE_ALPHABET := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
@@ -58,8 +66,8 @@ static func defaults() -> Dictionary:
 		"format": FORMAT,
 		"profile": {},
 		"results": {},
-		"weeks": {},
-		"current_week": -1,
+		"rounds": {},
+		"current_round": -1,
 		"friends": [],
 		"pending_summary": {},
 		"history": [],
@@ -70,6 +78,12 @@ func init() -> Dictionary:
 	data = defaults()
 	if FileAccess.file_exists(path):
 		var loaded := SaveData.read_json(path)
+		if int(loaded.get("format", 1)) < FORMAT:
+			# Format 2 replaced calendar weeks with per-tier rounds: the open
+			# week and the old summaries are dropped, profile and results stay.
+			for key in ["weeks", "current_week", "pending_summary", "history"]:
+				loaded.erase(key)
+			loaded["format"] = FORMAT
 		for key in loaded:
 			data[key] = loaded[key]
 	_rollover()
@@ -112,7 +126,7 @@ func register_player(player_id: String, nickname: String) -> Dictionary:
 			"friend_code": friend_code_for(player_id),
 			"tier": league_cfg()["tiers"][0]["id"],
 			"created_at": now_utc(),
-			"stats": {"games": 0, "flawless": 0, "best_score": 0, "weeks_played": 0},
+			"stats": {"games": 0, "flawless": 0, "best_score": 0, "rounds_played": 0},
 		}
 	elif nickname != "" and nickname != str(profile.get("nickname", "")):
 		profile["nickname"] = nickname
@@ -141,37 +155,43 @@ func tier_id() -> String:
 	return str(data["profile"].get("tier", league_cfg()["tiers"][0]["id"]))
 
 
-# --- weeks and results ------------------------------------------------------
+# --- rounds and results -----------------------------------------------------
 
-func current_week() -> int:
-	return Scoring.week_index(now_utc())
-
-
-func _week(index: int) -> Dictionary:
-	var weeks: Dictionary = data["weeks"]
-	var key := str(index)
-	if not weeks.has(key):
-		weeks[key] = {"joined": false, "group_id": "", "scores": [], "games": 0, "last_submit_at": 0, "tier": tier_id()}
-	return weeks[key]
+## Index of the round of the player's tier that is open right now.
+func current_round() -> int:
+	return LeagueRules.round_index(league_cfg(), tier_id(), now_utc())
 
 
-func _join(week: int) -> Dictionary:
-	var wk := _week(week)
-	if not wk["joined"]:
-		wk["joined"] = true
-		wk["tier"] = tier_id()
-		wk["group_id"] = "lg_%d_%s_001" % [week, tier_id()]
+static func _round_key(tier: String, index: int) -> String:
+	return "%s:%d" % [tier, index]
+
+
+func _round(index: int, tier: String = "") -> Dictionary:
+	if tier == "":
+		tier = tier_id()
+	var rounds: Dictionary = data["rounds"]
+	var key := _round_key(tier, index)
+	if not rounds.has(key):
+		rounds[key] = {"joined": false, "group_id": "", "scores": [], "games": 0, "last_submit_at": 0, "tier": tier, "index": index}
+	return rounds[key]
+
+
+func _join(index: int) -> Dictionary:
+	var rd := _round(index)
+	if not rd["joined"]:
+		rd["joined"] = true
+		rd["group_id"] = "lg_%s_%d_001" % [tier_id(), index]
 		var stats: Dictionary = data["profile"]["stats"]
-		stats["weeks_played"] = int(stats.get("weeks_played", 0)) + 1
-	return wk
+		stats["rounds_played"] = int(stats.get("rounds_played", 0)) + 1
+	return rd
 
 
 func start_game(_level_id: String) -> Dictionary:
-	var week := current_week()
-	var wk := _join(week)
+	var index := current_round()
+	var rd := _join(index)
 	_save()
 	standing_changed.emit()
-	return ok({"week_index": week, "group_id": wk["group_id"], "joined": true})
+	return ok({"round_index": index, "group_id": rd["group_id"], "joined": true})
 
 
 func submit_result(result: Dictionary) -> Dictionary:
@@ -182,22 +202,22 @@ func submit_result(result: Dictionary) -> Dictionary:
 	if results.has(id):
 		return ok(results[id]["response"])
 	var bd := Scoring.breakdown(result)
-	var week := int(result.get("week_index", current_week()))
-	if week <= 0:
-		week = current_week()
-	var response := {"breakdown": bd, "weekly_score": 0, "group_rank": 0, "group_size": 0, "zone": "", "tier": tier_id(), "week_index": week}
-	var wk := _join(week)
+	# A game finished in a round that has already closed still counts, in the open round.
+	var finished := int(result.get("finished_at", now_utc()))
+	var index := maxi(current_round(), LeagueRules.round_index(league_cfg(), tier_id(), finished))
+	var response := {"breakdown": bd, "round_score": 0, "group_rank": 0, "group_size": 0, "zone": "", "tier": tier_id(), "round_index": index}
+	var rd := _join(index)
 	if bool(result.get("completed", false)):
-		(wk["scores"] as Array).append(int(bd["score"]))
-		wk["games"] = int(wk["games"]) + 1
-		wk["last_submit_at"] = int(result.get("finished_at", now_utc()))
+		(rd["scores"] as Array).append(int(bd["score"]))
+		rd["games"] = int(rd["games"]) + 1
+		rd["last_submit_at"] = finished
 		var stats: Dictionary = data["profile"]["stats"]
 		stats["games"] = int(stats.get("games", 0)) + 1
 		if bd["flawless"]:
 			stats["flawless"] = int(stats.get("flawless", 0)) + 1
 		stats["best_score"] = maxi(int(stats.get("best_score", 0)), int(bd["score"]))
-	var standing := _standing_for(week)
-	response["weekly_score"] = standing["my_weekly_score"]
+	var standing := _standing_for(index)
+	response["round_score"] = standing["my_round_score"]
 	response["group_rank"] = standing["my_rank"]
 	response["group_size"] = standing["group"]["size"]
 	response["zone"] = standing["zone"]
@@ -230,14 +250,16 @@ static func _hash01(key: String) -> float:
 	return float(absi(hash(key)) % 10007) / 10007.0
 
 
-## Weekly score of a synthetic player at `frac` of the week.
-func _synthetic_weekly(seed_key: String, skill: float, games_per_week: int, frac: float, anchor: int) -> Dictionary:
-	var best_n := int(league_cfg().get("weekly_best_n", 15))
-	var games_so_far := mini(games_per_week, ceili(games_per_week * frac))
-	var counted := mini(games_so_far, best_n) if str(league_cfg().get("weekly_mode", "best_n")) == "best_n" else games_so_far
+## Round score of a synthetic player at `frac` of a round of `days` days,
+## given how many games it plays in a full week.
+func _synthetic_round(seed_key: String, skill: float, games_per_week: int, frac: float, anchor: int, days: int) -> Dictionary:
+	var best_n := int(league_cfg().get("round_best_n", 15))
+	var games_in_round := maxi(1, ceili(games_per_week * days / 7.0))
+	var games_so_far := mini(games_in_round, ceili(games_in_round * frac))
+	var counted := mini(games_so_far, best_n) if str(league_cfg().get("round_mode", "best_n")) == "best_n" else games_so_far
 	var noise := 0.9 + 0.2 * _hash01(seed_key + ":" + str(games_so_far))
 	var score := int(round(anchor * skill * counted * noise)) if games_so_far > 0 else 0
-	return {"weekly_score": score, "games": games_so_far}
+	return {"round_score": score, "games": games_so_far}
 
 
 func _bot(group_id: String, index: int) -> Dictionary:
@@ -255,13 +277,43 @@ func _bot(group_id: String, index: int) -> Dictionary:
 	}
 
 
-func _members(week: int, at_time: int, final: bool) -> Array:
-	var wk := _week(week)
-	var tier := str(wk.get("tier", tier_id()))
-	var group_id := str(wk.get("group_id", "lg_%d_%s_001" % [week, tier]))
+## Simulated Diamond population: grows a little every calendar week.
+func _diamond_players(at_time: int) -> int:
+	var weeks_live := maxi(0, Scoring.week_index(at_time) - LAUNCH_WEEK)
+	return mini(DIAMOND_BASE + DIAMOND_GROWTH_PER_WEEK * weeks_live, DIAMOND_MAX)
+
+
+## Players in the standing of `tier` (me included): the group size, the
+## Diamond population for the global tier, every slot for the capped tier.
+func _population(tier: String, at_time: int) -> int:
+	var cfg := league_cfg()
+	if LeagueRules.is_capped(cfg, tier):
+		return LeagueRules.slots(cfg, tier, _population(LeagueRules.relegate_tier(cfg, tier), at_time))
+	if LeagueRules.is_global(cfg, tier):
+		return _diamond_players(at_time)
+	return int(cfg.get("group_size", 30))
+
+
+## Fixed number of promotions for a tier that feeds a capped tier, else -1.
+func _up_count(tier: String, at_time: int) -> int:
+	var cfg := league_cfg()
+	if LeagueRules.up_mode(cfg, tier) != LeagueRules.UP_MODE_OPENINGS:
+		return -1
+	var above := LeagueRules.promote_tier(cfg, tier)
+	return LeagueRules.openings(cfg, above, _population(tier, at_time), _population(above, at_time))
+
+
+func _members(index: int, at_time: int, final: bool) -> Array:
+	var cfg := league_cfg()
+	var rd := _round(index)
+	var tier := str(rd.get("tier", tier_id()))
+	var group_id := str(rd.get("group_id", "lg_%s_%d_001" % [tier, index]))
 	var anchor := _anchor()
-	var frac := 1.0 if final else clampf(float(at_time - Scoring.week_start(week)) / Scoring.WEEK_SECONDS, 0.0, 1.0)
-	var pool := DIAMOND_POOL if LeagueRules.is_global(league_cfg(), tier) else int(league_cfg().get("group_size", 30)) - 1
+	var days := LeagueRules.round_days(cfg, tier)
+	var starts := LeagueRules.round_start(cfg, tier, index)
+	var length := LeagueRules.round_seconds(cfg, tier)
+	var frac := 1.0 if final else clampf(float(at_time - starts) / length, 0.0, 1.0)
+	var pool := _population(tier, at_time) - 1
 	var members: Array = []
 	var same_tier_friends: Array = []
 	for fr in data["friends"]:
@@ -275,14 +327,14 @@ func _members(week: int, at_time: int, final: bool) -> Array:
 			is_friend = true
 		else:
 			who = _bot(group_id, i)
-		var played := _synthetic_weekly("%s:%s" % [group_id, who["player_id"]], float(who["skill"]), int(who["games_per_week"]), frac, anchor)
+		var played := _synthetic_round("%s:%s" % [group_id, who["player_id"]], float(who["skill"]), int(who["games_per_week"]), frac, anchor, days)
 		var seed_offset := absi(hash(str(who["player_id"]))) % 3600
 		members.append({
 			"player_id": who["player_id"],
 			"nickname": who["nickname"],
-			"weekly_score": played["weekly_score"],
+			"round_score": played["round_score"],
 			"games": played["games"],
-			"last_submit_at": Scoring.week_start(week) + int(frac * Scoring.WEEK_SECONDS) - seed_offset,
+			"last_submit_at": starts + int(frac * length) - seed_offset,
 			"is_me": false,
 			"is_friend": is_friend,
 			"is_bot": not is_friend,
@@ -290,9 +342,9 @@ func _members(week: int, at_time: int, final: bool) -> Array:
 	members.append({
 		"player_id": player_id(),
 		"nickname": str(data["profile"].get("nickname", "")),
-		"weekly_score": LeagueRules.weekly_score(wk["scores"], league_cfg()),
-		"games": int(wk["games"]),
-		"last_submit_at": int(wk["last_submit_at"]),
+		"round_score": LeagueRules.round_score(rd["scores"], cfg),
+		"games": int(rd["games"]),
+		"last_submit_at": int(rd["last_submit_at"]),
 		"is_me": true,
 		"is_friend": false,
 		"is_bot": false,
@@ -300,40 +352,45 @@ func _members(week: int, at_time: int, final: bool) -> Array:
 	return members
 
 
-func _standing_for(week: int) -> Dictionary:
-	var wk := _week(week)
-	var tier := str(wk.get("tier", tier_id())) if wk["joined"] else tier_id()
-	var tier_cfg := LeagueRules.tier(league_cfg(), tier)
+func _standing_for(index: int) -> Dictionary:
+	var cfg := league_cfg()
+	var rd := _round(index)
+	var tier := str(rd.get("tier", tier_id())) if rd["joined"] else tier_id()
+	var tier_cfg := LeagueRules.tier(cfg, tier)
+	var up_count := _up_count(tier, now_utc())
+	var above := LeagueRules.promote_tier(cfg, tier)
 	var standing := {
 		"tier": tier,
-		"tier_name": LeagueRules.tier_name(league_cfg(), tier),
-		"week_index": week,
-		"week_ends_at": Scoring.week_end(week),
-		"joined": bool(wk["joined"]),
+		"tier_name": LeagueRules.tier_name(cfg, tier),
+		"round_index": index,
+		"round_days": LeagueRules.round_days(cfg, tier),
+		"round_ends_at": LeagueRules.round_end(cfg, tier, index),
+		"joined": bool(rd["joined"]),
 		"group": {},
 		"my_rank": 0,
-		"my_weekly_score": 0,
+		"my_round_score": 0,
 		"my_games": 0,
 		"zone": "",
-		"rules": {"up_pct": tier_cfg.get("up_pct", 0), "down_pct": tier_cfg.get("down_pct", 0),
-			"best_n": league_cfg().get("weekly_best_n", 15), "weekly_mode": league_cfg().get("weekly_mode", "best_n"),
-			"global": LeagueRules.is_global(league_cfg(), tier)},
-		"rules_text": LeagueRules.rules_text(tier_cfg),
+		"rules": {"up_pct": tier_cfg.get("up_pct", 0), "down_pct": tier_cfg.get("down_pct", 0), "up_count": up_count,
+			"best_n": cfg.get("round_best_n", 15), "round_mode": cfg.get("round_mode", "best_n"),
+			"round_days": LeagueRules.round_days(cfg, tier),
+			"global": LeagueRules.is_global(cfg, tier), "floor": LeagueRules.is_floor(cfg, tier)},
+		"rules_text": LeagueRules.rules_text(tier_cfg, up_count, LeagueRules.tier_name(cfg, above) if up_count >= 0 else ""),
 	}
-	if not wk["joined"]:
+	if not rd["joined"]:
 		return standing
-	var ev := LeagueRules.evaluate(_members(week, now_utc(), false), tier, league_cfg())
+	var ev := LeagueRules.evaluate(_members(index, now_utc(), false), tier, cfg, up_count)
 	var members: Array = ev["members"]
 	for m in members:
 		if m["is_me"]:
 			standing["my_rank"] = m["rank"]
-			standing["my_weekly_score"] = m["weekly_score"]
+			standing["my_round_score"] = m["round_score"]
 			standing["my_games"] = m["games"]
 			standing["zone"] = m["zone"]
 	standing["group"] = {
-		"group_id": wk["group_id"],
+		"group_id": rd["group_id"],
 		"tier": tier,
-		"week_index": week,
+		"round_index": index,
 		"size": members.size(),
 		"promote_count": ev["promote_count"],
 		"relegate_count": ev["relegate_count"],
@@ -343,62 +400,71 @@ func _standing_for(week: int) -> Dictionary:
 
 
 func get_league_standing() -> Dictionary:
-	return ok(_standing_for(current_week()))
+	return ok(_standing_for(current_round()))
 
 
-## Applies every finished week since the last processed one.
+## Closes every round that has ended since the last processed one. A tier
+## change moves the player into the round of the new tier that contains the
+## boundary, so a promotion out of a 3-day Bronze round joins the running
+## Silver week.
 func _rollover() -> void:
-	var current := current_week()
-	if int(data.get("current_week", -1)) < 0 or data["profile"].is_empty():
-		data["current_week"] = current
+	var cfg := league_cfg()
+	if int(data.get("current_round", -1)) < 0 or data["profile"].is_empty():
+		data["current_round"] = current_round()
 		return
-	while int(data["current_week"]) < current:
-		var w := int(data["current_week"])
-		var summary := _close_week(w)
+	while true:
+		var tier := tier_id()
+		var index := int(data["current_round"])
+		var ends := LeagueRules.round_end(cfg, tier, index)
+		if ends > now_utc():
+			break
+		var summary := _close_round(tier, index)
 		data["pending_summary"] = summary
 		var history: Array = data["history"]
 		history.append(summary)
 		while history.size() > HISTORY_CAP:
 			history.pop_front()
-		data["current_week"] = w + 1
-	# Forget weeks that are no longer needed.
-	var weeks: Dictionary = data["weeks"]
-	for key in weeks.keys():
-		if int(key) < current - 1:
-			weeks.erase(key)
+		data["current_round"] = LeagueRules.round_index(cfg, tier_id(), ends)
+	# Forget rounds that are no longer open.
+	var rounds: Dictionary = data["rounds"]
+	var open_key := _round_key(tier_id(), int(data["current_round"]))
+	for key in rounds.keys():
+		if key != open_key:
+			rounds.erase(key)
 
 
-func _close_week(week: int) -> Dictionary:
-	var weeks: Dictionary = data["weeks"]
-	var wk: Dictionary = weeks.get(str(week), {})
-	var tier_before := tier_id()
-	var tier_cfg := LeagueRules.tier(league_cfg(), tier_before)
+func _close_round(tier: String, index: int) -> Dictionary:
+	var cfg := league_cfg()
+	var rd: Dictionary = (data["rounds"] as Dictionary).get(_round_key(tier, index), {})
+	var tier_cfg := LeagueRules.tier(cfg, tier)
+	var ends := LeagueRules.round_end(cfg, tier, index)
 	var summary := {
-		"week_index": week, "tier_before": tier_before, "tier_after": tier_before,
-		"outcome": LeagueRules.OUTCOME_STAYED, "rank": 0, "group_size": 0, "weekly_score": 0,
+		"round_index": index, "tier_before": tier, "tier_after": tier,
+		"outcome": LeagueRules.OUTCOME_STAYED, "rank": 0, "group_size": 0, "round_score": 0,
 		"best_game": {}, "seen": false,
 	}
-	if wk.is_empty() or not bool(wk.get("joined", false)):
+	if rd.is_empty() or not bool(rd.get("joined", false)):
 		summary["outcome"] = LeagueRules.inactive_outcome(tier_cfg)
 	else:
-		var ev := LeagueRules.evaluate(_members(week, Scoring.week_end(week), true), tier_before, league_cfg())
+		var ev := LeagueRules.evaluate(_members(index, ends, true), tier, cfg, _up_count(tier, ends))
 		for m in ev["members"]:
 			if m["is_me"]:
 				summary["outcome"] = LeagueRules.outcome_for_zone(m["zone"])
 				summary["rank"] = m["rank"]
-				summary["weekly_score"] = m["weekly_score"]
+				summary["round_score"] = m["round_score"]
 		summary["group_size"] = (ev["members"] as Array).size()
-		summary["best_game"] = _best_game_of_week(week)
-	summary["tier_after"] = LeagueRules.apply(league_cfg(), tier_before, summary["outcome"])
+		summary["best_game"] = _best_game_between(LeagueRules.round_start(cfg, tier, index), ends)
+	summary["tier_after"] = LeagueRules.apply(cfg, tier, summary["outcome"])
 	data["profile"]["tier"] = summary["tier_after"]
 	return summary
 
 
-func _best_game_of_week(week: int) -> Dictionary:
+func _best_game_between(from_time: int, to_time: int) -> Dictionary:
 	var best := {}
 	for entry in data["results"].values():
 		var r: Dictionary = entry["result"]
-		if int(r.get("week_index", -1)) != week or not bool(r.get("completed", false)):
+		var finished := int(r.get("finished_at", -1))
+		if finished < from_time or finished >= to_time or not bool(r.get("completed", false)):
 			continue
 		var score := int(entry["response"]["breakdown"]["score"])
 		if best.is_empty() or score > int(best["score"]):
@@ -406,13 +472,13 @@ func _best_game_of_week(week: int) -> Dictionary:
 	return best
 
 
-func get_week_summary() -> Dictionary:
+func get_round_summary() -> Dictionary:
 	return ok((data["pending_summary"] as Dictionary).duplicate(true))
 
 
-func ack_week_summary(week_index: int) -> Dictionary:
+func ack_round_summary(round_index: int) -> Dictionary:
 	var pending: Dictionary = data["pending_summary"]
-	if not pending.is_empty() and int(pending.get("week_index", -1)) == week_index:
+	if not pending.is_empty() and int(pending.get("round_index", -1)) == round_index:
 		pending["seen"] = true
 		data["pending_summary"] = {}
 		_save()
@@ -520,13 +586,15 @@ func get_level_leaderboard(level_id: String, scope: String = "global", limit: in
 # --- friends ----------------------------------------------------------------
 
 func _friend_view(fr: Dictionary) -> Dictionary:
-	var week := current_week()
-	var frac := clampf(float(now_utc() - Scoring.week_start(week)) / Scoring.WEEK_SECONDS, 0.0, 1.0)
-	var played := _synthetic_weekly("friend:%d:%s" % [week, fr["player_id"]], float(fr["skill"]), int(fr["games_per_week"]), frac, _anchor())
+	var cfg := league_cfg()
+	var tier := str(fr["tier"])
+	var index := LeagueRules.round_index(cfg, tier, now_utc())
+	var frac := clampf(float(now_utc() - LeagueRules.round_start(cfg, tier, index)) / LeagueRules.round_seconds(cfg, tier), 0.0, 1.0)
+	var played := _synthetic_round("friend:%s:%d:%s" % [tier, index, fr["player_id"]], float(fr["skill"]), int(fr["games_per_week"]), frac, _anchor(), LeagueRules.round_days(cfg, tier))
 	return {
-		"player_id": fr["player_id"], "nickname": fr["nickname"], "tier": fr["tier"],
-		"tier_name": LeagueRules.tier_name(league_cfg(), str(fr["tier"])),
-		"weekly_score": played["weekly_score"], "friend_since": fr["friend_since"], "friend_code": fr["friend_code"],
+		"player_id": fr["player_id"], "nickname": fr["nickname"], "tier": tier,
+		"tier_name": LeagueRules.tier_name(cfg, tier),
+		"round_score": played["round_score"], "friend_since": fr["friend_since"], "friend_code": fr["friend_code"],
 	}
 
 

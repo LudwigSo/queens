@@ -30,21 +30,32 @@ var save_path: String = "user://save.json"
 var legacy_cfg_path: String = "user://progress.cfg"
 var backend_path: String = "user://backend_local.json"
 
-## Weekly league (see scripts/league_rules.gd). Weekly score is the sum of
-## the best `weekly_best_n` games ("best_n") or of all games ("sum").
-## Per tier: share promoted / relegated at the end of the week, what happens
-## in a week without a game, and the score a leader of a tiny group needs.
+## League (see scripts/league_rules.gd). Each tier plays in rounds of
+## `round_days` days; the round score is the sum of the best `round_best_n`
+## games ("best_n") or of all games ("sum"). Per tier: share promoted /
+## relegated at the end of the round, what happens in a round without a
+## game, and the score a leader of a tiny group needs.
+##
+## Bronze and Silver are the on-ramp: short rounds, large promotion share,
+## no relegation. Gold is a floor: once reached it is never lost. Platinum
+## and Diamond are skill-based with movement in both directions; Diamond is
+## uncapped and, since nobody drops below Gold, grows slowly as the player
+## base matures. Challenger is the capped top: one slot per
+## `players_per_slot` Diamond players (5..50), half of it relegated every
+## round, and Diamond promotes exactly the number of slots that opens.
 var league: Dictionary = {
 	"group_size": 30,
 	"min_group_size": 5,
-	"weekly_mode": "best_n",
-	"weekly_best_n": 15,
+	"round_mode": "best_n",
+	"round_best_n": 15,
 	"tiers": [
-		{"id": "bronze", "name": "Bronze", "up_pct": 30, "down_pct": 0, "inactive": "stay", "min_promo_score": 500},
-		{"id": "silver", "name": "Silver", "up_pct": 25, "down_pct": 10, "inactive": "stay", "min_promo_score": 1000},
-		{"id": "gold", "name": "Gold", "up_pct": 20, "down_pct": 20, "inactive": "relegate", "min_promo_score": 1500},
-		{"id": "platinum", "name": "Platinum", "up_pct": 15, "down_pct": 30, "inactive": "relegate", "min_promo_score": 2500},
-		{"id": "diamond", "name": "Diamond", "up_pct": 0, "down_pct": 40, "inactive": "relegate", "min_promo_score": 0, "global": true},
+		{"id": "bronze", "name": "Bronze", "round_days": 3, "up_pct": 50, "down_pct": 0, "inactive": "stay", "min_promo_score": 300},
+		{"id": "silver", "name": "Silver", "round_days": 7, "up_pct": 40, "down_pct": 0, "inactive": "stay", "min_promo_score": 800},
+		{"id": "gold", "name": "Gold", "round_days": 7, "up_pct": 20, "down_pct": 0, "inactive": "stay", "floor": true, "min_promo_score": 1500},
+		{"id": "platinum", "name": "Platinum", "round_days": 7, "up_pct": 15, "down_pct": 25, "inactive": "relegate", "min_promo_score": 2500},
+		{"id": "diamond", "name": "Diamond", "round_days": 7, "up_mode": "openings", "up_pct": 0, "down_pct": 20, "inactive": "relegate", "min_promo_score": 0, "global": true},
+		{"id": "challenger", "name": "Challenger", "round_days": 7, "up_pct": 0, "down_pct": 50, "inactive": "relegate", "min_promo_score": 0, "global": true,
+			"min_slots": 5, "max_slots": 50, "players_per_slot": 10},
 	],
 }
 

@@ -44,29 +44,48 @@ The level overview shows the best score per level.
 
 ### League and leaderboards
 
-Every solved game also counts for the weekly league (Monday to Sunday,
-UTC). Your weekly score is the sum of your best 15 games of the week, so
-grinding beyond that only helps by replacing a weaker game. You play in a
-group of up to 30 players of the same tier; at the end of the week the top
-share moves up a tier and, from Silver on, the bottom share moves down:
+Every solved game also counts for the league. Each tier plays in rounds:
+three days in Bronze, a calendar week (Monday to Sunday, UTC) everywhere
+else. Your round score is the sum of your best 15 games of the round, so
+grinding beyond that only helps by replacing a weaker game. Up to Platinum
+you play in a group of up to 30 players of the same tier; at the end of the
+round the top share moves up a tier and, from Platinum on, the bottom share
+moves down:
 
-| Tier | up | down | week without a game |
-| --- | --- | --- | --- |
-| Bronze | 30 % | 0 % | stay |
-| Silver | 25 % | 10 % | stay |
-| Gold | 20 % | 20 % | relegate |
-| Platinum | 15 % | 30 % | relegate |
-| Diamond | 0 % | 40 % | relegate |
+| Tier | round | up | down | round without a game |
+| --- | --- | --- | --- | --- |
+| Bronze | 3 days | 50 % | none | stay |
+| Silver | week | 40 % | none | stay |
+| Gold | week | 20 % | never | stay |
+| Platinum | week | 15 % | 25 % | relegate |
+| Diamond | week | open Challenger slots | 20 % | relegate |
+| Challenger | week | – | bottom half | relegate |
 
-Diamond is one global standing. The rules live in `GameConfig.league`
-(`scripts/config.gd`) and the maths in `scripts/league_rules.gd`. Each
-level also has its own leaderboard (best score per player, plus a "fastest
-flawless" view), reachable from the level overview.
+Bronze and Silver are the on-ramp: short rounds, big promotion shares, no
+way down. Gold is a floor: once you are Gold you are never relegated, not
+even for an idle week. Platinum and Diamond are where skill decides and
+players move in both directions. Diamond is one global standing of everyone
+in the tier and has no cap. Because nobody ever drops below Gold, the tiers
+above it fill up as the player base matures, so the Diamond population
+grows slowly over time.
+
+Challenger is the capped top for the best of the best: one slot per ten
+Diamond players, at least 5 and at most 50. Every week the bottom half of
+Challenger drops back to Diamond, and Diamond promotes exactly as many
+players as slots are then open. As Diamond grows, so do the Challenger
+slots, until the cap of 50 is reached.
+
+A promotion out of a 3-day Bronze round joins the Silver week that is
+already running. The rules live in `GameConfig.league` (`scripts/config.gd`)
+and the maths in `scripts/league_rules.gd`. Each level also has its own
+leaderboard (best score per player, plus a "fastest flawless" view),
+reachable from the level overview.
 
 There is no server yet. `scripts/backend/backend.gd` is the contract and
 `scripts/backend/local_backend.gd` an offline stand-in that fills the group
-with deterministic bots anchored to your own scores, simulates the weekly
-rollover on start, and fabricates friends from friend codes. A real backend
+with deterministic bots anchored to your own scores, simulates the round
+rollover on start (with a slowly growing Diamond population and a full
+Challenger), and fabricates friends from friend codes. A real backend
 (for example Supabase) implements the same contract; the client does not
 change.
 

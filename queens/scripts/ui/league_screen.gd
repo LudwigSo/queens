@@ -1,5 +1,5 @@
 extends Control
-## Weekly league: standings of the player's group (promotion zone green,
+## League: standings of the player's group (promotion zone green,
 ## relegation zone red, the player highlighted, friends marked) and a
 ## Friends tab with the player's code, adding friends and renaming.
 
@@ -44,13 +44,15 @@ func _ready() -> void:
 
 
 ## standing: LeagueStanding; friends: [FriendEntry]; code: own friend code.
-func refresh(standing: Dictionary, friends: Array, code: String, nickname: String, week_left_text: String) -> void:
+func refresh(standing: Dictionary, friends: Array, code: String, nickname: String, round_left_text: String) -> void:
 	_standing = standing
 	_friends = friends
 	title_label.text = "%s league" % standing.get("tier_name", "")
 	var rules: Dictionary = standing.get("rules", {})
-	var counting := "Best %d games count" % int(rules.get("best_n", 15)) if str(rules.get("weekly_mode", "best_n")) == "best_n" else "Every game counts"
-	info_label.text = "%s\n%s · ends in %s" % [standing.get("rules_text", ""), counting, week_left_text]
+	var counting := "Best %d games count" % int(rules.get("best_n", 15)) if str(rules.get("round_mode", "best_n")) == "best_n" else "Every game counts"
+	var days := int(rules.get("round_days", 7))
+	var period := "Week" if days == 7 else "%d-day round" % days
+	info_label.text = "%s\n%s · %s ends in %s" % [standing.get("rules_text", ""), counting, period, round_left_text]
 	code_label.text = "Your code: %s" % code
 	if name_edit.text == "":
 		name_edit.text = nickname
@@ -81,12 +83,18 @@ func _clear_list() -> void:
 
 func _fill_standings() -> void:
 	if not _standing.get("joined", false):
-		list.add_child(_note("Play a game to join this week's league."))
+		list.add_child(_note("Play a game to join this round's league."))
 		return
 	var group: Dictionary = _standing.get("group", {})
 	var rules: Dictionary = _standing.get("rules", {})
 	if rules.get("global", false):
-		list.add_child(_note("Diamond is one global standing. Top %d shown." % mini(100, int(group.get("size", 0)))))
+		var size := int(group.get("size", 0))
+		var note := "%s is one global standing of %d players." % [_standing.get("tier_name", ""), size]
+		if size > 100:
+			note += " Top 100 shown."
+		if int(rules.get("up_count", -1)) >= 0:
+			note += " %d Challenger slot%s open this week." % [int(rules["up_count"]), "" if int(rules["up_count"]) == 1 else "s"]
+		list.add_child(_note(note))
 	var shown := 0
 	for m in group.get("members", []):
 		if shown >= 100 and not m.get("is_me", false):
@@ -158,7 +166,7 @@ func _member_row(m: Dictionary) -> Control:
 		name += " ♥"
 	row.add_child(_cell(name, 0, HORIZONTAL_ALIGNMENT_LEFT))
 	row.add_child(_cell("%d games" % int(m.get("games", 0)), 120, HORIZONTAL_ALIGNMENT_RIGHT, 22, COLOR_MUTED))
-	row.add_child(_cell("%d" % int(m.get("weekly_score", 0)), 110, HORIZONTAL_ALIGNMENT_RIGHT))
+	row.add_child(_cell("%d" % int(m.get("round_score", 0)), 110, HORIZONTAL_ALIGNMENT_RIGHT))
 	panel.add_child(row)
 	return panel
 
@@ -169,7 +177,7 @@ func _friend_row(fr: Dictionary) -> Control:
 	row.add_theme_constant_override("separation", 12)
 	row.add_child(_cell(str(fr.get("nickname", "")), 0, HORIZONTAL_ALIGNMENT_LEFT))
 	row.add_child(_cell(str(fr.get("tier_name", "")), 120, HORIZONTAL_ALIGNMENT_CENTER, 22, COLOR_MUTED))
-	row.add_child(_cell("%d this week" % int(fr.get("weekly_score", 0)), 170, HORIZONTAL_ALIGNMENT_RIGHT, 22, COLOR_MUTED))
+	row.add_child(_cell("%d this round" % int(fr.get("round_score", 0)), 170, HORIZONTAL_ALIGNMENT_RIGHT, 22, COLOR_MUTED))
 	var remove := Button.new()
 	remove.text = "Remove"
 	remove.flat = true

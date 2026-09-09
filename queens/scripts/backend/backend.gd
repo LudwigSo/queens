@@ -1,7 +1,7 @@
 class_name Backend
 extends Node
 ## Contract between the game and the online part: identity, results,
-## per-level leaderboards, the weekly league and friends.
+## per-level leaderboards, the league and friends.
 ##
 ## Every call returns {"ok": bool, "data": ..., "error": String}. Callers
 ## always `await` the call so a networked implementation can be a
@@ -13,13 +13,18 @@ extends Node
 ##   ScoreBreakdown  see Scoring.breakdown()
 ##   LeaderboardEntry {rank, player_id, nickname, score, time_seconds,
 ##                    wrong_placements, undo_count, achieved_at, is_me, is_friend}
-##   LeagueGroup     {group_id, tier, week_index, size, promote_count,
+##   LeagueGroup     {group_id, tier, round_index, size, promote_count,
 ##                    relegate_count, members: [member + rank + zone]}
-##   LeagueStanding  {tier, tier_name, week_index, week_ends_at, joined, group,
-##                    my_rank, my_weekly_score, my_games, zone, rules, rules_text}
-##   WeekSummary     {week_index, tier_before, tier_after, outcome, rank,
-##                    group_size, weekly_score, best_game, seen}
-##   FriendEntry     {player_id, nickname, tier, weekly_score, friend_since}
+##   LeagueStanding  {tier, tier_name, round_index, round_days, round_ends_at,
+##                    joined, group, my_rank, my_round_score, my_games, zone,
+##                    rules, rules_text}
+##   RoundSummary    {round_index, tier_before, tier_after, outcome, rank,
+##                    group_size, round_score, best_game, seen}
+##   FriendEntry     {player_id, nickname, tier, round_score, friend_since}
+##
+## A round is the scoring period of a tier (3 days in Bronze, a week
+## elsewhere; see LeagueRules). Round indices are only comparable within one
+## tier.
 
 signal standing_changed
 
@@ -56,12 +61,12 @@ func get_profile() -> Dictionary:
 	return fail("not implemented")
 
 
-## Called when a game starts; joins this week's league group lazily.
+## Called when a game starts; joins the open round's league group lazily.
 func start_game(_level_id: String) -> Dictionary:
 	return fail("not implemented")
 
 
-## Idempotent per result_id. Returns {breakdown, weekly_score, group_rank,
+## Idempotent per result_id. Returns {breakdown, round_score, group_rank,
 ## group_size, zone, tier}.
 func submit_result(_result: Dictionary) -> Dictionary:
 	return fail("not implemented")
@@ -82,12 +87,12 @@ func get_league_standing() -> Dictionary:
 	return fail("not implemented")
 
 
-## The latest unseen WeekSummary, or {} when there is none.
-func get_week_summary() -> Dictionary:
+## The latest unseen RoundSummary, or {} when there is none.
+func get_round_summary() -> Dictionary:
 	return fail("not implemented")
 
 
-func ack_week_summary(_week_index: int) -> Dictionary:
+func ack_round_summary(_round_index: int) -> Dictionary:
 	return fail("not implemented")
 
 

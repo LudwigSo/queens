@@ -9,7 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/energy_dialog.tscn" id="7_energy"]
 [ext_resource type="PackedScene" path="res://scenes/league_screen.tscn" id="8_league"]
 [ext_resource type="PackedScene" path="res://scenes/level_detail.tscn" id="9_detail"]
-[ext_resource type="PackedScene" path="res://scenes/week_summary.tscn" id="10_week"]
+[ext_resource type="PackedScene" path="res://scenes/round_summary.tscn" id="10_round"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -48,7 +48,7 @@ layout_mode = 1
 [node name="WinOverlay" parent="." instance=ExtResource("4_win")]
 layout_mode = 1
 
-[node name="WeekSummary" parent="." instance=ExtResource("10_week")]
+[node name="RoundSummary" parent="." instance=ExtResource("10_round")]
 layout_mode = 1
 
 [node name="EnergyDialog" parent="." instance=ExtResource("7_energy")]

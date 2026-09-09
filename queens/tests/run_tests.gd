@@ -692,41 +692,69 @@ func _test_scoring() -> void:
 
 
 func _league_member(id: String, score: int, games: int = 5, last: int = 100) -> Dictionary:
-	return {"player_id": id, "nickname": id, "weekly_score": score, "games": games, "last_submit_at": last, "is_me": id == "me", "is_friend": false, "is_bot": id != "me"}
+	return {"player_id": id, "nickname": id, "round_score": score, "games": games, "last_submit_at": last, "is_me": id == "me", "is_friend": false, "is_bot": id != "me"}
 
 
 func _test_league_rules() -> void:
 	var cfg := GameConfig.new().league
-	_check(LeagueRules.weekly_score([100, 50, 200], cfg) == 350, "weekly score sums the games")
+	_check(LeagueRules.round_score([100, 50, 200], cfg) == 350, "round score sums the games")
 	var many: Array = []
 	for i in 20:
 		many.append(10 * (i + 1))
-	_check(LeagueRules.weekly_score(many, cfg) == 1950, "weekly score keeps only the best 15")
+	_check(LeagueRules.round_score(many, cfg) == 1950, "round score keeps only the best 15")
 	var sum_cfg := cfg.duplicate(true)
-	sum_cfg["weekly_mode"] = "sum"
-	_check(LeagueRules.weekly_score(many, sum_cfg) == 2100, "sum mode counts every game")
-	_check(LeagueRules.promote_tier(cfg, "bronze") == "silver" and LeagueRules.promote_tier(cfg, "diamond") == "diamond", "promotion goes one tier up and stops at the top")
-	_check(LeagueRules.relegate_tier(cfg, "gold") == "silver" and LeagueRules.relegate_tier(cfg, "bronze") == "bronze", "relegation goes one tier down and stops at the bottom")
-	_check(LeagueRules.is_global(cfg, "diamond") and not LeagueRules.is_global(cfg, "gold"), "diamond is the global tier")
+	sum_cfg["round_mode"] = "sum"
+	_check(LeagueRules.round_score(many, sum_cfg) == 2100, "sum mode counts every game")
+	_check(LeagueRules.top_tier(cfg) == "challenger", "challenger is the top tier")
+	_check(LeagueRules.promote_tier(cfg, "bronze") == "silver" and LeagueRules.promote_tier(cfg, "diamond") == "challenger" and LeagueRules.promote_tier(cfg, "challenger") == "challenger", "promotion goes one tier up and stops at the top")
+	_check(LeagueRules.relegate_tier(cfg, "platinum") == "gold" and LeagueRules.relegate_tier(cfg, "challenger") == "diamond" and LeagueRules.relegate_tier(cfg, "bronze") == "bronze", "relegation goes one tier down and stops at the bottom")
+	_check(LeagueRules.relegate_tier(cfg, "gold") == "gold" and LeagueRules.is_floor(cfg, "gold") and not LeagueRules.is_floor(cfg, "silver"), "gold is a floor: no relegation out of it")
+	_check(LeagueRules.is_global(cfg, "diamond") and LeagueRules.is_global(cfg, "challenger") and not LeagueRules.is_global(cfg, "platinum"), "diamond and challenger are global tiers")
+	_check(LeagueRules.is_capped(cfg, "challenger") and not LeagueRules.is_capped(cfg, "diamond"), "only challenger is capped")
+	_check(LeagueRules.up_mode(cfg, "diamond") == "openings" and LeagueRules.up_mode(cfg, "platinum") == "pct", "diamond promotes into openings")
+
+	# Rounds: 3 days in bronze, calendar weeks elsewhere, same Monday epoch.
+	var t := Scoring.week_start(2957) + 2 * 86400
+	_check(LeagueRules.round_days(cfg, "bronze") == 3 and LeagueRules.round_days(cfg, "silver") == 7, "round length per tier")
+	_check(LeagueRules.round_index(cfg, "silver", t) == 2957 and LeagueRules.round_start(cfg, "gold", 2957) == Scoring.week_start(2957) and LeagueRules.round_end(cfg, "gold", 2957) == Scoring.week_end(2957), "7-day rounds are calendar weeks")
+	var br := LeagueRules.round_index(cfg, "bronze", t)
+	_check(LeagueRules.round_start(cfg, "bronze", br) <= t and t < LeagueRules.round_end(cfg, "bronze", br), "bronze round contains the time")
+	_check(LeagueRules.round_end(cfg, "bronze", br) - LeagueRules.round_start(cfg, "bronze", br) == 3 * 86400, "bronze rounds last three days")
+	_check((LeagueRules.round_start(cfg, "bronze", br) - LeagueRules.ROUND_EPOCH_OFFSET) % 86400 == 0, "rounds start at midnight UTC")
+
+	# Challenger slots: one per 10 diamond players, 5..50; openings after its own relegation.
+	_check(LeagueRules.slots(cfg, "challenger", 60) == 6 and LeagueRules.slots(cfg, "challenger", 20) == 5 and LeagueRules.slots(cfg, "challenger", 2000) == 50, "challenger slots follow the diamond population within 5..50")
+	_check(LeagueRules.slots(cfg, "diamond", 60) == -1, "uncapped tiers have no slots")
+	_check(LeagueRules.openings(cfg, "challenger", 60, 6) == 3, "a full challenger of six opens three slots")
+	_check(LeagueRules.openings(cfg, "challenger", 60, 4) == 2, "a tiny challenger relegates nobody, unfilled slots open")
+	_check(LeagueRules.openings(cfg, "challenger", 60, 0) == 6 and LeagueRules.openings(cfg, "challenger", 500, 50) == 25, "openings scale with the slots")
 
 	# Sorting: score desc, then fewer games, then earlier submit.
 	var sorted := LeagueRules.sort_members([
 		_league_member("late", 100, 5, 300), _league_member("top", 200), _league_member("early", 100, 5, 100), _league_member("busy", 100, 9, 50)])
 	_check(sorted[0]["player_id"] == "top" and sorted[1]["player_id"] == "early" and sorted[2]["player_id"] == "late" and sorted[3]["player_id"] == "busy", "members sort by score, games, submit time")
 
-	# A full Gold group of 30: 6 up, 6 down.
+	# A full group of 30 per tier.
 	var members: Array = []
 	for i in 30:
 		members.append(_league_member("p%d" % i, 1000 - i * 10))
-	var ev := LeagueRules.evaluate(members, "gold", cfg)
-	_check(ev["promote_count"] == 6 and ev["relegate_count"] == 6, "gold: 20 % up and down of 30")
-	_check(ev["members"][0]["zone"] == "promote" and ev["members"][5]["zone"] == "promote" and ev["members"][6]["zone"] == "safe", "top six promote")
-	_check(ev["members"][23]["zone"] == "safe" and ev["members"][24]["zone"] == "relegate" and ev["members"][29]["zone"] == "relegate", "bottom six relegate")
+	var ev := LeagueRules.evaluate(members, "platinum", cfg)
+	_check(ev["promote_count"] == 5 and ev["relegate_count"] == 8, "platinum: 15 % up and 25 % down of 30")
+	_check(ev["members"][0]["zone"] == "promote" and ev["members"][4]["zone"] == "promote" and ev["members"][5]["zone"] == "safe", "top five promote")
+	_check(ev["members"][21]["zone"] == "safe" and ev["members"][22]["zone"] == "relegate" and ev["members"][29]["zone"] == "relegate", "bottom eight relegate")
 	_check(ev["members"][0]["rank"] == 1 and ev["members"][29]["rank"] == 30, "ranks are assigned")
 	var bronze := LeagueRules.evaluate(members, "bronze", cfg)
-	_check(bronze["promote_count"] == 9 and bronze["relegate_count"] == 0, "bronze: 30 % up, nobody down")
-	var diamond := LeagueRules.evaluate(members, "diamond", cfg)
-	_check(diamond["promote_count"] == 0 and diamond["relegate_count"] == 12, "diamond: nobody up, 40 % down")
+	_check(bronze["promote_count"] == 15 and bronze["relegate_count"] == 0, "bronze: half up, nobody down")
+	var silver := LeagueRules.evaluate(members, "silver", cfg)
+	_check(silver["promote_count"] == 12 and silver["relegate_count"] == 0, "silver: 40 % up, nobody down")
+	var gold := LeagueRules.evaluate(members, "gold", cfg)
+	_check(gold["promote_count"] == 6 and gold["relegate_count"] == 0, "gold: 20 % up, nobody down")
+	var diamond := LeagueRules.evaluate(members, "diamond", cfg, 3)
+	_check(diamond["promote_count"] == 3 and diamond["relegate_count"] == 6 and diamond["members"][2]["zone"] == "promote" and diamond["members"][3]["zone"] == "safe", "diamond: exactly the open slots up, 20 % down")
+	var closed := LeagueRules.evaluate(members, "diamond", cfg, 0)
+	_check(closed["promote_count"] == 0 and closed["relegate_count"] == 6, "diamond without openings promotes nobody")
+	var challenger := LeagueRules.evaluate(members, "challenger", cfg)
+	_check(challenger["promote_count"] == 0 and challenger["relegate_count"] == 15 and challenger["members"][14]["zone"] == "safe" and challenger["members"][15]["zone"] == "relegate", "challenger: nobody up, bottom half down")
 	# Zero scores never promote.
 	var idle: Array = []
 	for i in 10:
@@ -735,19 +763,25 @@ func _test_league_rules() -> void:
 	_check(idle_ev["promote_count"] == 0 and idle_ev["members"][0]["zone"] == "safe", "a zero score never promotes")
 	# Tiny groups: nobody down, leader up only above the threshold.
 	var tiny := [_league_member("a", 600), _league_member("b", 100), _league_member("c", 50)]
-	var tiny_ev := LeagueRules.evaluate(tiny, "gold", cfg)
-	_check(tiny_ev["promote_count"] == 0 and tiny_ev["relegate_count"] == 0, "tiny gold group: leader below 1500 stays")
-	tiny[0]["weekly_score"] = 1600
-	tiny_ev = LeagueRules.evaluate(tiny, "gold", cfg)
-	_check(tiny_ev["promote_count"] == 1 and tiny_ev["members"][0]["zone"] == "promote" and tiny_ev["relegate_count"] == 0, "tiny gold group: strong leader promotes alone")
+	var tiny_ev := LeagueRules.evaluate(tiny, "platinum", cfg)
+	_check(tiny_ev["promote_count"] == 0 and tiny_ev["relegate_count"] == 0, "tiny platinum group: leader below 2500 stays")
+	tiny[0]["round_score"] = 2600
+	tiny_ev = LeagueRules.evaluate(tiny, "platinum", cfg)
+	_check(tiny_ev["promote_count"] == 1 and tiny_ev["members"][0]["zone"] == "promote" and tiny_ev["relegate_count"] == 0, "tiny platinum group: strong leader promotes alone")
+	_check(LeagueRules.evaluate(tiny, "diamond", cfg, 0)["promote_count"] == 0 and LeagueRules.evaluate(tiny, "diamond", cfg, 2)["promote_count"] == 1, "tiny diamond group: one up when a slot is open")
 	_check(LeagueRules.evaluate([], "gold", cfg)["members"].is_empty(), "empty group evaluates")
 	# Outcomes and transitions.
 	_check(LeagueRules.outcome_for_zone("promote") == "promoted" and LeagueRules.outcome_for_zone("safe") == "stayed" and LeagueRules.outcome_for_zone("relegate") == "relegated", "zones map to outcomes")
-	_check(LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "silver")) == "inactive_frozen" and LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "gold")) == "inactive_relegated", "inactive rule per tier")
-	_check(LeagueRules.apply(cfg, "silver", "promoted") == "gold" and LeagueRules.apply(cfg, "silver", "relegated") == "bronze", "apply moves tiers")
-	_check(LeagueRules.apply(cfg, "gold", "inactive_relegated") == "silver" and LeagueRules.apply(cfg, "gold", "stayed") == "gold" and LeagueRules.apply(cfg, "gold", "inactive_frozen") == "gold", "apply handles inactivity")
-	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "gold")) == "Top 20 % promote · bottom 20 % relegate", "rules text")
-	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "bronze")) == "Top 30 % promote", "rules text without relegation")
+	_check(LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "silver")) == "inactive_frozen" and LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "platinum")) == "inactive_relegated" and LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "challenger")) == "inactive_relegated", "inactive rule per tier")
+	_check(LeagueRules.inactive_outcome(LeagueRules.tier(cfg, "gold")) == "inactive_frozen" and LeagueRules.inactive_outcome({"floor": true, "inactive": "relegate"}) == "inactive_frozen", "a floor tier freezes idle players whatever it says")
+	_check(LeagueRules.apply(cfg, "silver", "promoted") == "gold" and LeagueRules.apply(cfg, "platinum", "relegated") == "gold" and LeagueRules.apply(cfg, "diamond", "promoted") == "challenger" and LeagueRules.apply(cfg, "challenger", "relegated") == "diamond", "apply moves tiers")
+	_check(LeagueRules.apply(cfg, "gold", "relegated") == "gold" and LeagueRules.apply(cfg, "gold", "inactive_relegated") == "gold" and LeagueRules.apply(cfg, "platinum", "inactive_relegated") == "gold" and LeagueRules.apply(cfg, "gold", "stayed") == "gold", "apply respects the gold floor")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "platinum")) == "Top 15 % promote · bottom 25 % relegate", "rules text")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "bronze")) == "Top 50 % promote · nobody relegates", "rules text without relegation")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "gold")) == "Top 20 % promote · relegation impossible", "rules text for the floor")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "diamond"), 3, "Challenger") == "Top 3 promote to Challenger · bottom 20 % relegate", "rules text with fixed openings")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "diamond"), 0, "Challenger") == "No slot open in Challenger · bottom 20 % relegate", "rules text without openings")
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "challenger")) == "Bottom 50 % relegate", "rules text for the top")
 
 
 func _test_local_backend() -> void:
@@ -759,6 +793,7 @@ func _test_local_backend() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var clock := [Scoring.week_start(2957) + 2 * 86400]   # a Wednesday
 	var now_fn := func() -> int: return clock[0]
+	var bronze_round := LeagueRules.round_index(cfg.league, "bronze", clock[0])
 	var backend := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend.init()
 	var reg := backend.register_player("player-1", "Ludwig")
@@ -768,18 +803,19 @@ func _test_local_backend() -> void:
 	_check(not LocalBackend.is_valid_code("QN-abc"), "malformed friend codes are rejected")
 
 	var standing: Dictionary = backend.get_league_standing()["data"]
-	_check(not standing["joined"] and standing["my_rank"] == 0 and standing["week_index"] == 2957, "not in a group before the first game")
-	_check(standing["week_ends_at"] == Scoring.week_end(2957) and standing["rules_text"] == "Top 30 % promote", "standing carries week end and rules")
+	_check(not standing["joined"] and standing["my_rank"] == 0 and standing["round_index"] == bronze_round, "not in a group before the first game")
+	_check(standing["round_ends_at"] == LeagueRules.round_end(cfg.league, "bronze", bronze_round) and standing["round_days"] == 3 and standing["rules_text"] == "Top 50 % promote · nobody relegates", "standing carries round end and rules")
+	_check(standing["rules"]["up_count"] == -1 and not standing["rules"]["global"], "bronze promotes by share inside a group")
 
 	var lv: Dictionary = levels[0]
 	var start := backend.start_game(lv["id"])
-	_check(start["ok"] and start["data"]["joined"] and start["data"]["week_index"] == 2957, "start_game joins the week")
+	_check(start["ok"] and start["data"]["joined"] and start["data"]["round_index"] == bronze_round, "start_game joins the round")
 	standing = backend.get_league_standing()["data"]
 	_check(standing["joined"] and standing["group"]["size"] == cfg.league["group_size"], "group has group_size members including me")
-	_check(standing["my_weekly_score"] == 0 and standing["my_rank"] > 0, "joined with zero points")
+	_check(standing["my_round_score"] == 0 and standing["my_rank"] > 0, "joined with zero points")
 	var bots_playing := 0
 	for m in standing["group"]["members"]:
-		if m["is_bot"] and int(m["weekly_score"]) > 0:
+		if m["is_bot"] and int(m["round_score"]) > 0:
 			bots_playing += 1
 	_check(bots_playing > 10, "bots have played by Wednesday")
 
@@ -788,14 +824,14 @@ func _test_local_backend() -> void:
 		"finished_at": clock[0], "week_index": 2957}
 	var sub := backend.submit_result(result)
 	_check(sub["ok"] and sub["data"]["breakdown"]["score"] == Scoring.score(result), "submit computes the score")
-	_check(sub["data"]["weekly_score"] == Scoring.score(result) and sub["data"]["group_rank"] > 0 and sub["data"]["group_size"] == 30, "submit reports weekly score and rank")
+	_check(sub["data"]["round_score"] == Scoring.score(result) and sub["data"]["group_rank"] > 0 and sub["data"]["group_size"] == 30 and sub["data"]["round_index"] == bronze_round, "submit reports round score and rank")
 	var again := backend.submit_result(result)
-	_check(again["ok"] and again["data"]["weekly_score"] == sub["data"]["weekly_score"], "submit is idempotent per result id")
+	_check(again["ok"] and again["data"]["round_score"] == sub["data"]["round_score"], "submit is idempotent per result id")
 	_check(backend.get_profile()["data"]["stats"]["games"] == 1 and backend.get_profile()["data"]["stats"]["flawless"] == 1, "profile stats count the game once")
 	var forfeit := result.duplicate()
 	forfeit.merge({"result_id": "r-2", "completed": false}, true)
 	var sub2 := backend.submit_result(forfeit)
-	_check(sub2["ok"] and sub2["data"]["breakdown"]["score"] == 0 and sub2["data"]["weekly_score"] == sub["data"]["weekly_score"], "a forfeit scores 0 and changes nothing")
+	_check(sub2["ok"] and sub2["data"]["breakdown"]["score"] == 0 and sub2["data"]["round_score"] == sub["data"]["round_score"], "a forfeit scores 0 and changes nothing")
 	_check(backend.submit_result({})["ok"] == false, "missing result id fails")
 
 	# Level leaderboard: bots, me, scopes.
@@ -830,41 +866,74 @@ func _test_local_backend() -> void:
 	var backend2 := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend2.init()
 	var standing2: Dictionary = backend2.get_league_standing()["data"]
-	_check(standing2["joined"] and standing2["my_weekly_score"] == Scoring.score(result) and standing2["group"]["members"][0]["nickname"] == standing["group"]["members"][0]["nickname"], "standing survives a restart")
+	_check(standing2["joined"] and standing2["my_round_score"] == Scoring.score(result) and standing2["group"]["members"][0]["nickname"] == standing["group"]["members"][0]["nickname"], "standing survives a restart")
 	var same_scores := true
 	var fresh: Dictionary = backend.get_league_standing()["data"]
 	for i in fresh["group"]["members"].size():
-		if fresh["group"]["members"][i]["weekly_score"] != standing2["group"]["members"][i]["weekly_score"]:
+		if fresh["group"]["members"][i]["round_score"] != standing2["group"]["members"][i]["round_score"]:
 			same_scores = false
 	_check(same_scores, "bot scores are deterministic")
 	_check(backend2.get_profile()["data"]["nickname"] == "Queen Bee", "nickname persisted")
 
-	# Rollover: a strong week in bronze promotes; an idle week in gold relegates.
+	# Rollover: a strong 3-day round in bronze promotes into the running silver week.
 	for i in 15:
 		var r := result.duplicate()
 		r.merge({"result_id": "big-%d" % i, "size": 10, "difficulty": 55.0, "elapsed_seconds": 100.0, "wrong_placements": 0}, true)
 		backend2.submit_result(r)
 	_check(backend2.get_league_standing()["data"]["my_rank"] == 1, "fifteen perfect hard games lead the bronze group")
-	clock[0] = Scoring.week_start(2958) + 3600
+	var bronze_ends := LeagueRules.round_end(cfg.league, "bronze", bronze_round)
+	clock[0] = bronze_ends + 3600
 	var backend3 := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend3.init()
-	var summary: Dictionary = backend3.get_week_summary()["data"]
-	_check(summary["week_index"] == 2957 and summary["outcome"] == "promoted" and summary["tier_after"] == "silver" and summary["rank"] <= 9, "week summary reports the promotion")
+	var summary: Dictionary = backend3.get_round_summary()["data"]
+	_check(summary["round_index"] == bronze_round and summary["outcome"] == "promoted" and summary["tier_after"] == "silver" and summary["rank"] <= 15, "round summary reports the promotion")
 	_check(summary["best_game"]["score"] == Scoring.score({"size": 10, "difficulty": 55.0, "completed": true, "elapsed_seconds": 100.0, "wrong_placements": 0, "undo_count": 0}), "summary names the best game")
 	_check(backend3.get_profile()["data"]["tier"] == "silver", "profile moved to silver")
-	_check(not backend3.get_league_standing()["data"]["joined"], "new week starts unjoined")
-	backend3.ack_week_summary(2957)
-	_check(backend3.get_week_summary()["data"].is_empty(), "summary acknowledged")
-	# Two idle weeks: silver freezes, then (after a manual bump to gold) relegates.
-	backend3.data["profile"]["tier"] = "gold"
+	var silver_standing: Dictionary = backend3.get_league_standing()["data"]
+	_check(not silver_standing["joined"] and silver_standing["tier"] == "silver" and silver_standing["round_index"] == 2957 and silver_standing["round_days"] == 7, "the silver week that contains the bronze boundary is open and unjoined")
+	_check(backend3.data["rounds"].size() <= 1, "closed rounds are forgotten")
+	backend3.ack_round_summary(bronze_round)
+	_check(backend3.get_round_summary()["data"].is_empty(), "summary acknowledged")
+	# Three idle weeks from platinum: relegated to gold, then the gold floor holds.
+	backend3.data["profile"]["tier"] = "platinum"
 	backend3._save()
 	clock[0] = Scoring.week_start(2960) + 10
 	var backend4 := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend4.init()
-	var s2: Dictionary = backend4.get_week_summary()["data"]
-	_check(s2["week_index"] == 2959 and s2["outcome"] == "inactive_frozen" and backend4.data["history"][1]["outcome"] == "inactive_relegated", "idle weeks: gold relegates, silver freezes")
-	_check(backend4.get_profile()["data"]["tier"] == "silver", "two idle weeks: gold -> silver, then silver freezes")
-	_check(backend4.data["history"].size() == 3, "history keeps every closed week")
+	var s2: Dictionary = backend4.get_round_summary()["data"]
+	var hist: Array = backend4.data["history"]
+	_check(hist.size() == 4 and hist[1]["outcome"] == "inactive_relegated" and hist[1]["tier_after"] == "gold" and hist[2]["outcome"] == "inactive_frozen", "idle weeks: platinum relegates to gold, gold freezes")
+	_check(s2["round_index"] == 2959 and s2["outcome"] == "inactive_frozen" and backend4.get_profile()["data"]["tier"] == "gold", "gold is never lost")
+	# Diamond promotes into the open Challenger slots; both are global standings that grow.
+	backend4.data["profile"]["tier"] = "diamond"
+	backend4.start_game(lv["id"])
+	var dia: Dictionary = backend4.get_league_standing()["data"]
+	var diamond_players := 60 + 3 * (2960 - 2957)
+	_check(dia["joined"] and dia["rules"]["global"] and dia["group"]["size"] == diamond_players, "diamond is one standing of the whole (growing) population")
+	_check(dia["rules"]["up_count"] == 3 and dia["group"]["promote_count"] == 3 and dia["rules_text"] == "Top 3 promote to Challenger · bottom 20 % relegate", "diamond promotes exactly the open challenger slots")
+	backend4.data["profile"]["tier"] = "challenger"
+	backend4.start_game(lv["id"])
+	var ch: Dictionary = backend4.get_league_standing()["data"]
+	_check(ch["group"]["size"] == 6 and ch["group"]["promote_count"] == 0 and ch["group"]["relegate_count"] == 3 and ch["rules_text"] == "Bottom 50 % relegate", "challenger is full at its slot count and drops the bottom half")
+	clock[0] = Scoring.week_start(3100) + 10
+	backend4.data["profile"]["tier"] = "diamond"
+	backend4.start_game(lv["id"])
+	var later: Dictionary = backend4.get_league_standing()["data"]
+	_check(later["group"]["size"] == 60 + 3 * (3100 - 2957) and later["rules"]["up_count"] == 24, "challenger slots grow with the diamond population up to the cap")
+
+	# A format-1 file (calendar weeks) migrates: profile and results survive, the week is dropped.
+	var legacy_path := "user://test_tmp/backend_legacy.json"
+	var legacy := FileAccess.open(legacy_path, FileAccess.WRITE)
+	legacy.store_string(JSON.stringify({"format": 1, "profile": {"player_id": "old", "nickname": "Old", "friend_code": "QN-AAAAAA", "tier": "gold", "created_at": 1, "stats": {"games": 3}},
+		"results": {"r": {"result": {"completed": true, "finished_at": 5}, "response": {"breakdown": {"score": 100}}}},
+		"weeks": {"2957": {"joined": true}}, "current_week": 2957, "pending_summary": {"week_index": 2956}, "history": [{}], "friends": []}))
+	legacy.close()
+	var migrated := LocalBackend.new(cfg, catalog, now_fn, legacy_path)
+	migrated.init()
+	_check(migrated.data["format"] == 2 and not migrated.data.has("weeks") and migrated.data["pending_summary"].is_empty() and migrated.data["history"].is_empty(), "legacy weeks are dropped")
+	_check(migrated.get_profile()["data"]["tier"] == "gold" and migrated.data["results"].size() == 1 and migrated.data["current_round"] == 3100, "profile and results survive the migration")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(legacy_path))
+	migrated.free()
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	backend.free()
