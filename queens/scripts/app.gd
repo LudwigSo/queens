@@ -15,6 +15,11 @@ var config: GameConfig
 var save: SaveData
 var catalog: LevelCatalog
 var picker: LevelPicker
+var energy: EnergyLedger
+var ads: AdsProvider
+var purchases: PurchaseProvider
+
+var product_prices: Dictionary = {}   ## product id -> price text from the store
 
 var _save_queued: bool = false
 
@@ -26,8 +31,63 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Time.get_ticks_usec()
 	picker = LevelPicker.new(catalog, config, rng)
+	energy = EnergyLedger.new(save, config)
 	save.changed.connect(_queue_save)
 	_forfeit_dangling_game()
+	_select_providers()
+	ads.reward_earned.connect(_on_reward_earned)
+	purchases.products_updated.connect(_on_products_updated)
+	purchases.purchase_completed.connect(_on_purchase_completed)
+	purchases.restore_completed.connect(_on_restore_completed)
+	ads.initialize()
+	purchases.start()
+	purchases.query_products([config.unlimited_product_id])
+	purchases.restore()
+
+
+## Real providers only on Android with the plugin present; the fakes let the
+## game run in the editor and in headless tests. The Android scripts are
+## loaded by path so the project parses without the addons installed.
+func _select_providers() -> void:
+	var android := OS.has_feature("android")
+	var admob_script := "res://scripts/providers/admob_ads_provider.gd"
+	if android and ResourceLoader.exists(admob_script) and ResourceLoader.exists("res://addons/admob/plugin.cfg"):
+		ads = load(admob_script).new()
+	else:
+		ads = FakeAdsProvider.new()
+	var billing_script := "res://scripts/providers/play_billing_provider.gd"
+	if android and ResourceLoader.exists(billing_script) and Engine.has_singleton("GodotGooglePlayBilling"):
+		purchases = load(billing_script).new()
+	else:
+		purchases = FakePurchaseProvider.new()
+	ads.name = "Ads"
+	purchases.name = "Purchases"
+	add_child(ads)
+	add_child(purchases)
+
+
+func _on_reward_earned(_units: int) -> void:
+	energy.grant(config.ad_reward_energy)
+	energy.record_ad_watched()
+
+
+func _on_products_updated(products: Dictionary) -> void:
+	for id in products:
+		product_prices[id] = str(products[id].get("price_text", ""))
+
+
+func _on_purchase_completed(product_id: String, token: String) -> void:
+	if product_id == config.unlimited_product_id:
+		energy.set_unlimited(token)
+
+
+func _on_restore_completed(owned: Array) -> void:
+	if owned.has(config.unlimited_product_id) and not energy.is_unlimited():
+		energy.set_unlimited("restored")
+
+
+func unlimited_price_text() -> String:
+	return str(product_prices.get(config.unlimited_product_id, config.unlimited_price_fallback))
 
 
 ## A game that was running when the app was killed counts as forfeited.
@@ -55,6 +115,7 @@ func use_save_path(path: String) -> void:
 	config.save_path = path
 	save = SaveData.load_or_create(config)
 	save.changed.connect(_queue_save)
+	energy.bind_save(save)
 	_forfeit_dangling_game()
 
 

@@ -31,6 +31,8 @@ func _initialize() -> void:
 	_test_game_session()
 	_test_cooldown()
 	_test_level_picker()
+	_test_energy()
+	_test_fake_providers()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -514,3 +516,110 @@ func _test_level_picker() -> void:
 	_check(tiny_picker.pick(0, {"level_id": "b"}, {"a": true, "c": true})["reason"] == "none", "tiny: same with everything else locked")
 	_check(tiny_picker.pick(1, {"level_id": "a"}, {"b": true})["level"]["id"] == "c", "tiny: harder skips a locked level")
 	_check(tiny_picker.pick(0, {}, {})["reason"] == "band", "tiny: first launch works")
+
+
+func _test_energy() -> void:
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	var ledger := EnergyLedger.new(save, cfg)
+	var changes := [0]
+	ledger.changed.connect(func() -> void: changes[0] += 1)
+	_check(ledger.amount() == cfg.start_energy and ledger.can_start(), "ledger starts with start_energy")
+	var ok := true
+	for i in cfg.start_energy:
+		ok = ok and ledger.charge_start()
+	_check(ok and ledger.amount() == 0, "start_energy charges succeed and empty the ledger")
+	_check(not ledger.can_start() and not ledger.charge_start() and ledger.amount() == 0, "an empty ledger refuses a start and stays at 0")
+	_check(changes[0] == cfg.start_energy, "every charge emits changed")
+	ledger.grant(cfg.ad_reward_energy)
+	_check(ledger.amount() == cfg.ad_reward_energy and ledger.can_start(), "grant refills")
+	cfg.energy_cap = 15
+	ledger.grant(10)
+	_check(ledger.amount() == 15, "grant respects the cap")
+	cfg.energy_cap = 0
+	ledger.grant(10)
+	_check(ledger.amount() == 25, "no cap when energy_cap is 0")
+	ledger.grant(-5)
+	_check(ledger.amount() == 25, "negative grants are ignored")
+	ledger.record_ad_watched()
+	_check(int(save.data["energy"]["ads_watched"]) == 1, "ads watched are counted")
+	_check(ledger.display_text() == "25", "display text shows the amount")
+	_check(not ledger.is_unlimited(), "not unlimited by default")
+	ledger.set_unlimited("token-1")
+	_check(ledger.is_unlimited() and ledger.can_start(), "unlimited can always start")
+	_check(ledger.charge_start() and ledger.amount() == 25, "unlimited charges nothing")
+	_check(save.data["energy"]["purchase_token"] == "token-1", "purchase token stored")
+	_check(ledger.display_text() == "∞", "display text shows infinity when unlimited")
+	# Rebinding to another save reads that save's state.
+	var other := SaveData.new()
+	other.data = SaveData.defaults(cfg)
+	other.data["energy"]["amount"] = 3
+	ledger.bind_save(other)
+	_check(ledger.amount() == 3 and not ledger.is_unlimited(), "bind_save switches the backing save")
+
+
+func _test_fake_providers() -> void:
+	var ads := FakeAdsProvider.new()
+	ads.instant = true
+	var rewards := [0]
+	var closed := [0]
+	var ready_events: Array = []
+	ads.reward_earned.connect(func(units: int) -> void: rewards[0] += units)
+	ads.ad_closed.connect(func(rewarded: bool) -> void: closed[0] += 1 if rewarded else 0)
+	ads.availability_changed.connect(func(ready: bool) -> void: ready_events.append(ready))
+	_check(not ads.is_ready(), "fake ad is not ready before initialize")
+	ads.initialize()
+	_check(ads.is_ready(), "fake ad is ready after initialize")
+	ads.show_rewarded()
+	_check(rewards[0] == 1 and closed[0] == 1, "fake ad rewards once and closes")
+	_check(ads.is_ready(), "fake ad preloads the next ad")
+	_check(ready_events == [true, false, true], "availability toggles around the ad")
+	var failed := [0]
+	var bare := AdsProvider.new()
+	bare.ad_failed.connect(func(_reason: String) -> void: failed[0] += 1)
+	bare.show_rewarded()
+	_check(failed[0] == 1 and not bare.is_ready(), "base ads provider fails gracefully")
+	ads.free()
+	bare.free()
+
+	var shop := FakePurchaseProvider.new()
+	shop.instant = true
+	var bought: Array = []
+	var restored: Array = []
+	var prices := {}
+	shop.purchase_completed.connect(func(id: String, token: String) -> void: bought.append([id, token]))
+	shop.restore_completed.connect(func(owned: Array) -> void: restored.append(owned))
+	shop.products_updated.connect(func(products: Dictionary) -> void: prices.merge(products))
+	shop.query_products(["queens_unlimited_energy"])
+	_check(prices.has("queens_unlimited_energy") and prices["queens_unlimited_energy"]["price_text"] != "", "fake shop reports a price")
+	shop.restore()
+	_check(restored.size() == 1 and restored[0].is_empty(), "nothing to restore before buying")
+	shop.purchase("queens_unlimited_energy")
+	_check(bought.size() == 1 and bought[0][0] == "queens_unlimited_energy" and bought[0][1].begins_with("fake-token"), "fake purchase completes with a token")
+	shop.restore()
+	_check(restored[1] == ["queens_unlimited_energy"], "restore returns the bought product")
+	shop.fake_owned = ["preset"]
+	shop.restore()
+	_check(restored[2] == ["preset"], "restore returns preset ownership")
+	var bare_shop := PurchaseProvider.new()
+	var shop_failed := [0]
+	bare_shop.purchase_failed.connect(func(_reason: String) -> void: shop_failed[0] += 1)
+	bare_shop.purchase("x")
+	_check(shop_failed[0] == 1 and not bare_shop.is_available(), "base purchase provider fails gracefully")
+	shop.free()
+	bare_shop.free()
+
+	# The App-level rule: an ad grants the configured energy, a purchase makes it unlimited.
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	save.data["energy"]["amount"] = 0
+	var ledger := EnergyLedger.new(save, cfg)
+	var ads2 := FakeAdsProvider.new()
+	ads2.instant = true
+	ads2.reward_earned.connect(func(_units: int) -> void: ledger.grant(cfg.ad_reward_energy))
+	ads2.initialize()
+	ads2.show_rewarded()
+	_check(ledger.amount() == cfg.ad_reward_energy, "a rewarded ad grants ad_reward_energy regardless of ad units")
+	ads2.free()

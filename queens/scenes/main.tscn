@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/home_screen.tscn" id="6_home"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/game_screen.tscn" id="3_game"]
 [ext_resource type="PackedScene" path="res://scenes/win_overlay.tscn" id="4_win"]
 [ext_resource type="PackedScene" path="res://scenes/message_dialog.tscn" id="5_message"]
+[ext_resource type="PackedScene" path="res://scenes/energy_dialog.tscn" id="7_energy"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -36,6 +37,9 @@ layout_mode = 1
 layout_mode = 1
 
 [node name="WinOverlay" parent="." instance=ExtResource("4_win")]
+layout_mode = 1
+
+[node name="EnergyDialog" parent="." instance=ExtResource("7_energy")]
 layout_mode = 1
 
 [node name="MessageDialog" parent="." instance=ExtResource("5_message")]

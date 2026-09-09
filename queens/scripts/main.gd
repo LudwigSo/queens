@@ -11,6 +11,7 @@ const DEFAULT_HINT := "Tap once to mark X, tap again to place a queen, tap again
 @onready var game_screen: Control = $Game
 @onready var board: Board = game_screen.board
 @onready var win_overlay: Control = $WinOverlay
+@onready var energy_dialog: Control = $EnergyDialog
 @onready var message_dialog: Control = $MessageDialog
 
 var levels: Array = []          ## Level dictionaries, see scripts/levels.gd.
@@ -22,6 +23,20 @@ func _ready() -> void:
 	levels = App.catalog.levels
 	home.play_requested.connect(_play_step)
 	home.overview_requested.connect(_show_level_select)
+	home.energy_pressed.connect(_open_energy_dialog.bind(false))
+	energy_dialog.watch_ad_pressed.connect(_on_watch_ad)
+	energy_dialog.buy_pressed.connect(_on_buy_unlimited)
+	energy_dialog.restore_pressed.connect(_on_restore_purchase)
+	energy_dialog.closed.connect(_resume_game)
+	App.energy.changed.connect(_refresh_energy)
+	App.ads.availability_changed.connect(func(_ready: bool) -> void: _refresh_energy())
+	App.ads.ad_progress.connect(energy_dialog.set_status)
+	App.ads.ad_failed.connect(func(reason: String) -> void: energy_dialog.set_status(reason))
+	App.ads.ad_closed.connect(func(rewarded: bool) -> void: energy_dialog.set_status("Thanks! Energy added." if rewarded else "No reward this time."))
+	App.purchases.products_updated.connect(func(_products: Dictionary) -> void: _refresh_energy())
+	App.purchases.purchase_failed.connect(func(reason: String) -> void: energy_dialog.set_status(reason))
+	App.purchases.purchase_completed.connect(func(_id: String, _token: String) -> void: energy_dialog.set_status("Unlimited energy unlocked."))
+	App.purchases.restore_completed.connect(func(owned: Array) -> void: energy_dialog.set_status("Purchase restored." if not owned.is_empty() else "Nothing to restore."))
 	level_select.level_chosen.connect(_on_level_chosen)
 	level_select.back_requested.connect(_show_home)
 	level_select.set_back_visible(true)
@@ -48,6 +63,8 @@ func _notification(what: int) -> void:
 		NOTIFICATION_WM_GO_BACK_REQUEST:
 			if message_dialog.visible:
 				message_dialog.cancel()
+			elif energy_dialog.visible:
+				energy_dialog.close()
 			elif game_screen.visible and not win_overlay.visible:
 				_on_give_up()
 			elif level_select.visible:
@@ -58,7 +75,12 @@ func _notification(what: int) -> void:
 
 func _home_view() -> Dictionary:
 	var last := App.save.last_game()
-	var view := {"has_last": not last.is_empty(), "nickname": App.save.nickname(), "last_text": "Pick how hard you want to start"}
+	var view := {
+		"has_last": not last.is_empty(),
+		"nickname": App.save.nickname(),
+		"energy_text": App.energy.display_text(),
+		"last_text": "Pick how hard you want to start",
+	}
 	if not last.is_empty():
 		var lv := App.catalog.get_level(str(last["level_id"]))
 		if lv.is_empty():
@@ -76,6 +98,48 @@ func _show_home() -> void:
 	game_screen.visible = false
 	level_select.visible = false
 	home.visible = true
+
+
+# --- energy -----------------------------------------------------------------
+
+func _energy_state() -> Dictionary:
+	return {
+		"energy_text": App.energy.display_text(),
+		"unlimited": App.energy.is_unlimited(),
+		"can_start": App.energy.can_start(),
+		"ad_ready": App.ads.is_ready(),
+		"ad_reward": App.config.ad_reward_energy,
+		"price_text": App.unlimited_price_text(),
+		"purchases_available": App.purchases.is_available(),
+	}
+
+
+func _refresh_energy() -> void:
+	home.set_energy_text(App.energy.display_text())
+	energy_dialog.set_state(_energy_state())
+
+
+## `blocked`: a game start was refused for lack of energy.
+func _open_energy_dialog(blocked: bool) -> void:
+	_pause_game(true)
+	energy_dialog.set_state(_energy_state())
+	energy_dialog.open(blocked)
+	energy_dialog.set_state(_energy_state())
+
+
+func _on_watch_ad() -> void:
+	energy_dialog.set_status("Loading ad…")
+	App.ads.show_rewarded()
+
+
+func _on_buy_unlimited() -> void:
+	energy_dialog.set_status("Contacting the store…")
+	App.purchases.purchase(App.config.unlimited_product_id)
+
+
+func _on_restore_purchase() -> void:
+	energy_dialog.set_status("Restoring…")
+	App.purchases.restore()
 
 
 func _locked_ids() -> Dictionary:
@@ -170,8 +234,12 @@ func start_game(level: Dictionary, note: String = "") -> void:
 		var remaining := Cooldown.remaining(App.save.level_entry(level["id"]), App.now(), App.config.cooldown_seconds)
 		message_dialog.open("Level locked", "You played this level recently. It unlocks in %s." % Cooldown.format_remaining(remaining))
 		return
+	if not App.energy.can_start():
+		_open_energy_dialog(true)
+		return
 	if session != null and not session.finished:
 		end_game(false)
+	App.energy.charge_start()
 	current_level = levels.find(level)
 	session = GameSession.new()
 	session.start(level, App.save.player_id(), App.now(), App.config.client_version)
@@ -210,7 +278,7 @@ func _pause_game(persist: bool) -> void:
 func _resume_game() -> void:
 	if session == null or session.finished:
 		return
-	if game_screen.visible and not win_overlay.visible and not message_dialog.visible:
+	if game_screen.visible and not win_overlay.visible and not message_dialog.visible and not energy_dialog.visible:
 		session.resume()
 
 

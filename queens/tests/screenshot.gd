@@ -82,13 +82,36 @@ func _ready() -> void:
 	await _frames(2)
 	_save(out_dir + "06_home_after_game.png")
 
+	# Energy: dialog, blocked start, fake ad refill, fake unlimited purchase.
+	main._open_energy_dialog(false)
+	await _frames(2)
+	_save(out_dir + "07_energy_dialog.png")
+	main.energy_dialog.close()
+	App.save.data["energy"]["amount"] = 0
+	App.energy.grant(0)
+	main._play_step(0)
+	await _frames(2)
+	print("blocked start: dialog visible = %s, hint shown = %s, game visible = %s" % [main.energy_dialog.visible, main.energy_dialog.hint_label.visible, main.game_screen.visible])
+	_save(out_dir + "08_energy_blocked.png")
+	App.ads.instant = true
+	main._on_watch_ad()
+	await _frames(1)
+	print("after fake ad: energy = %d, hint shown = %s" % [App.energy.amount(), main.energy_dialog.hint_label.visible])
+	App.purchases.instant = true
+	main._on_buy_unlimited()
+	await _frames(1)
+	print("after fake purchase: unlimited = %s, buy button visible = %s" % [App.energy.is_unlimited(), main.energy_dialog.buy_button.visible])
+	_save(out_dir + "09_energy_unlimited.png")
+	main.energy_dialog.close()
+	await _frames(1)
+
 	main._show_level_select()
 	await _frames(2)
 	var played: Button = main.level_select.grid.get_child(index)
 	print("played level button: disabled = %s, shows lock = %s" % [played.disabled, played.text.contains("Locked")])
 	main.level_select.grid.get_parent().scroll_vertical = int(played.position.y)
 	await _frames(2)
-	_save(out_dir + "07_level_select_locked.png")
+	_save(out_dir + "10_level_select_locked.png")
 	get_tree().quit()
 
 

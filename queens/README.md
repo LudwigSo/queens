@@ -13,6 +13,17 @@ locked for seven days (`cooldown_seconds` in `scripts/config.gd`), so a time
 cannot be improved by replaying a solution you remember. Giving up counts as
 a played game.
 
+### Energy
+
+Starting a game costs one energy; giving up does not refund it. A fresh
+install has 10. Tapping the energy counter on the home screen opens a panel
+where a rewarded ad adds 10 energy and a one-time purchase (2.99 EUR)
+switches to unlimited energy for good. All numbers live in
+`scripts/config.gd`. In the editor and in tests the ad and the store are
+fakes (`scripts/providers/fake_*.gd`) that always succeed after a short
+delay; the real AdMob and Google Play Billing providers are only used on
+Android when their plugins are installed.
+
 ## Running locally
 
 Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press
