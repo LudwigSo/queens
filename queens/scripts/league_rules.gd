@@ -50,7 +50,18 @@ static func tier(cfg: Dictionary, tier_id: String) -> Dictionary:
 	return cfg["tiers"][tier_index(cfg, tier_id)]
 
 
+## The tier's display name. Translated from the id, so the ids in the save
+## file and in backend payloads stay language-neutral; the `name` in the
+## config is the fallback for a tier without a TIER_ row.
+static func tier_label(tier_id: String) -> String:
+	var key := "TIER_" + tier_id.to_upper()
+	return Loc.t(key) if Loc.has(key) else tier_id.capitalize()
+
+
 static func tier_name(cfg: Dictionary, tier_id: String) -> String:
+	var key := "TIER_" + tier_id.to_upper()
+	if Loc.has(key):
+		return Loc.t(key)
 	return str(tier(cfg, tier_id).get("name", tier_id.capitalize()))
 
 
@@ -255,21 +266,24 @@ static func apply(cfg: Dictionary, tier_id: String, outcome: String) -> String:
 ## the tier above, shown only in those two cases.
 static func rules_text(tier_cfg: Dictionary, up_count: int = -1, up_to: String = "") -> String:
 	var parts: Array = []
-	var to_text := (" to " + up_to) if up_to != "" else ""
+	var named := up_to != ""
 	if promo_score(tier_cfg) > 0:
-		parts.append("Reach %d points to promote%s" % [promo_score(tier_cfg), to_text])
+		if named:
+			parts.append(Loc.f("RULES_PROMO_SCORE_TO", [promo_score(tier_cfg), up_to]))
+		else:
+			parts.append(Loc.f("RULES_PROMO_SCORE", [promo_score(tier_cfg)]))
 	elif up_count >= 0:
 		if up_count > 0:
-			parts.append("Top %d promote%s" % [up_count, to_text])
+			parts.append(Loc.f("RULES_UP_N_TO", [up_count, up_to]) if named else Loc.f("RULES_UP_N", [up_count]))
 		else:
-			parts.append("No slot open%s" % [(" in " + up_to) if up_to != "" else ""])
+			parts.append(Loc.f("RULES_NO_SLOT_IN", [up_to]) if named else Loc.t("RULES_NO_SLOT"))
 	elif int(tier_cfg.get("up_pct", 0)) > 0:
-		parts.append("Top %d %% promote" % int(tier_cfg["up_pct"]))
+		parts.append(Loc.f("RULES_UP_PCT", [int(tier_cfg["up_pct"])]))
 	if int(tier_cfg.get("down_pct", 0)) > 0:
-		parts.append("bottom %d %% relegate" % int(tier_cfg["down_pct"]))
+		parts.append(Loc.f("RULES_DOWN_PCT", [int(tier_cfg["down_pct"])]))
 	elif bool(tier_cfg.get("floor", false)):
-		parts.append("relegation impossible")
+		parts.append(Loc.t("RULES_DOWN_FLOOR"))
 	else:
-		parts.append("nobody relegates")
+		parts.append(Loc.t("RULES_DOWN_NONE"))
 	var text := " · ".join(parts)
 	return text.substr(0, 1).to_upper() + text.substr(1)

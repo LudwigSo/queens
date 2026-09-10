@@ -69,7 +69,7 @@ stretch_mode = 5
 [node name="Tagline" type="Label" parent="Margin/VBox/Hero"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "One queen per row, column and colour. None may touch."
+text = "HOME_TAGLINE"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -95,7 +95,7 @@ stretch_mode = 5
 [node name="StreakLabel" type="Label" parent="Margin/VBox/Hero/StreakChip/HBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionInk"
-text = "3 day streak"
+text = "HOME_STREAK"
 
 [node name="LeagueCard" type="Button" parent="Margin/VBox"]
 custom_minimum_size = Vector2(0, 96)
@@ -136,12 +136,12 @@ theme_override_constants/separation = 2
 [node name="LeagueTitle" type="Label" parent="Margin/VBox/LeagueCard/HBox/Text"]
 layout_mode = 2
 theme_type_variation = &"LabelBodyBold"
-text = "Bronze league"
+text = "LEAGUE_NAME"
 
 [node name="LeagueLine" type="Label" parent="Margin/VBox/LeagueCard/HBox/Text"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Play a game to join this round"
+text = "HOME_LEAGUE_JOIN"
 autowrap_mode = 3
 
 [node name="Chevron" type="TextureRect" parent="Margin/VBox/LeagueCard/HBox"]
@@ -161,7 +161,7 @@ size_flags_vertical = 3
 [node name="LastGame" type="Label" parent="Margin/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Pick how hard you want to start"
+text = "HOME_PICK_START"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -193,7 +193,7 @@ alignment = 1
 [node name="Name" type="Label" parent="Margin/VBox/Options/Easier/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "Easier"
+text = "STEP_EASIER"
 horizontal_alignment = 1
 
 [node name="Size" type="Label" parent="Margin/VBox/Options/Easier/VBox"]
@@ -212,7 +212,7 @@ icon_size = 16
 [node name="Diff" type="Label" parent="Margin/VBox/Options/Easier/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "diff 9"
+text = "HOME_DIFF"
 horizontal_alignment = 1
 
 [node name="Same" type="Button" parent="Margin/VBox/Options"]
@@ -239,7 +239,7 @@ alignment = 1
 [node name="Name" type="Label" parent="Margin/VBox/Options/Same/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "Same"
+text = "STEP_SAME"
 horizontal_alignment = 1
 
 [node name="Size" type="Label" parent="Margin/VBox/Options/Same/VBox"]
@@ -258,7 +258,7 @@ icon_size = 16
 [node name="Diff" type="Label" parent="Margin/VBox/Options/Same/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "diff 12"
+text = "HOME_DIFF"
 horizontal_alignment = 1
 
 [node name="Harder" type="Button" parent="Margin/VBox/Options"]
@@ -285,7 +285,7 @@ alignment = 1
 [node name="Name" type="Label" parent="Margin/VBox/Options/Harder/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "Harder"
+text = "STEP_HARDER"
 horizontal_alignment = 1
 
 [node name="Size" type="Label" parent="Margin/VBox/Options/Harder/VBox"]
@@ -304,14 +304,14 @@ icon_size = 16
 [node name="Diff" type="Label" parent="Margin/VBox/Options/Harder/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "diff 20"
+text = "HOME_DIFF"
 horizontal_alignment = 1
 
 [node name="PlayButton" type="Button" parent="Margin/VBox"]
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
-text = "Play"
+text = "HOME_PLAY"
 
 [node name="Bottom" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -321,11 +321,12 @@ alignment = 1
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_type_variation = &"ButtonGhost"
-text = "All levels"
+text = "HOME_ALL_LEVELS"
 icon = ExtResource("7_grid")
 
 [node name="Player" type="Label" parent="Margin/VBox"]
 layout_mode = 2
+auto_translate_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Player"
+text = ""
 horizontal_alignment = 1

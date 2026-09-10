@@ -1,0 +1,262 @@
+key,en,de
+#,--- shared wording ---,
+COMMON_LEVEL_N,Level %d,Level %d
+COMMON_LEVEL_TITLE,Level %d · %dx%d · diff %d,Level %d · %dx%d · Schwierigkeit %d
+COMMON_PTS,%d pts,%d Pkt.
+COMMON_DECIMAL_SEP,".",","
+COMMON_YOU,%s (you),%s (du)
+COMMON_PROGRESS,%d / %d pts,%d / %d Pkt.
+COMMON_PROGRESS_TO,%d / %d pts to %s,%d / %d Pkt. bis %s
+MISTAKES_ZERO,flawless,fehlerfrei
+MISTAKES_ONE,%d mistake,%d Fehler
+MISTAKES_OTHER,%d mistakes,%d Fehler
+ZONE_PROMOTE,promotion zone,Aufstiegszone
+ZONE_RELEGATE,relegation zone,Abstiegszone
+ZONE_SAFE,safe,sicher
+#,--- countdowns and periods ---,
+COOLDOWN_D_H,%dd %dh,%d T %d Std
+COOLDOWN_H_M,%dh %dm,%d Std %d Min
+COOLDOWN_M,%dm,%d Min
+COOLDOWN_LT_1M,<1m,<1 Min
+PERIOD_DAYS_ONE,%d day,%d Tag
+PERIOD_DAYS_OTHER,%d days,%d Tage
+PERIOD_HOURS_ONE,%d hour,%d Stunde
+PERIOD_HOURS_OTHER,%d hours,%d Stunden
+PERIOD_MINUTES_ONE,%d minute,%d Minute
+PERIOD_MINUTES_OTHER,%d minutes,%d Minuten
+#,--- league tiers (the ids stay english in the save file) ---,
+TIER_BRONZE,Bronze,Bronze
+TIER_SILVER,Silver,Silber
+TIER_GOLD,Gold,Gold
+TIER_PLATINUM,Platinum,Platin
+TIER_DIAMOND,Diamond,Diamant
+TIER_CHALLENGER,Challenger,Challenger
+#,--- league rules (joined with a middot then capitalised) ---,
+RULES_PROMO_SCORE,Reach %d points to promote,Erreiche %d Punkte für den Aufstieg
+RULES_PROMO_SCORE_TO,Reach %d points to promote to %s,Erreiche %d Punkte für den Aufstieg nach %s
+RULES_UP_N,Top %d promote,beste %d steigen auf
+RULES_UP_N_TO,Top %d promote to %s,beste %d steigen nach %s auf
+RULES_NO_SLOT,No slot open,kein Platz frei
+RULES_NO_SLOT_IN,No slot open in %s,kein Platz frei in %s
+RULES_UP_PCT,Top %d %% promote,beste %d %% steigen auf
+RULES_DOWN_PCT,bottom %d %% relegate,letzte %d %% steigen ab
+RULES_DOWN_FLOOR,relegation impossible,Abstieg unmöglich
+RULES_DOWN_NONE,nobody relegates,niemand steigt ab
+#,--- home screen ---,
+HOME_TAGLINE,"One queen per row, column and colour. None may touch.","Eine Dame pro Zeile, Spalte und Farbe. Keine darf eine andere berühren."
+HOME_STREAK,%d day streak,%d Tage in Folge
+HOME_PICK_START,Pick how hard you want to start,"Wähle, wie schwer du starten willst"
+HOME_LAST_GAME,Last game: Level %d · %s · diff %d,Letztes Spiel: Level %d · %s · Schwierigkeit %d
+HOME_ALL_LEVELS,All levels,Alle Level
+HOME_PLAY,Play,Spielen
+HOME_PLAY_SIZE,Play %s,%s spielen
+HOME_DIFF,diff %d,Schwierigkeit %d
+HOME_COOLING,cooling down,gesperrt
+HOME_START_EASY,Start easy,Leicht starten
+HOME_LEAGUE_JOIN,Play a game to join this round,Spiel eine Runde und mach mit
+HOME_LEAGUE_LINE,#%d of %d · %s · %d pts · ends in %s,#%d von %d · %s · %d Pkt. · endet in %s
+HOME_LEAGUE_PROMO_LINE,#%d of %d · %s · ends in %s,#%d von %d · %s · endet in %s
+LEAGUE_NAME,%s league,%s-Liga
+STEP_EASIER,Easier,Leichter
+STEP_SAME,Same,Gleich
+STEP_HARDER,Harder,Schwerer
+HOME_OPT_ALL_COOLING,All cooling down,Alle gesperrt
+HOME_OPT_NO_HARDER,No harder level free,Nichts Schwereres frei
+HOME_OPT_NO_EASIER,No easier level free,Nichts Leichteres frei
+HOME_OPT_NEAREST,Closest available level,Nächstes freies Level
+#,--- game screen ---,
+GAME_LEVEL_TITLE,Level %d · %s · diff %d,Level %d · %s · Schwierigkeit %d
+GAME_HINT_DEFAULT,"Tap to mark X, tap again for a queen. Drag to mark many.","Tippen setzt ein X, nochmal tippen eine Dame. Ziehen markiert mehrere."
+GAME_UNDO,Undo,Zurück
+GAME_HINT,Hint,Tipp
+GAME_HINT_N,Hint · %d,Tipp · %d
+GAME_CLEAR,Clear,Leeren
+#,--- hints ---,
+HINT_NONE,Nothing left to hint.,Hier gibt es nichts mehr zu verraten.
+HINT_NONE_ENCOURAGE,Nothing left to hint. You're almost there!,Hier gibt es nichts mehr zu verraten. Du hast es fast!
+HINT_WRONG_QUEEN,This queen can't be right. Tap it to remove it.,"Diese Dame kann nicht stimmen. Tipp sie an, um sie zu entfernen."
+HINT_WRONG_MARK,One of your X marks is wrong. Tap it to clear it.,"Eines deiner X ist falsch. Tipp es an, um es zu löschen."
+HINT_SINGLE_ROW,Only one spot left in this row.,In dieser Zeile ist nur noch ein Feld möglich.
+HINT_SINGLE_COL,Only one spot left in this column.,In dieser Spalte ist nur noch ein Feld möglich.
+HINT_SINGLE_REGION,Only one spot left in this region.,In diesem Bereich ist nur noch ein Feld möglich.
+HINT_CONFINED_ROW,"This region's queen must be in this row, so the rest of the row is out.","Die Dame dieses Bereichs muss in diese Zeile, also fällt der Rest der Zeile weg."
+HINT_CONFINED_COL,"This region's queen must be in this column, so the rest of the column is out.","Die Dame dieses Bereichs muss in diese Spalte, also fällt der Rest der Spalte weg."
+HINT_REVEAL,Try a queen here.,Versuch hier eine Dame.
+#,--- pause menu ---,
+PAUSE_TITLE,Paused,Pause
+PAUSE_SUBTITLE,Level %d · %s · %s,Level %d · %s · %s
+PAUSE_RESUME,Resume,Weiter
+PAUSE_RESTART,Restart level,Level neu starten
+PAUSE_SETTINGS,Settings,Einstellungen
+PAUSE_GIVE_UP,Give up,Aufgeben
+#,--- dialogs ---,
+DIALOG_OK,OK,OK
+DIALOG_CANCEL,Cancel,Abbrechen
+DIALOG_RESTART_TITLE,Restart level?,Level neu starten?
+DIALOG_RESTART_BODY,The board is wiped. The clock keeps running.,Das Feld wird geleert. Die Uhr läuft weiter.
+DIALOG_RESTART_OK,Restart,Neu starten
+DIALOG_RESTART_CANCEL,Keep going,Weiterspielen
+DIALOG_GIVE_UP_TITLE,Give up?,Aufgeben?
+DIALOG_GIVE_UP_BODY,Giving up ends this game and locks the level for %s.,Aufgeben beendet das Spiel und sperrt das Level für %s.
+DIALOG_GIVE_UP_OK,Give up,Aufgeben
+DIALOG_GIVE_UP_CANCEL,Keep playing,Weiterspielen
+DIALOG_LOCKED_TITLE,Level locked,Level gesperrt
+DIALOG_LOCKED_BODY,You played this level recently. It unlocks in %s.,Du hast dieses Level vor Kurzem gespielt. Es wird in %s wieder frei.
+DIALOG_ALL_COOLING_TITLE,All levels cooling down,Alle Level gesperrt
+DIALOG_ALL_COOLING_BODY,The next level unlocks in %s.,Das nächste Level wird in %s frei.
+#,--- toasts ---,
+TOAST_ENERGY_ADDED,+%d energy,+%d Energie
+TOAST_UNLIMITED,Unlimited energy unlocked,Unbegrenzte Energie freigeschaltet
+TOAST_TUTORIAL_DONE,You're ready. Have fun!,Du bist bereit. Viel Spaß!
+TOAST_ALL_HARDER_COOLING,Every harder level is cooling down. Try Same or Easier.,Alle schwereren Level sind gesperrt. Versuch Gleich oder Leichter.
+TOAST_ALL_EASIER_COOLING,Every easier level is cooling down. Try Same or Harder.,Alle leichteren Level sind gesperrt. Versuch Gleich oder Schwerer.
+TOAST_FRIEND_ADDED,Added %s,%s hinzugefügt
+TOAST_RENAMED,You are now %s,Du heißt jetzt %s
+#,--- energy sheet ---,
+SHOP_TITLE,Energy,Energie
+SHOP_EXPLAIN,Every game you start costs one energy.,Jedes Spiel kostet eine Energie.
+SHOP_EXPLAIN_UNLIMITED,Unlimited energy: play as much as you like.,Unbegrenzte Energie: spiel so viel du willst.
+SHOP_BLOCKED,You need 1 energy to play. Watch an ad or go unlimited.,Du brauchst 1 Energie zum Spielen. Schau Werbung oder hol dir unbegrenzt.
+SHOP_WATCH_AD,Watch an ad · +%d,Werbung ansehen · +%d
+SHOP_NO_AD,No ad right now,Gerade keine Werbung
+SHOP_UNLIMITED,Unlimited · %s,Unbegrenzt · %s
+SHOP_RESTORE,Restore purchase,Kauf wiederherstellen
+SHOP_STATUS_LOADING_AD,Loading ad…,Werbung wird geladen…
+SHOP_STATUS_CONTACTING,Contacting the store…,Verbinde mit dem Store…
+SHOP_STATUS_RESTORING,Restoring…,Wiederherstellen…
+SHOP_STATUS_THANKS,Thanks! Energy added.,Danke! Energie gutgeschrieben.
+SHOP_STATUS_NO_REWARD,No reward this time.,Diesmal ohne Belohnung.
+SHOP_STATUS_UNLIMITED,Unlimited energy unlocked.,Unbegrenzte Energie freigeschaltet.
+SHOP_STATUS_RESTORED,Purchase restored.,Kauf wiederhergestellt.
+SHOP_STATUS_NOTHING,Nothing to restore.,Nichts wiederherzustellen.
+SHOP_AD_PLAYING,Ad playing…,Werbung läuft…
+SHOP_AD_PLAYING_FAKE,Fake ad playing… %d,Test-Werbung läuft… %d
+#,--- level overview and level detail ---,
+LEVELS_TITLE,All levels,Alle Level
+LEVELS_FILTER_ALL,All,Alle
+LEVELS_CARD_META,%s · diff %d,%s · Schwierigkeit %d
+LEVELS_NOT_PLAYED,Not played yet,Noch nicht gespielt
+DETAIL_BEST_SCORE,Best %s · %s,Bester %s · %s
+DETAIL_BEST_TIME,Best %s,Beste %s
+DETAIL_META,Difficulty %d · par %s · %d players,Schwierigkeit %d · Par %s · %d Spieler
+DETAIL_MINE,Your best: %s · %s · %s · #%d,Dein Bestwert: %s · %s · %s · #%d
+DETAIL_PLAY,Play this level,Dieses Level spielen
+DETAIL_UNLOCKS_IN,Unlocks in %s,Frei in %s
+DETAIL_EMPTY,Nobody here yet.,Hier ist noch niemand.
+DETAIL_EMPTY_FRIENDS,None of your friends has played this level.,Keiner deiner Freunde hat dieses Level gespielt.
+DETAIL_TAB_GLOBAL,Global,Global
+DETAIL_TAB_FRIENDS,Friends,Freunde
+DETAIL_TAB_FLAWLESS,Flawless,Fehlerfrei
+DETAIL_CLEAN,clean,sauber
+DETAIL_WRONG,%d ✕,%d ✕
+#,--- league screen ---,
+LEAGUE_TITLE,League,Liga
+LEAGUE_TAB_STANDINGS,Standings,Tabelle
+LEAGUE_TAB_FRIENDS,Friends,Freunde
+LEAGUE_YOUR_CODE,Your code,Dein Code
+LEAGUE_CODE_PLACEHOLDER,Friend code QN-...,Freundescode QN-...
+LEAGUE_ADD,Add,Hinzufügen
+LEAGUE_INFO_RULES,%s · %s,%s · %s
+LEAGUE_INFO_ENDS,%s ends in %s,%s endet in %s
+LEAGUE_COUNT_BEST_N,best %d games count,beste %d Spiele zählen
+LEAGUE_COUNT_ALL,every game counts,jedes Spiel zählt
+LEAGUE_PERIOD_WEEK,Week,Woche
+LEAGUE_PERIOD_DAYS,%d-day round,%d-Tage-Runde
+LEAGUE_JOIN_NOTE,Play a game to join this round's league.,Spiel eine Runde und komm in die Liga dieser Runde.
+LEAGUE_GLOBAL_NOTE,%s is one global standing of %d players.,%s ist eine globale Tabelle mit %d Spielern.
+LEAGUE_TOP_100,Top 100 shown.,Top 100 werden gezeigt.
+LEAGUE_SLOTS_OPEN_ONE,%d Challenger slot open this round.,%d Challenger-Platz ist diese Runde frei.
+LEAGUE_SLOTS_OPEN_OTHER,%d Challenger slots open this round.,%d Challenger-Plätze sind diese Runde frei.
+LEAGUE_NO_FRIENDS,No friends yet. Swap codes to see each other here and land in the same league group.,"Noch keine Freunde. Tauscht Codes aus, dann seht ihr euch hier und landet in derselben Liga-Gruppe."
+LEAGUE_GAMES_ONE,%d game,%d Spiel
+LEAGUE_GAMES_OTHER,%d games,%d Spiele
+LEAGUE_FRIEND_REMOVED,Friend removed,Freund entfernt
+#,--- win overlay ---,
+WIN_TITLE,Solved!,Gelöst!
+WIN_POINTS,points,Punkte
+WIN_NEXT,Next game,Nächstes Spiel
+WIN_HOME,Home,Startseite
+WIN_BADGE_FLAWLESS,Flawless,Fehlerfrei
+WIN_BADGE_NEW_BEST,New best,Neuer Bestwert
+WIN_BADGE_FASTEST,Fastest yet,Schnellste Zeit
+WIN_BADGE_UNDER_PAR,Under par,Unter Par
+WIN_STAT_TIME,Time,Zeit
+WIN_STAT_PAR,Par,Par
+WIN_STAT_MISTAKES,Mistakes,Fehler
+WIN_STAT_UNDOS,Undos,Zurück
+WIN_STAT_HINTS,Hints,Tipps
+WIN_STAT_DETAILS,Details,Details
+WIN_FACTOR,×%s,×%s
+WIN_LEAGUE_LINE,%s league · %d pts · #%d of %d · %s,%s-Liga · %d Pkt. · #%d von %d · %s
+WIN_LEAGUE_PROMO_LINE,%s league · %s · #%d of %d,%s-Liga · %s · #%d von %d
+WIN_PROMOTED,Promoted to %s league!,Aufstieg in die %s-Liga!
+FACTOR_ACCURACY,Accuracy,Präzision
+FACTOR_SPEED,Speed,Tempo
+FACTOR_UNDO,Undo,Zurück
+FACTOR_HINT,Hints,Tipps
+#,--- round summary ---,
+SUMMARY_HEADING_ROUND,LAST ROUND,LETZTE RUNDE
+SUMMARY_HEADING_PROMOTION,PROMOTION,AUFSTIEG
+SUMMARY_PROMOTED,Promoted to %s!,Aufstieg nach %s!
+SUMMARY_RELEGATED,Relegated to %s,Abstieg nach %s
+SUMMARY_INACTIVE_DOWN,No games played: down to %s,Keine Spiele: runter nach %s
+SUMMARY_INACTIVE_STAY,"No games played, still %s","Keine Spiele, weiterhin %s"
+SUMMARY_STAYED,You stay in %s,Du bleibst in %s
+SUMMARY_RANK,#%d of %d,#%d von %d
+SUMMARY_TIER_POINTS,%d tier points,%d Ligapunkte
+SUMMARY_POINTS,%d points,%d Punkte
+SUMMARY_REACHED,Reached %d points in %s,%d Punkte in %s erreicht
+SUMMARY_BEST_GAME,Best game: %d points,Bestes Spiel: %d Punkte
+SUMMARY_PLAY_TO_CLIMB,Play this round to climb.,Spiel diese Runde und steig auf.
+SUMMARY_CONTINUE,Continue,Weiter
+#,--- settings ---,
+SETTINGS_TITLE,Settings,Einstellungen
+SETTINGS_SOUND_HEADING,SOUND & FEEL,TON & GEFÜHL
+SETTINGS_SFX,Sound effects,Soundeffekte
+SETTINGS_MUSIC,Music,Musik
+SETTINGS_HAPTICS,Vibration,Vibration
+SETTINGS_REDUCED_MOTION,Reduce motion,Bewegung reduzieren
+SETTINGS_LANGUAGE_HEADING,LANGUAGE,SPRACHE
+SETTINGS_PLAY_HEADING,PLAYING,SPIELEN
+SETTINGS_MISTAKE_ALERTS,Flash wrong queens,Falsche Damen blinken
+SETTINGS_MISTAKE_NOTE,"Off: mistakes only count in the score, the cell stays quiet.","Aus: Fehler zählen nur für die Punkte, das Feld bleibt ruhig."
+SETTINGS_REGION_PATTERNS,Region patterns,Bereichsmuster
+SETTINGS_PATTERN_NOTE,"Adds a line pattern to each colour, for colour-vision deficiency.","Legt ein Linienmuster über jede Farbe, für Farbsehschwäche."
+SETTINGS_HOW_TO_PLAY,How to play,So wird gespielt
+SETTINGS_PROFILE_HEADING,PROFILE,PROFIL
+SETTINGS_NAME_PLACEHOLDER,Your name,Dein Name
+SETTINGS_NAME_SAVE,Save,Speichern
+SETTINGS_RESTORE,Restore purchases,Käufe wiederherstellen
+SETTINGS_ABOUT_HEADING,ABOUT,ÜBER
+SETTINGS_FONTS,Fonts: Fredoka and Nunito (SIL Open Font License).,Schriften: Fredoka und Nunito (SIL Open Font License).
+#,--- tutorial ---,
+TUT_TITLE,How to play,So wird gespielt
+TUT_SKIP,Skip,Überspringen
+TUT_NEXT,Next,Weiter
+TUT_STEP_1,"One queen in every row, column and colour region. Queens never touch, not even diagonally.","Eine Dame in jeder Zeile, Spalte und Farbregion. Damen berühren sich nie, auch nicht diagonal."
+TUT_STEP_2,Tap a cell once to mark it with an X. Try the glowing cell.,Tipp ein Feld einmal an für ein X. Probier das leuchtende Feld.
+TUT_STEP_3,Tap it again to place a queen.,"Tipp nochmal drauf, um eine Dame zu setzen."
+TUT_STEP_4,"The small X marks show where no other queen can go: its row, column, region and the cells around it.","Die kleinen X zeigen, wo keine andere Dame stehen kann: Zeile, Spalte, Region und die Felder ringsum."
+TUT_STEP_5,Try placing a queen right next to it.,Setz mal eine Dame direkt daneben.
+TUT_STEP_6,See the shake? Two queens can't touch. Tap it again to remove it.,"Siehst du das Wackeln? Zwei Damen dürfen sich nicht berühren. Tipp nochmal, um sie zu entfernen."
+TUT_STEP_7,Drag your finger across cells to mark many at once. Try the bottom row.,"Zieh den Finger über mehrere Felder, um sie auf einmal zu markieren. Probier die unterste Zeile."
+TUT_STEP_8,Now finish the board. Every queen must sit on a different colour.,Jetzt mach das Feld fertig. Jede Dame muss auf einer anderen Farbe stehen.
+#,--- splash ---,
+SPLASH_TAGLINE,a logic puzzle,ein Logikrätsel
+#,--- errors from the backend and the store ---,
+ERR_NICKNAME_LENGTH,Nickname must be 2 to 16 characters,Der Name muss 2 bis 16 Zeichen haben
+ERR_FRIEND_CODE_FORMAT,A friend code looks like QN-ABC234,Ein Freundescode sieht so aus: QN-ABC234
+ERR_FRIEND_OWN_CODE,That is your own code,Das ist dein eigener Code
+ERR_FRIEND_ALREADY,Already friends,Ihr seid schon Freunde
+ERR_FRIEND_UNKNOWN,Not a friend,Kein Freund
+ERR_ADS_UNAVAILABLE,Ads are not available,Werbung ist nicht verfügbar
+ERR_ADS_PLUGIN_MISSING,AdMob plugin not installed,AdMob-Plugin ist nicht installiert
+ERR_AD_NOT_READY,Ad not ready yet,Werbung ist noch nicht bereit
+ERR_AD_LOAD,Ad failed to load: %s,Werbung konnte nicht geladen werden: %s
+ERR_AD_SHOW,Ad could not be shown: %s,Werbung konnte nicht gezeigt werden: %s
+ERR_PURCHASES_UNAVAILABLE,Purchases are not available,Käufe sind nicht verfügbar
+ERR_BILLING_PLUGIN_MISSING,Google Play Billing plugin not installed,Google-Play-Billing-Plugin ist nicht installiert
+ERR_STORE_CONNECT,Store connection failed (%d): %s,Verbindung zum Store fehlgeschlagen (%d): %s
+ERR_STORE,Store error: %s,Store-Fehler: %s
+ERR_STORE_NOT_CONNECTED,Store not connected,Keine Verbindung zum Store
+ERR_PURCHASE,Purchase failed: %s,Kauf fehlgeschlagen: %s

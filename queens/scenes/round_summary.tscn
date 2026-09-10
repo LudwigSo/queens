@@ -45,7 +45,7 @@ theme_override_constants/separation = 14
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "LAST ROUND"
+text = "SUMMARY_HEADING_ROUND"
 horizontal_alignment = 1
 
 [node name="Medals" type="HBoxContainer" parent="Panel/VBox"]
@@ -80,7 +80,7 @@ stretch_mode = 5
 [node name="Headline" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelTitle"
-text = "Promoted to Silver!"
+text = "SUMMARY_PROMOTED"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -93,7 +93,7 @@ alignment = 1
 [node name="Body" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelMuted"
-text = "Best game: 210 points"
+text = "SUMMARY_BEST_GAME"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -101,4 +101,4 @@ autowrap_mode = 3
 custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
-text = "Continue"
+text = "SUMMARY_CONTINUE"

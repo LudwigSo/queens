@@ -34,14 +34,14 @@ func is_ready() -> bool:
 
 func show_rewarded() -> void:
 	if not is_ready():
-		ad_failed.emit("Ad not ready yet")
+		ad_failed.emit(Loc.t("ERR_AD_NOT_READY"))
 		return
 	_showing = true
 	_loaded = false
 	availability_changed.emit(false)
 	if not instant and is_inside_tree():
 		for i in range(show_seconds, 0, -1):
-			ad_progress.emit("Fake ad playing… %d" % i)
+			ad_progress.emit(Loc.f("SHOP_AD_PLAYING_FAKE", [i]))
 			await get_tree().create_timer(1.0).timeout
 	_showing = false
 	reward_earned.emit(1)

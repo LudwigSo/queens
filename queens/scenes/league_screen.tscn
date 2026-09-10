@@ -47,7 +47,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"LabelTitle"
-text = "League"
+text = "LEAGUE_TITLE"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Margin/VBox/TopBar"]
@@ -80,13 +80,12 @@ theme_override_constants/separation = 2
 [node name="TierLabel" type="Label" parent="Margin/VBox/TierCard/HBox/Text"]
 layout_mode = 2
 theme_type_variation = &"LabelHeading"
-text = "Bronze league"
+text = "LEAGUE_NAME"
 
 [node name="InfoLabel" type="Label" parent="Margin/VBox/TierCard/HBox/Text"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Top 30 % promote · best 15 games count
-Round ends in 2d 14h"
+text = ""
 autowrap_mode = 3
 
 [node name="Progress" type="ProgressBar" parent="Margin/VBox/TierCard/HBox/Text"]
@@ -101,7 +100,7 @@ show_percentage = false
 visible = false
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "1240 / 3000 pts to Silver"
+text = ""
 
 [node name="Tabs" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -111,12 +110,12 @@ script = ExtResource("2_segmented")
 [node name="standings" type="Button" parent="Margin/VBox/Tabs"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Standings"
+text = "LEAGUE_TAB_STANDINGS"
 
 [node name="friends" type="Button" parent="Margin/VBox/Tabs"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Friends"
+text = "LEAGUE_TAB_FRIENDS"
 
 [node name="FriendsPanel" type="VBoxContainer" parent="Margin/VBox"]
 visible = false
@@ -138,10 +137,11 @@ layout_mode = 2
 [node name="CodeCaption" type="Label" parent="Margin/VBox/FriendsPanel/CodeRow/CodeChip/HBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Your code"
+text = "LEAGUE_YOUR_CODE"
 
 [node name="CodeLabel" type="Label" parent="Margin/VBox/FriendsPanel/CodeRow/CodeChip/HBox"]
 layout_mode = 2
+auto_translate_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"LabelBodyBold"
 text = "QN-ABC234"
@@ -171,14 +171,14 @@ theme_override_constants/separation = 10
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "Friend code QN-..."
+placeholder_text = "LEAGUE_CODE_PLACEHOLDER"
 max_length = 9
 
 [node name="AddButton" type="Button" parent="Margin/VBox/FriendsPanel/AddRow"]
 custom_minimum_size = Vector2(130, 64)
 layout_mode = 2
 theme_type_variation = &"ButtonSecondary"
-text = "Add"
+text = "LEAGUE_ADD"
 
 [node name="Scroll" type="ScrollContainer" parent="Margin/VBox"]
 layout_mode = 2

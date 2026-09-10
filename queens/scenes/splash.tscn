@@ -55,5 +55,5 @@ horizontal_alignment = 1
 [node name="Sub" type="Label" parent="Center"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionOnDark"
-text = "a logic puzzle"
+text = "SPLASH_TAGLINE"
 horizontal_alignment = 1

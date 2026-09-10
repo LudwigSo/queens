@@ -123,14 +123,14 @@ func _build_steps() -> void:
 		if p != q0 and p != q1:
 			row_cells.append(p)
 	_steps = [
-		{"text": "One queen in every row, column and colour region. Queens never touch, not even diagonally.", "glow": _region_of(q0), "wait": "next"},
-		{"text": "Tap a cell once to mark it with an X. Try the glowing cell.", "glow": [q0], "allowed": [q0], "wait": "mark", "cell": q0},
-		{"text": "Tap it again to place a queen.", "glow": [q0], "allowed": [q0], "wait": "queen", "cell": q0},
-		{"text": "The small X marks show where no other queen can go: its row, column, region and the cells around it.", "wait": "next"},
-		{"text": "Try placing a queen right next to it.", "glow": [nb], "allowed": [nb], "wait": "queen", "cell": nb},
-		{"text": "See the shake? Two queens can't touch. Tap it again to remove it.", "glow": [nb], "allowed": [nb], "wait": "removed", "cell": nb},
-		{"text": "Drag your finger across cells to mark many at once. Try the bottom row.", "glow": row_cells, "allowed": row_cells, "wait": "stroke"},
-		{"text": "Now finish the board. Every queen must sit on a different colour.", "allowed": [], "wait": "solved"},
+		{"text": Loc.t("TUT_STEP_1"), "glow": _region_of(q0), "wait": "next"},
+		{"text": Loc.t("TUT_STEP_2"), "glow": [q0], "allowed": [q0], "wait": "mark", "cell": q0},
+		{"text": Loc.t("TUT_STEP_3"), "glow": [q0], "allowed": [q0], "wait": "queen", "cell": q0},
+		{"text": Loc.t("TUT_STEP_4"), "wait": "next"},
+		{"text": Loc.t("TUT_STEP_5"), "glow": [nb], "allowed": [nb], "wait": "queen", "cell": nb},
+		{"text": Loc.t("TUT_STEP_6"), "glow": [nb], "allowed": [nb], "wait": "removed", "cell": nb},
+		{"text": Loc.t("TUT_STEP_7"), "glow": row_cells, "allowed": row_cells, "wait": "stroke"},
+		{"text": Loc.t("TUT_STEP_8"), "allowed": [], "wait": "solved"},
 	]
 
 

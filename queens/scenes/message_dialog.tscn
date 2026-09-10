@@ -45,14 +45,14 @@ layout_mode = 2
 [node name="Title" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelTitle"
-text = "Title"
+text = ""
 horizontal_alignment = 1
 
 [node name="Body" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelMuted"
 size_flags_vertical = 3
-text = "Body"
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -65,11 +65,11 @@ custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 theme_type_variation = &"ButtonSecondary"
 size_flags_horizontal = 3
-text = "Cancel"
+text = "DIALOG_CANCEL"
 
 [node name="OkButton" type="Button" parent="Panel/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
 size_flags_horizontal = 3
-text = "OK"
+text = "DIALOG_OK"

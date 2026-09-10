@@ -2,10 +2,14 @@ extends Node
 ## Visual smoke test: instantiates the main scene, plays part of a level and
 ## writes screenshots. Uses its own save file so real progress is untouched.
 ## Run with:
-##   godot --path queens res://tests/screenshot.tscn -- <output_dir>
+##   godot --path queens res://tests/screenshot.tscn -- <output_dir> [locale]
+## With a locale ("de") the shots are taken in that language and the files
+## get a "_de" suffix.
 
 const MainScene := preload("res://scenes/main.tscn")
 const SAVE_PATH := "user://screenshot_save.json"
+
+var _locale: String = ""   ## "" keeps the device language (English in CI).
 
 
 func _ready() -> void:
@@ -13,10 +17,15 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		out_dir = args[0].trim_suffix("/").trim_suffix("\\") + "/"
+	if args.size() > 1:
+		_locale = args[1]
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	App.use_save_path(SAVE_PATH)
 	App.save.set_setting("tutorial_done", true)
+	# use_save_path does not re-apply settings, so the language is pushed here.
+	App.save.set_setting("language", _locale)
+	App.apply_settings()
 	Motion.instant = true
 
 	var main: Control = MainScene.instantiate()
@@ -170,13 +179,13 @@ func _ready() -> void:
 	# Round summary modal (fabricated: the real one only appears after a round).
 	main.debug.show_home()
 	await _frames(1)
-	main.round_summary.open({"round_index": 1, "outcome": "promoted", "rank": 4, "group_size": 30, "round_score": 4120, "best_game": {"score": 540}}, "Gold", "Platinum")
+	main.round_summary.open({"round_index": 1, "outcome": "promoted", "rank": 4, "group_size": 30, "round_score": 4120, "best_game": {"score": 540}}, LeagueRules.tier_label("gold"), LeagueRules.tier_label("platinum"))
 	await _frames(2)
 	_save(out_dir + "14_round_summary.png")
 	main.round_summary.close()
 	await _frames(1)
 	# A promotion by tier points (Bronze -> Silver, mid-round).
-	main.round_summary.open({"round_index": 1, "outcome": "promoted", "reason": "score", "rank": 3, "group_size": 30, "round_score": 1850, "tier_points": 3120, "best_game": {"score": 540}}, "Bronze", "Silver")
+	main.round_summary.open({"round_index": 1, "outcome": "promoted", "reason": "score", "rank": 3, "group_size": 30, "round_score": 1850, "tier_points": 3120, "best_game": {"score": 540}}, LeagueRules.tier_label("bronze"), LeagueRules.tier_label("silver"))
 	await _frames(2)
 	_save(out_dir + "14b_promotion.png")
 	main.round_summary.close()
@@ -204,6 +213,8 @@ func _frames(n: int) -> void:
 
 
 func _save(path: String) -> void:
+	if _locale != "":
+		path = path.get_basename() + "_" + _locale + "." + path.get_extension()
 	var img := get_viewport().get_texture().get_image()
 	var err := img.save_png(path)
 	print("screenshot %s -> %s" % [path, error_string(err)])

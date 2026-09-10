@@ -50,8 +50,10 @@ static func defaults(cfg: GameConfig) -> Dictionary:
 
 
 ## Player settings, all with a default so screens never check for keys.
+## `language` is "" (follow the device language), "en" or "de".
 static func settings_defaults() -> Dictionary:
 	return {
+		"language": "",
 		"sfx": true,
 		"music": true,
 		"haptics": true,

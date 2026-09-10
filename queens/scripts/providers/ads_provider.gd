@@ -31,4 +31,4 @@ func is_ready() -> bool:
 
 
 func show_rewarded() -> void:
-	ad_failed.emit("Ads are not available")
+	ad_failed.emit(Loc.t("ERR_ADS_UNAVAILABLE"))

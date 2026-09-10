@@ -130,7 +130,7 @@ script = ExtResource("2_board")
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Tap to mark X, tap again for a queen. Drag to mark many."
+text = "GAME_HINT_DEFAULT"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -145,7 +145,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ButtonSecondary"
 disabled = true
-text = "Undo"
+text = "GAME_UNDO"
 icon = ExtResource("7_undo")
 
 [node name="HintButton" type="Button" parent="Margin/VBox/Actions"]
@@ -153,7 +153,7 @@ custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ButtonSecondary"
-text = "Hint"
+text = "GAME_HINT"
 icon = ExtResource("8_bulb")
 
 [node name="ClearButton" type="Button" parent="Margin/VBox/Actions"]
@@ -161,5 +161,5 @@ custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ButtonSecondary"
-text = "Clear"
+text = "GAME_CLEAR"
 icon = ExtResource("9_eraser")

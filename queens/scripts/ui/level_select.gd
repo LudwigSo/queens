@@ -38,7 +38,7 @@ func refresh(cards: Array) -> void:
 	var sizes := {}
 	for c in cards:
 		sizes[int(c["size"])] = true
-	var options: Array = [{"id": "0", "text": "All"}]
+	var options: Array = [{"id": "0", "text": Loc.t("LEVELS_FILTER_ALL")}]
 	var keys := sizes.keys()
 	keys.sort()
 	for s in keys:

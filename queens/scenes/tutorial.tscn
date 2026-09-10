@@ -34,13 +34,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"LabelTitle"
-text = "How to play"
+text = "TUT_TITLE"
 
 [node name="SkipButton" type="Button" parent="Margin/VBox/TopBar"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_type_variation = &"ButtonGhostMuted"
-text = "Skip"
+text = "TUT_SKIP"
 
 [node name="Progress" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -65,7 +65,7 @@ theme_override_constants/separation = 12
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"LabelBody"
-text = "One queen in every row, column and colour region. Queens never touch, not even diagonally."
+text = "TUT_STEP_1"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -74,4 +74,4 @@ autowrap_mode = 3
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
-text = "Next"
+text = "TUT_NEXT"

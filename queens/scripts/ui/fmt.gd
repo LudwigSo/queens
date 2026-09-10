@@ -15,7 +15,7 @@ static func remaining(seconds: int) -> String:
 
 
 static func level_title(level_no: int, size: int, difficulty: int) -> String:
-	return "Level %d · %dx%d · diff %d" % [level_no, size, size, difficulty]
+	return Loc.f("COMMON_LEVEL_TITLE", [level_no, size, size, difficulty])
 
 
 static func size_text(size: int) -> String:
@@ -24,27 +24,34 @@ static func size_text(size: int) -> String:
 
 static func mistakes(n: int) -> String:
 	if n == 0:
-		return "flawless"
-	return "%d mistake" % n if n == 1 else "%d mistakes" % n
+		return Loc.t("MISTAKES_ZERO")
+	return Loc.plural("MISTAKES", n)
+
+
+## "×0.85" / "×0,85": a score multiplier on the win overlay. GDScript always
+## formats with a dot, so the separator comes from the translation file.
+static func factor(value: float) -> String:
+	return Loc.f("WIN_FACTOR", [("%.2f" % value).replace(".", Loc.t("COMMON_DECIMAL_SEP"))])
 
 
 static func points(n: int) -> String:
-	return "%d pts" % n
+	return Loc.f("COMMON_PTS", [n])
 
 
 ## "1240 / 3000 pts to Silver": tier points toward the next tier.
 static func progress(points_now: int, need: int, next_tier: String) -> String:
-	var text := "%d / %d pts" % [points_now, need]
-	return text + (" to " + next_tier if next_tier != "" else "")
+	if next_tier == "":
+		return Loc.f("COMMON_PROGRESS", [points_now, need])
+	return Loc.f("COMMON_PROGRESS_TO", [points_now, need, next_tier])
 
 
 static func zone(zone_id: String) -> String:
 	match zone_id:
 		"promote":
-			return "promotion zone"
+			return Loc.t("ZONE_PROMOTE")
 		"relegate":
-			return "relegation zone"
-	return "safe"
+			return Loc.t("ZONE_RELEGATE")
+	return Loc.t("ZONE_SAFE")
 
 
 static func ordinal(n: int) -> String:

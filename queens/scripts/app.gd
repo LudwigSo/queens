@@ -26,6 +26,7 @@ var _save_queued: bool = false
 
 
 func _ready() -> void:
+	Loc.load_csv()
 	config = GameConfig.new()
 	save = SaveData.load_or_create(config)
 	catalog = LevelCatalog.new(Levels.load_all())
@@ -49,9 +50,10 @@ func _ready() -> void:
 	purchases.restore()
 
 
-## Pushes the persisted settings into the motion and audio systems.
+## Pushes the persisted settings into the language, motion and audio systems.
 func apply_settings() -> void:
 	var st := save.settings()
+	Loc.apply(Loc.resolve(str(st.get("language", "")), OS.get_locale_language()))
 	Motion.reduced = bool(st.get("reduced_motion", false))
 	var audio := get_node_or_null("/root/Audio")
 	if audio != null:

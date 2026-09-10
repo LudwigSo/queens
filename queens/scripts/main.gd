@@ -61,6 +61,7 @@ func _ready() -> void:
 	settings_screen.rename_requested.connect(_on_rename)
 	settings_screen.restore_requested.connect(_on_restore_purchase)
 	settings_screen.tutorial_requested.connect(_show_tutorial)
+	settings_screen.language_selected.connect(_on_language_selected)
 	tutorial.finished.connect(_on_tutorial_finished)
 	pause_menu.settings_requested.connect(_show_settings)
 	pause_menu.set_settings_available(true)
@@ -73,15 +74,15 @@ func _ready() -> void:
 	App.ads.ad_progress.connect(energy_dialog.set_status)
 	App.ads.ad_failed.connect(func(reason: String) -> void: energy_dialog.set_status(reason); toast.show_message(reason, "error"))
 	App.ads.ad_closed.connect(func(rewarded: bool) -> void:
-		energy_dialog.set_status("Thanks! Energy added." if rewarded else "No reward this time.")
+		energy_dialog.set_status(Loc.t("SHOP_STATUS_THANKS") if rewarded else Loc.t("SHOP_STATUS_NO_REWARD"))
 		if rewarded:
-			toast.show_message("+%d energy" % App.config.ad_reward_energy, "success"))
+			toast.show_message(Loc.f("TOAST_ENERGY_ADDED", [App.config.ad_reward_energy]), "success"))
 	App.purchases.products_updated.connect(func(_products: Dictionary) -> void: _refresh_energy())
 	App.purchases.purchase_failed.connect(func(reason: String) -> void: energy_dialog.set_status(reason); toast.show_message(reason, "error"))
 	App.purchases.purchase_completed.connect(func(_id: String, _token: String) -> void:
-		energy_dialog.set_status("Unlimited energy unlocked.")
-		toast.show_message("Unlimited energy unlocked", "success"))
-	App.purchases.restore_completed.connect(func(owned: Array) -> void: energy_dialog.set_status("Purchase restored." if not owned.is_empty() else "Nothing to restore."))
+		energy_dialog.set_status(Loc.t("SHOP_STATUS_UNLIMITED"))
+		toast.show_message(Loc.t("TOAST_UNLIMITED"), "success"))
+	App.purchases.restore_completed.connect(func(owned: Array) -> void: energy_dialog.set_status(Loc.t("SHOP_STATUS_RESTORED") if not owned.is_empty() else Loc.t("SHOP_STATUS_NOTHING")))
 	level_select.detail_requested.connect(_show_level_detail)
 	level_select.back_requested.connect(_show_home.bind(true))
 	level_select.set_back_visible(true)
@@ -267,17 +268,17 @@ func _open_energy_dialog(blocked: bool) -> void:
 
 
 func _on_watch_ad() -> void:
-	energy_dialog.set_status("Loading ad…")
+	energy_dialog.set_status(Loc.t("SHOP_STATUS_LOADING_AD"))
 	App.ads.show_rewarded()
 
 
 func _on_buy_unlimited() -> void:
-	energy_dialog.set_status("Contacting the store…")
+	energy_dialog.set_status(Loc.t("SHOP_STATUS_CONTACTING"))
 	App.purchases.purchase(App.config.unlimited_product_id)
 
 
 func _on_restore_purchase() -> void:
-	energy_dialog.set_status("Restoring…")
+	energy_dialog.set_status(Loc.t("SHOP_STATUS_RESTORING"))
 	App.purchases.restore()
 
 
@@ -285,6 +286,7 @@ func _on_restore_purchase() -> void:
 
 func _settings_view() -> Dictionary:
 	var view := App.save.settings()
+	view["language_effective"] = Loc.resolve(str(view.get("language", "")), OS.get_locale_language())
 	view["nickname"] = App.save.nickname()
 	view["purchases_available"] = App.purchases.is_available()
 	view["version"] = App.config.client_version
@@ -308,6 +310,14 @@ func _on_settings_back() -> void:
 		_show_home(true)
 
 
+## The flag row: every visible screen re-translates itself on the locale
+## change, the settings screen is rebuilt here for the toggle state.
+func _on_language_selected(code: String) -> void:
+	App.save.set_setting("language", code)
+	App.apply_settings()
+	settings_screen.refresh(_settings_view())
+
+
 func _on_setting_changed(key: String, value: bool) -> void:
 	App.save.set_setting(key, value)
 	App.apply_settings()
@@ -325,7 +335,7 @@ func _show_tutorial() -> void:
 func _on_tutorial_finished(completed: bool) -> void:
 	App.save.set_setting("tutorial_done", true)
 	if completed:
-		toast.show_message("You're ready. Have fun!", "success")
+		toast.show_message(Loc.t("TOAST_TUTORIAL_DONE"), "success")
 	_show_home()
 
 
@@ -338,14 +348,14 @@ func _play_step(step: int) -> void:
 	var pick: Dictionary = _options.get(step, {"level": {}, "reason": "none"})
 	match str(pick.get("reason", "none")):
 		"none_harder":
-			toast.show_message("Every harder level is cooling down. Try Same or Easier.")
+			toast.show_message(Loc.t("TOAST_ALL_HARDER_COOLING"))
 		"none_easier":
-			toast.show_message("Every easier level is cooling down. Try Same or Harder.")
+			toast.show_message(Loc.t("TOAST_ALL_EASIER_COOLING"))
 		"none":
-			message_dialog.open("All levels cooling down", "The next level unlocks in %s." % Cooldown.format_remaining(_shortest_lock()))
+			message_dialog.open(Loc.t("DIALOG_ALL_COOLING_TITLE"), Loc.f("DIALOG_ALL_COOLING_BODY", [Cooldown.format_remaining(_shortest_lock())]))
 			router.present(message_dialog)
 		_:
-			start_game(pick["level"], "Closest available level" if pick["reason"] == "nearest" else "")
+			start_game(pick["level"], Loc.t("HOME_OPT_NEAREST") if pick["reason"] == "nearest" else "")
 
 
 # --- level overview and detail ------------------------------------------------
@@ -404,8 +414,8 @@ func _on_add_friend(code: String) -> void:
 	var res: Dictionary = await App.backend.add_friend(code)
 	if res["ok"]:
 		league.clear_code()
-		league.set_status("Added %s" % res["data"]["nickname"])
-		toast.show_message("Added %s" % res["data"]["nickname"], "success")
+		league.set_status(Loc.f("TOAST_FRIEND_ADDED", [str(res["data"]["nickname"])]))
+		toast.show_message(Loc.f("TOAST_FRIEND_ADDED", [str(res["data"]["nickname"])]), "success")
 		await _refresh_league()
 	else:
 		league.set_status(res["error"])
@@ -414,7 +424,7 @@ func _on_add_friend(code: String) -> void:
 
 func _on_remove_friend(player_id: String) -> void:
 	await App.backend.remove_friend(player_id)
-	league.set_status("Friend removed")
+	league.set_status(Loc.t("LEAGUE_FRIEND_REMOVED"))
 	await _refresh_league()
 
 
@@ -423,7 +433,7 @@ func _on_rename(nickname: String) -> void:
 	if res["ok"]:
 		App.save.data["player"]["nickname"] = res["data"]["nickname"]
 		App.save.mark_changed()
-		toast.show_message("You are now %s" % res["data"]["nickname"], "success")
+		toast.show_message(Loc.f("TOAST_RENAMED", [str(res["data"]["nickname"])]), "success")
 		settings_screen.refresh(_settings_view())
 		await _refresh_league()
 	else:
@@ -437,7 +447,7 @@ func _on_rename(nickname: String) -> void:
 func start_game(level: Dictionary, note: String = "") -> void:
 	if _is_locked(level):
 		var remaining := Cooldown.remaining(App.save.level_entry(level["id"]), App.now(), App.config.cooldown_seconds)
-		message_dialog.open("Level locked", "You played this level recently. It unlocks in %s." % Cooldown.format_remaining(remaining))
+		message_dialog.open(Loc.t("DIALOG_LOCKED_TITLE"), Loc.f("DIALOG_LOCKED_BODY", [Cooldown.format_remaining(remaining)]))
 		router.present(message_dialog)
 		return
 	if not App.energy.can_start():
@@ -505,7 +515,7 @@ func _open_pause() -> void:
 	var lv: Dictionary = levels[current_level] if current_level >= 0 else {}
 	var subtitle := ""
 	if not lv.is_empty():
-		subtitle = "Level %d · %s · %s" % [App.catalog.display_index(lv["id"]) + 1, Fmt.size_text(int(lv["size"])), Fmt.time(session.elapsed_seconds())]
+		subtitle = Loc.f("PAUSE_SUBTITLE", [App.catalog.display_index(lv["id"]) + 1, Fmt.size_text(int(lv["size"])), Fmt.time(session.elapsed_seconds())])
 	pause_menu.open(subtitle)
 	router.present(pause_menu)
 
@@ -513,7 +523,7 @@ func _open_pause() -> void:
 func _on_restart() -> void:
 	if session == null or session.finished:
 		return
-	message_dialog.open("Restart level?", "The board is wiped. The clock keeps running.", "Restart", "Keep going")
+	message_dialog.open(Loc.t("DIALOG_RESTART_TITLE"), Loc.t("DIALOG_RESTART_BODY"), Loc.t("DIALOG_RESTART_OK"), Loc.t("DIALOG_RESTART_CANCEL"))
 	router.present(message_dialog)
 	var confirmed: bool = await message_dialog.closed
 	if confirmed:
@@ -527,9 +537,9 @@ func _on_hint() -> void:
 		return
 	var hint := HintFinder.find(board.model)
 	if hint["kind"] == "none":
-		game_screen.set_hint("Nothing left to hint. You're almost there!", 3.0)
+		game_screen.set_hint(Loc.t("HINT_NONE_ENCOURAGE"), 3.0)
 		return
-	game_screen.set_hint(hint["text"], 4.0)
+	game_screen.set_hint(Loc.t(str(hint["text_key"])), 4.0)
 	await board.apply_hint(hint)
 	if session != null:
 		game_screen.set_hints_used(session.result.hint_count)
@@ -543,7 +553,7 @@ func _on_give_up() -> void:
 	if session == null or session.finished or message_dialog.visible:
 		return
 	_pause_game(true)
-	message_dialog.open("Give up?", "Giving up ends this game and locks the level for %s." % Cooldown.format_period(App.config.cooldown_seconds), "Give up", "Keep playing")
+	message_dialog.open(Loc.t("DIALOG_GIVE_UP_TITLE"), Loc.f("DIALOG_GIVE_UP_BODY", [Cooldown.format_period(App.config.cooldown_seconds)]), Loc.t("DIALOG_GIVE_UP_OK"), Loc.t("DIALOG_GIVE_UP_CANCEL"))
 	router.present(message_dialog)
 	var confirmed: bool = await message_dialog.closed
 	if confirmed:

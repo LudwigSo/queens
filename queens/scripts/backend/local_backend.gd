@@ -142,7 +142,7 @@ func register_player(player_id: String, nickname: String) -> Dictionary:
 func set_nickname(nickname: String) -> Dictionary:
 	nickname = nickname.strip_edges()
 	if nickname.length() < 2 or nickname.length() > 16:
-		return fail("Nickname must be 2 to 16 characters")
+		return fail(Loc.t("ERR_NICKNAME_LENGTH"))
 	data["profile"]["nickname"] = nickname
 	_save()
 	return ok(data["profile"].duplicate(true))
@@ -667,12 +667,12 @@ func get_friends() -> Dictionary:
 func add_friend(code: String) -> Dictionary:
 	code = code.strip_edges().to_upper()
 	if not is_valid_code(code):
-		return fail("A friend code looks like QN-ABC234")
+		return fail(Loc.t("ERR_FRIEND_CODE_FORMAT"))
 	if code == str(data["profile"].get("friend_code", "")):
-		return fail("That is your own code")
+		return fail(Loc.t("ERR_FRIEND_OWN_CODE"))
 	for fr in data["friends"]:
 		if fr["friend_code"] == code:
-			return fail("Already friends")
+			return fail(Loc.t("ERR_FRIEND_ALREADY"))
 	var tiers: Array = league_cfg()["tiers"]
 	var fr := {
 		"player_id": "friend:" + code,
@@ -697,4 +697,4 @@ func remove_friend(friend_id: String) -> Dictionary:
 			_save()
 			standing_changed.emit()
 			return ok(null)
-	return fail("Not a friend")
+	return fail(Loc.t("ERR_FRIEND_UNKNOWN"))

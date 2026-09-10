@@ -33,14 +33,14 @@ static func find(m: BoardModel) -> Dictionary:
 
 
 static func _none() -> Dictionary:
-	return {"kind": "none", "cells": [], "unit": [], "place": null, "marks": [], "text": "Nothing left to hint."}
+	return {"kind": "none", "cells": [], "unit": [], "place": null, "marks": [], "text_key": "HINT_NONE"}
 
 
 static func _wrong_queen(m: BoardModel) -> Dictionary:
 	for q in m.queens():
 		if not m.is_correct_cell(q.x, q.y):
 			return {"kind": "wrong_queen", "cells": [q], "unit": [], "place": null, "marks": [],
-				"text": "This queen can't be right. Tap it to remove it."}
+				"text_key": "HINT_WRONG_QUEEN"}
 	return {}
 
 
@@ -49,7 +49,7 @@ static func _wrong_mark(m: BoardModel) -> Dictionary:
 		var c := int(m.solution[r])
 		if m.cells[r][c] == BoardModel.Cell.MARK:
 			return {"kind": "wrong_mark", "cells": [Vector2i(r, c)], "unit": [], "place": null, "marks": [],
-				"text": "One of your X marks is wrong. Tap it to clear it."}
+				"text_key": "HINT_WRONG_MARK"}
 	return {}
 
 
@@ -66,22 +66,22 @@ static func _single(m: BoardModel, cands: Array[Vector2i]) -> Dictionary:
 		if not m.row_has_queen(r) and by_row.get(r, []).size() == 1:
 			var p: Vector2i = by_row[r][0]
 			if m.is_correct_cell(p.x, p.y):
-				return _single_result(p, _row_cells(m, r), "Only one spot left in this row.")
+				return _single_result(p, _row_cells(m, r), "HINT_SINGLE_ROW")
 	for c in m.size_n:
 		if not m.col_has_queen(c) and by_col.get(c, []).size() == 1:
 			var p: Vector2i = by_col[c][0]
 			if m.is_correct_cell(p.x, p.y):
-				return _single_result(p, _col_cells(m, c), "Only one spot left in this column.")
+				return _single_result(p, _col_cells(m, c), "HINT_SINGLE_COL")
 	for reg in by_region:
 		if not m.region_has_queen(reg) and by_region[reg].size() == 1:
 			var p: Vector2i = by_region[reg][0]
 			if m.is_correct_cell(p.x, p.y):
-				return _single_result(p, m.region_cells(reg), "Only one spot left in this region.")
+				return _single_result(p, m.region_cells(reg), "HINT_SINGLE_REGION")
 	return {}
 
 
-static func _single_result(p: Vector2i, unit: Array, text: String) -> Dictionary:
-	return {"kind": "single", "cells": [p], "unit": unit, "place": p, "marks": [], "text": text}
+static func _single_result(p: Vector2i, unit: Array, text_key: String) -> Dictionary:
+	return {"kind": "single", "cells": [p], "unit": unit, "place": p, "marks": [], "text_key": text_key}
 
 
 ## A region whose candidates all share one row (or column): the rest of that
@@ -112,7 +112,7 @@ static func _confined(m: BoardModel, cands: Array[Vector2i]) -> Dictionary:
 					marks.append(p)
 			if not marks.is_empty():
 				return {"kind": "confined", "cells": ps, "unit": _row_cells(m, ps[0].x), "place": null, "marks": marks,
-					"text": "This region's queen must be in this row, so the rest of the row is out."}
+					"text_key": "HINT_CONFINED_ROW"}
 		if same_col:
 			var marks: Array[Vector2i] = []
 			for r in m.size_n:
@@ -121,7 +121,7 @@ static func _confined(m: BoardModel, cands: Array[Vector2i]) -> Dictionary:
 					marks.append(p)
 			if not marks.is_empty():
 				return {"kind": "confined", "cells": ps, "unit": _col_cells(m, ps[0].y), "place": null, "marks": marks,
-					"text": "This region's queen must be in this column, so the rest of the column is out."}
+					"text_key": "HINT_CONFINED_COL"}
 	return {}
 
 
@@ -142,7 +142,7 @@ static func _reveal(m: BoardModel, cands: Array[Vector2i]) -> Dictionary:
 	if best_row < 0:
 		return _none()
 	var p := Vector2i(best_row, int(m.solution[best_row]))
-	return {"kind": "reveal", "cells": [p], "unit": _row_cells(m, best_row), "place": p, "marks": [], "text": "Try a queen here."}
+	return {"kind": "reveal", "cells": [p], "unit": _row_cells(m, best_row), "place": p, "marks": [], "text_key": "HINT_REVEAL"}
 
 
 ## Applies a hint to the model as one undo step. Returns the cells changed.

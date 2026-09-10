@@ -37,7 +37,7 @@ func provider_name() -> String:
 
 func initialize() -> void:
 	if not has_plugin():
-		ad_failed.emit("AdMob plugin not installed")
+		ad_failed.emit(Loc.t("ERR_ADS_PLUGIN_MISSING"))
 		return
 	var mobile_ads := _class_script("MobileAds")
 	mobile_ads.initialize()
@@ -51,7 +51,7 @@ func preload_ad() -> void:
 	var callback := _instance("RewardedAdLoadCallback")
 	callback.on_ad_failed_to_load = func(ad_error: Object) -> void:
 		_loading = false
-		ad_failed.emit("Ad failed to load: %s" % str(ad_error.get("message")))
+		ad_failed.emit(Loc.f("ERR_AD_LOAD", [str(ad_error.get("message"))]))
 	callback.on_ad_loaded = func(rewarded_ad: Object) -> void:
 		_loading = false
 		_rewarded_ad = rewarded_ad
@@ -60,7 +60,7 @@ func preload_ad() -> void:
 		content.on_ad_failed_to_show_full_screen_content = func(ad_error: Object) -> void:
 			_on_show_failed(str(ad_error.get("message")))
 		content.on_ad_showed_full_screen_content = func() -> void:
-			ad_progress.emit("Ad playing…")
+			ad_progress.emit(Loc.t("SHOP_AD_PLAYING"))
 		_rewarded_ad.full_screen_content_callback = content
 		availability_changed.emit(true)
 	var loader := _instance("RewardedAdLoader")
@@ -73,7 +73,7 @@ func is_ready() -> bool:
 
 func show_rewarded() -> void:
 	if not is_ready():
-		ad_failed.emit("Ad not ready yet")
+		ad_failed.emit(Loc.t("ERR_AD_NOT_READY"))
 		preload_ad()
 		return
 	_showing = true
@@ -92,7 +92,7 @@ func _on_dismissed() -> void:
 
 func _on_show_failed(message: String) -> void:
 	_release()
-	ad_failed.emit("Ad could not be shown: %s" % message)
+	ad_failed.emit(Loc.f("ERR_AD_SHOW", [message]))
 	preload_ad()
 
 

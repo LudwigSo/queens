@@ -36,5 +36,5 @@ stretch_mode = 5
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 theme_type_variation = &"LabelOnDark"
-text = "Message"
+text = ""
 autowrap_mode = 3

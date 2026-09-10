@@ -27,7 +27,7 @@ func query_products(_product_ids: Array) -> void:
 
 
 func purchase(_product_id: String) -> void:
-	purchase_failed.emit("Purchases are not available")
+	purchase_failed.emit(Loc.t("ERR_PURCHASES_UNAVAILABLE"))
 
 
 func restore() -> void:

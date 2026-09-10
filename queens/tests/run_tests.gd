@@ -16,6 +16,8 @@ var levels: Array = []
 
 
 func _initialize() -> void:
+	Loc.load_csv()
+	TranslationServer.set_locale("en")
 	levels = Levels.load_all()
 	_check(levels.size() > 0, "level file has levels")
 	var ids: Dictionary = {}
@@ -33,6 +35,7 @@ func _initialize() -> void:
 	_test_views()
 	_test_streak()
 	_test_settings()
+	_test_loc()
 	_test_level_catalog()
 	_test_save_data()
 	_test_game_session()
@@ -1247,11 +1250,13 @@ func _test_settings() -> void:
 	var fresh := SaveData.new()
 	fresh.data = SaveData.defaults(cfg)
 	_check(fresh.setting("sfx") == true and fresh.setting("tutorial_done") == false and fresh.setting("mistake_alerts") == true, "fresh save has the default settings")
+	_check(fresh.setting("language") == "", "a fresh save follows the device language")
 	fresh.set_setting("music", false)
 	_check(fresh.setting("music") == false and fresh.settings()["music"] == false, "a changed setting is read back")
 	var old := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3, "unlimited": false, "purchase_token": "", "ads_watched": 0}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": [], "settings": {"sfx": false}}
 	var migrated := SaveData.migrate(old, cfg)
 	_check(migrated["settings"]["sfx"] == false and migrated["settings"]["haptics"] == true and migrated["settings"]["tutorial_done"] == false, "migration keeps stored settings and fills the missing ones")
+	_check(migrated["settings"]["language"] == "", "a save from before the language setting follows the device language")
 	var missing := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": []}
 	_check(SaveData.migrate(missing, cfg)["settings"]["sfx"] == true, "a save without a settings block gets all defaults")
 	var tmp := "user://test_settings_save.json"
@@ -1261,3 +1266,144 @@ func _test_settings() -> void:
 	var back := SaveData.migrate(SaveData.read_json(tmp), cfg)
 	_check(back["settings"]["reduced_motion"] == true and back["settings"]["music"] == false, "settings survive a save/load roundtrip")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+
+
+## Every screen file, so the reference check can prove the migration is complete.
+func _files_under(dir_path: String, ext: String, out: Array) -> void:
+	var d := DirAccess.open(dir_path)
+	if d == null:
+		return
+	d.list_dir_begin()
+	var entry := d.get_next()
+	while entry != "":
+		var full := dir_path.path_join(entry)
+		if d.current_is_dir():
+			_files_under(full, ext, out)
+		elif entry.ends_with(ext):
+			out.append(full)
+		entry = d.get_next()
+	d.list_dir_end()
+
+
+func _read(path: String) -> String:
+	var f := FileAccess.open(path, FileAccess.READ)
+	return f.get_as_text() if f != null else ""
+
+
+## Translations: the CSV itself, the lookups, and that scripts and scenes and
+## the file agree on the set of keys.
+func _test_loc() -> void:
+	var rows := Loc.parse_csv()
+	_check(rows.size() > 150, "the translation file has %d keys" % rows.size())
+	var key_re := RegEx.create_from_string("^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")
+	var ph_re := RegEx.create_from_string("%[sdf%]")
+	var bad_key := ""
+	var missing := ""
+	var mismatched := ""
+	for key in rows:
+		if key_re.search(key) == null:
+			bad_key = key
+		var en := str(rows[key].get("en", ""))
+		var de := str(rows[key].get("de", ""))
+		if en.strip_edges() == "" or de.strip_edges() == "":
+			missing = key
+		# The one bug class that only shows up in the other language: a value
+		# whose placeholders no longer match the arguments the code passes.
+		var en_ph: Array = []
+		for m in ph_re.search_all(en):
+			en_ph.append(m.get_string())
+		var de_ph: Array = []
+		for m in ph_re.search_all(de):
+			de_ph.append(m.get_string())
+		if en_ph != de_ph:
+			mismatched = "%s (%s vs %s)" % [key, en_ph, de_ph]
+	_check(bad_key == "", "every key is UPPER_SNAKE (offender: %s)" % bad_key)
+	_check(missing == "", "every key has an english and a german value (missing: %s)" % missing)
+	_check(mismatched == "", "placeholders match between the languages (%s)" % mismatched)
+
+	# Lookups in both languages.
+	TranslationServer.set_locale("en")
+	_check(Loc.t("SETTINGS_TITLE") == "Settings", "english lookup")
+	_check(Loc.plural("MISTAKES", 1) == "1 mistake" and Loc.plural("MISTAKES", 2) == "2 mistakes", "english plural")
+	_check(Loc.t("NOPE_KEY") == "NOPE_KEY" and not Loc.has("NOPE_KEY"), "an unknown key falls back to itself")
+	_check(Loc.has("SETTINGS_TITLE"), "has() finds a known key")
+	TranslationServer.set_locale("de")
+	_check(Loc.t("SETTINGS_TITLE") == "Einstellungen", "german lookup")
+	_check(Loc.f("HOME_STREAK", [3]) == "3 Tage in Folge", "german formatting")
+	_check(Loc.plural("MISTAKES", 1) == "1 Fehler", "german plural")
+	_check(Fmt.mistakes(0) == "fehlerfrei" and Fmt.points(20) == "20 Pkt.", "Fmt follows the locale")
+	_check(Fmt.factor(0.85) == "×0,85", "german uses a decimal comma (got %s)" % Fmt.factor(0.85))
+	_check(Cooldown.format_period(86400) == "1 Tag" and Cooldown.format_period(7 * 86400) == "7 Tage", "Cooldown follows the locale")
+	_check(LeagueRules.tier_label("platinum") == "Platin" and LeagueRules.tier_label("gold") == "Gold", "tier names are translated")
+	_check(LeagueRules.tier_label("unknown_tier") == "Unknown Tier", "a tier without a row falls back to its id")
+	var cfg := GameConfig.new().league
+	_check(LeagueRules.rules_text(LeagueRules.tier(cfg, "gold")) == "Beste 20 % steigen auf · Abstieg unmöglich", "german rules text (got %s)" % LeagueRules.rules_text(LeagueRules.tier(cfg, "gold")))
+	TranslationServer.set_locale("en")
+
+	# Reloading must not stack a second copy of a language.
+	Loc.load_csv()
+	var de_count := 0
+	for l in TranslationServer.get_loaded_locales():
+		if str(l) == "de":
+			de_count += 1
+	_check(de_count == 1, "loading twice keeps one translation per language")
+
+	# Which language a fresh install picks.
+	_check(Loc.resolve("", "de") == "de", "a german device starts in german")
+	_check(Loc.resolve("", "en") == "en" and Loc.resolve("", "fr") == "en", "any other device starts in english")
+	_check(Loc.resolve("de", "en") == "de" and Loc.resolve("en", "de") == "en", "the player's choice wins")
+	_check(Loc.resolve("xx", "de") == "de", "an unknown stored language falls back to the device")
+
+	# Every key the code uses exists, and every key in the file is used.
+	var referenced: Dictionary = {}
+	var plural_bases: Dictionary = {}
+	var prefixes: Array = []
+	var script_files: Array = []
+	_files_under("res://scripts", ".gd", script_files)
+	var lit_re := RegEx.create_from_string("\"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_?)\"")
+	var plural_re := RegEx.create_from_string("plural\\(\\s*\"([A-Z0-9_]+)\"")
+	for path in script_files:
+		var text := _read(path)
+		for m in lit_re.search_all(text):
+			var lit := m.get_string(1)
+			if lit.ends_with("_"):
+				prefixes.append(lit)
+			elif key_re.search(lit) != null:
+				referenced[lit] = true
+		for m in plural_re.search_all(text):
+			plural_bases[m.get_string(1)] = true
+			referenced[m.get_string(1) + "_ONE"] = true
+			referenced[m.get_string(1) + "_OTHER"] = true
+	for base in plural_bases:
+		referenced.erase(base)
+	# A key built at runtime from an id ("TIER_" + id) covers its whole family.
+	for key in rows:
+		for prefix in prefixes:
+			if key.begins_with(prefix):
+				referenced[key] = true
+
+	var scene_files: Array = []
+	_files_under("res://scenes", ".tscn", scene_files)
+	var text_re := RegEx.create_from_string("(?m)^(?:text|placeholder_text) = \"(.*)\"$")
+	var no_letters := RegEx.create_from_string("^[^A-Za-z]*$")
+	var allowed := ["Queens", "Queens 1.0", "QN-ABC234", "Deutsch", "English"]
+	var stray := ""
+	for path in scene_files:
+		for m in text_re.search_all(_read(path)):
+			var value := m.get_string(1)
+			if key_re.search(value) != null:
+				referenced[value] = true
+			elif no_letters.search(value) == null and not allowed.has(value):
+				stray = "%s: %s" % [path.get_file(), value]
+	_check(stray == "", "no english left in a scene (%s)" % stray)
+
+	var unknown := ""
+	for key in referenced:
+		if not rows.has(key):
+			unknown = key
+	_check(unknown == "", "every key used by the game is in the translation file (missing: %s)" % unknown)
+	var unused := ""
+	for key in rows:
+		if not referenced.has(key):
+			unused = key
+	_check(unused == "", "the translation file has no unused key (%s)" % unused)

@@ -35,7 +35,7 @@ script = ExtResource("2_thumb")
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionInk"
-text = "Level 21"
+text = "COMMON_LEVEL_N"
 horizontal_alignment = 1
 
 [node name="Meta" type="HBoxContainer" parent="VBox"]
@@ -59,7 +59,7 @@ icon_size = 16
 [node name="Best" type="Label" parent="VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Best 143 pts"
+text = ""
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
@@ -84,4 +84,4 @@ stretch_mode = 5
 [node name="LockLabel" type="Label" parent="VBox/LockRow"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "6d 23h"
+text = ""

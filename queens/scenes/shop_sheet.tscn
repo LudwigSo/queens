@@ -54,7 +54,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"LabelTitle"
-text = "Energy"
+text = "SHOP_TITLE"
 
 [node name="CloseButton" type="Button" parent="Panel/VBox/TopRow"]
 custom_minimum_size = Vector2(56, 56)
@@ -88,7 +88,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"LabelCaption"
-text = "Every game you start costs one energy."
+text = "SHOP_EXPLAIN"
 autowrap_mode = 3
 
 [node name="HintBanner" type="PanelContainer" parent="Panel/VBox"]
@@ -99,7 +99,7 @@ theme_type_variation = &"Banner"
 [node name="HintLabel" type="Label" parent="Panel/VBox/HintBanner"]
 layout_mode = 2
 theme_type_variation = &"LabelError"
-text = "You need 1 energy to play. Watch an ad or go unlimited."
+text = "SHOP_BLOCKED"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -107,21 +107,21 @@ autowrap_mode = 3
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
-text = "Watch an ad · +10"
+text = "SHOP_WATCH_AD"
 icon = ExtResource("3_video")
 
 [node name="BuyButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 theme_type_variation = &"ButtonGold"
-text = "Unlimited · 2.99 €"
+text = "SHOP_UNLIMITED"
 icon = ExtResource("4_inf")
 
 [node name="RestoreButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_type_variation = &"ButtonGhostMuted"
-text = "Restore purchase"
+text = "SHOP_RESTORE"
 
 [node name="StatusLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2

@@ -6,7 +6,7 @@ extends Control
 signal pause_requested
 signal hint_requested
 
-const DEFAULT_HINT := "Tap to mark X, tap again for a queen. Drag to mark many."
+const DEFAULT_HINT_KEY := "GAME_HINT_DEFAULT"
 
 @onready var board: Board = $Margin/VBox/Board
 @onready var pause_button: Button = $Margin/VBox/Header/PauseButton
@@ -22,6 +22,9 @@ const DEFAULT_HINT := "Tap to mark X, tap again for a queen. Drag to mark many."
 @onready var clear_button: Button = $Margin/VBox/Actions/ClearButton
 
 var _hint_tween: Tween = null
+var _level_args: Array = []      ## set_level's arguments, so a language switch can re-render
+var _hints_used: int = 0
+var _hint_is_default: bool = true
 
 
 func _ready() -> void:
@@ -34,11 +37,13 @@ func _ready() -> void:
 
 ## Header for a new game.
 func set_level(level_no: int, size: int, difficulty: int, star_count: int) -> void:
-	level_label.text = "Level %d · %s · diff %d" % [level_no, Fmt.size_text(size), difficulty]
+	_level_args = [level_no, size, difficulty]
+	_render_level()
 	stars.set_stars(star_count, 4)
 	set_mistakes(0)
 	set_hints_used(0)
-	hint_label.text = DEFAULT_HINT
+	hint_label.text = Loc.t(DEFAULT_HINT_KEY)
+	_hint_is_default = true
 	hint_label.modulate.a = 1.0
 	undo_button.disabled = true
 	hint_button.disabled = false
@@ -47,7 +52,13 @@ func set_level(level_no: int, size: int, difficulty: int, star_count: int) -> vo
 
 ## Kept for older callers: a preformatted header line.
 func set_level_text(text: String) -> void:
+	_level_args = []
 	level_label.text = text
+
+
+func _render_level() -> void:
+	if _level_args.size() == 3:
+		level_label.text = Loc.f("GAME_LEVEL_TITLE", [_level_args[0], Fmt.size_text(int(_level_args[1])), _level_args[2]])
 
 
 func set_timer_text(text: String) -> void:
@@ -59,13 +70,14 @@ func set_hint(text: String, seconds: float = 0.0) -> void:
 	if _hint_tween != null and _hint_tween.is_valid():
 		_hint_tween.kill()
 	hint_label.text = text
+	_hint_is_default = false
 	hint_label.modulate.a = 0.0
 	_hint_tween = create_tween()
 	_hint_tween.tween_property(hint_label, "modulate:a", 1.0, Motion.d(Motion.FAST))
 	if seconds > 0.0:
 		_hint_tween.tween_interval(Motion.d(seconds))
 		_hint_tween.tween_property(hint_label, "modulate:a", 0.0, Motion.d(Motion.BASE))
-		_hint_tween.tween_callback(func() -> void: hint_label.text = DEFAULT_HINT)
+		_hint_tween.tween_callback(func() -> void: hint_label.text = Loc.t(DEFAULT_HINT_KEY); _hint_is_default = true)
 		_hint_tween.tween_property(hint_label, "modulate:a", 1.0, Motion.d(Motion.BASE))
 
 
@@ -81,7 +93,19 @@ func set_mistakes(n: int) -> void:
 
 
 func set_hints_used(n: int) -> void:
-	hint_button.text = "Hint" if n == 0 else "Hint · %d" % n
+	_hints_used = n
+	hint_button.text = Loc.t("GAME_HINT") if n == 0 else Loc.f("GAME_HINT_N", [n])
+
+
+## The header and the hint strip are built in code, so they do not follow a
+## language change on their own (settings are reachable from the pause menu).
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready():
+		return
+	_render_level()
+	set_hints_used(_hints_used)
+	if _hint_is_default:
+		hint_label.text = Loc.t(DEFAULT_HINT_KEY)
 
 
 func set_hint_enabled(enabled: bool) -> void:

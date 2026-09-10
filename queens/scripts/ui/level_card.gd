@@ -30,11 +30,11 @@ func setup(card: Dictionary) -> void:
 	locked = bool(card.get("locked", false))
 	thumb.regions = card.get("regions", [])
 	thumb.dim = locked
-	title.text = "Level %d" % int(card.get("level_no", 0))
-	size_label.text = "%s · diff %d" % [Fmt.size_text(int(card.get("size", 0))), int(card.get("difficulty", 0))]
+	title.text = Loc.f("COMMON_LEVEL_N", [int(card.get("level_no", 0))])
+	size_label.text = Loc.f("LEVELS_CARD_META", [Fmt.size_text(int(card.get("size", 0))), int(card.get("difficulty", 0))])
 	stars.set_stars(int(card.get("stars", 0)), 4)
 	var best_text := str(card.get("best_text", ""))
-	best.text = best_text if best_text != "" else "Not played yet"
+	best.text = best_text if best_text != "" else Loc.t("LEVELS_NOT_PLAYED")
 	best.visible = not locked
 	lock_row.visible = locked
 	lock_label.text = str(card.get("lock_text", ""))

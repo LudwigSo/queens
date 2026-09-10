@@ -46,7 +46,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"LabelTitle"
-text = "Level 21"
+text = "COMMON_LEVEL_N"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Margin/VBox/TopBar"]
@@ -90,13 +90,13 @@ icon_size = 18
 [node name="DiffLabel" type="Label" parent="Margin/VBox/HeaderCard/HBox/Stats"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Difficulty 9 · par 1:21 · 42 players"
+text = "DETAIL_META"
 autowrap_mode = 3
 
 [node name="MineLabel" type="Label" parent="Margin/VBox/HeaderCard/HBox/Stats"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionInk"
-text = "Your best: 143 pts · 0:58 · 1 mistake · #12"
+text = "DETAIL_MINE"
 autowrap_mode = 3
 
 [node name="Tabs" type="HBoxContainer" parent="Margin/VBox"]
@@ -107,17 +107,17 @@ script = ExtResource("4_segmented")
 [node name="global" type="Button" parent="Margin/VBox/Tabs"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Global"
+text = "DETAIL_TAB_GLOBAL"
 
 [node name="friends" type="Button" parent="Margin/VBox/Tabs"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Friends"
+text = "DETAIL_TAB_FRIENDS"
 
 [node name="flawless" type="Button" parent="Margin/VBox/Tabs"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Flawless"
+text = "DETAIL_TAB_FLAWLESS"
 
 [node name="Scroll" type="ScrollContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -141,4 +141,4 @@ row_height = 64.0
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
-text = "Play this level"
+text = "DETAIL_PLAY"

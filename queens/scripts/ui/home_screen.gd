@@ -9,7 +9,8 @@ signal league_requested
 signal energy_pressed
 signal settings_requested
 
-const STEP_NAMES := {-1: "Easier", 0: "Same", 1: "Harder"}
+## Translation keys, not text: a const cannot call into Loc.
+const STEP_KEYS := {-1: "STEP_EASIER", 0: "STEP_SAME", 1: "STEP_HARDER"}
 
 @onready var settings_button: Button = $Margin/VBox/TopBar/SettingsButton
 @onready var energy_button: Button = $Margin/VBox/TopBar/EnergyButton
@@ -62,12 +63,12 @@ func refresh(view: Dictionary) -> void:
 	var streak: Dictionary = view.get("streak", {})
 	var days := int(streak.get("days", 0))
 	streak_chip.visible = days >= 2
-	streak_label.text = "%d day streak" % days
+	streak_label.text = Loc.f("HOME_STREAK", [days])
 	var last: Dictionary = view.get("last", {})
 	if last.is_empty():
-		last_game_label.text = "Pick how hard you want to start"
+		last_game_label.text = Loc.t("HOME_PICK_START")
 	else:
-		last_game_label.text = "Last game: Level %d · %s · diff %d" % [int(last.get("level_no", 0)), Fmt.size_text(int(last.get("size", 0))), int(last.get("difficulty", 0))]
+		last_game_label.text = Loc.f("HOME_LAST_GAME", [int(last.get("level_no", 0)), Fmt.size_text(int(last.get("size", 0))), int(last.get("difficulty", 0))])
 	_options.clear()
 	for opt in view.get("options", []):
 		_options[int(opt["step"])] = opt
@@ -78,11 +79,11 @@ func refresh(view: Dictionary) -> void:
 		if opt.is_empty():
 			continue
 		card.disabled = not bool(opt.get("enabled", true))
-		card.get_node("VBox/Name").text = STEP_NAMES[step] if not last.is_empty() else "Start easy"
+		card.get_node("VBox/Name").text = Loc.t(STEP_KEYS[step]) if not last.is_empty() else Loc.t("HOME_START_EASY")
 		card.get_node("VBox/Size").text = Fmt.size_text(int(opt.get("size", 0)))
 		card.get_node("VBox/Stars").set_stars(int(opt.get("stars", 0)), 4)
 		var diff: Label = card.get_node("VBox/Diff")
-		diff.text = "diff %d" % int(opt.get("difficulty", 0)) if not card.disabled else str(opt.get("reason", "cooling down"))
+		diff.text = Loc.f("HOME_DIFF", [int(opt.get("difficulty", 0))]) if not card.disabled else str(opt.get("reason", Loc.t("HOME_COOLING")))
 	var wanted := _selected
 	if not _options.has(wanted) or not bool(_options[wanted].get("enabled", true)):
 		wanted = 0
@@ -94,20 +95,20 @@ func refresh(view: Dictionary) -> void:
 
 
 func _refresh_league(league: Dictionary) -> void:
-	var tier_name := str(league.get("tier_name", "Bronze"))
-	league_title.text = "%s league" % tier_name
+	var tier_name := str(league.get("tier_name", Loc.t("TIER_BRONZE")))
+	league_title.text = Loc.f("LEAGUE_NAME", [tier_name])
 	medal.modulate = Ui.tier_color(str(league.get("tier_id", "bronze")))
 	if not bool(league.get("joined", false)):
-		league_line.text = "Play a game to join this round"
+		league_line.text = Loc.t("HOME_LEAGUE_JOIN")
 		return
 	if int(league.get("promo_score", 0)) > 0:
 		# A tier that promotes by tier points: the progress replaces the zone.
-		league_line.text = "#%d of %d · %s · ends in %s" % [
-			int(league.get("rank", 0)), int(league.get("size", 0)), str(league.get("promo_text", "")), str(league.get("ends_in_text", ""))]
+		league_line.text = Loc.f("HOME_LEAGUE_PROMO_LINE", [
+			int(league.get("rank", 0)), int(league.get("size", 0)), str(league.get("promo_text", "")), str(league.get("ends_in_text", ""))])
 		return
-	league_line.text = "#%d of %d · %s · %d pts · ends in %s" % [
+	league_line.text = Loc.f("HOME_LEAGUE_LINE", [
 		int(league.get("rank", 0)), int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe"))),
-		int(league.get("score", 0)), str(league.get("ends_in_text", ""))]
+		int(league.get("score", 0)), str(league.get("ends_in_text", ""))])
 
 
 func _select(step: int) -> void:
@@ -122,11 +123,11 @@ func _select(step: int) -> void:
 			card.remove_theme_stylebox_override("hover")
 	var opt: Dictionary = _options.get(step, {})
 	if opt.is_empty():
-		play_button.text = "Play"
+		play_button.text = Loc.t("HOME_PLAY")
 		play_button.disabled = true
 	else:
 		play_button.disabled = not bool(opt.get("enabled", true))
-		play_button.text = "Play %s" % Fmt.size_text(int(opt.get("size", 0)))
+		play_button.text = Loc.f("HOME_PLAY_SIZE", [Fmt.size_text(int(opt.get("size", 0)))])
 
 
 func selected_step() -> int:

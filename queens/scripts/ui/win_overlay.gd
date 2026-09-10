@@ -6,7 +6,8 @@ signal next_requested(step: int)   ## -1 easier, 0 same, +1 harder
 signal home_requested
 signal closed
 
-const FACTOR_LABELS := {"accuracy": "Accuracy", "speed": "Speed", "undo": "Undo", "hint": "Hints"}
+## Translation keys, not text: a const cannot call into Loc.
+const FACTOR_KEYS := {"accuracy": "FACTOR_ACCURACY", "speed": "FACTOR_SPEED", "undo": "FACTOR_UNDO", "hint": "FACTOR_HINT"}
 
 @onready var dim: ColorRect = $Dim
 @onready var panel: PanelContainer = $Panel
@@ -84,14 +85,14 @@ func show_result(view: Dictionary) -> void:
 		medal.modulate = Ui.tier_color(str(league.get("tier_id", "bronze")))
 		if str(league.get("promoted_to_name", "")) != "":
 			medal.modulate = Ui.tier_color(str(league.get("promoted_to", "bronze")))
-			league_label.text = "Promoted to %s league!" % str(league.get("promoted_to_name", ""))
+			league_label.text = Loc.f("WIN_PROMOTED", [str(league.get("promoted_to_name", ""))])
 		elif int(league.get("promo_score", 0)) > 0:
-			league_label.text = "%s league · %s · #%d of %d" % [
-				str(league.get("tier_name", "")), str(league.get("promo_text", "")), int(league.get("rank", 0)), int(league.get("size", 0))]
+			league_label.text = Loc.f("WIN_LEAGUE_PROMO_LINE", [
+				str(league.get("tier_name", "")), str(league.get("promo_text", "")), int(league.get("rank", 0)), int(league.get("size", 0))])
 		else:
-			league_label.text = "%s league · %d pts · #%d of %d · %s" % [
+			league_label.text = Loc.f("WIN_LEAGUE_LINE", [
 				str(league.get("tier_name", "")), int(league.get("score", 0)), int(league.get("rank", 0)),
-				int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe")))]
+				int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe")))])
 
 	var next: Dictionary = view.get("next", {})
 	for pair in [[easier_button, -1], [same_button, 0], [harder_button, 1]]:
@@ -99,13 +100,13 @@ func show_result(view: Dictionary) -> void:
 		var opt: Dictionary = next.get(str(pair[1]), {})
 		button.visible = not opt.is_empty()
 		button.disabled = not bool(opt.get("enabled", true))
-		var base: String = {-1: "Easier", 0: "Same", 1: "Harder"}[pair[1]]
+		var base: String = Loc.t({-1: "STEP_EASIER", 0: "STEP_SAME", 1: "STEP_HARDER"}[pair[1]])
 		button.text = base if opt.is_empty() else "%s\n%s" % [base, Fmt.size_text(int(opt.get("size", 0)))]
 
 
 ## Kept for older callers: preformatted strings only.
 func show_result_text(score_text: String, badge_text: String, detail_text: String, league_text: String = "") -> void:
-	show_result({"score": int(score_text), "badges": Array(badge_text.split(" · ", false)), "stats": [{"label": "Details", "value": detail_text}], "factors": [], "league": {}, "next": {}})
+	show_result({"score": int(score_text), "badges": Array(badge_text.split(" · ", false)), "stats": [{"label": Loc.t("WIN_STAT_DETAILS"), "value": detail_text}], "factors": [], "league": {}, "next": {}})
 	league_label.text = league_text
 
 
@@ -146,7 +147,7 @@ func _factor_row(id: String, value: float, pct: float, index: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	var name := Label.new()
-	name.text = FACTOR_LABELS.get(id, id.capitalize())
+	name.text = Loc.t(FACTOR_KEYS[id]) if FACTOR_KEYS.has(id) else id.capitalize()
 	name.theme_type_variation = &"LabelCaption"
 	name.custom_minimum_size = Vector2(96, 0)
 	row.add_child(name)
@@ -164,7 +165,7 @@ func _factor_row(id: String, value: float, pct: float, index: int) -> Control:
 		bar.add_theme_stylebox_override("fill", fill)
 	row.add_child(bar)
 	var val := Label.new()
-	val.text = "×%.2f" % value
+	val.text = Fmt.factor(value)
 	val.theme_type_variation = &"LabelCaptionInk"
 	val.custom_minimum_size = Vector2(64, 0)
 	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

@@ -58,26 +58,26 @@ func open(summary: Dictionary, tier_before_name: String, tier_after_name: String
 	round_index = int(summary.get("round_index", -1))
 	var outcome := str(summary.get("outcome", "stayed"))
 	var by_score := str(summary.get("reason", "round")) == "score"
-	title.text = "PROMOTION" if by_score else "LAST ROUND"
+	title.text = Loc.t("SUMMARY_HEADING_PROMOTION") if by_score else Loc.t("SUMMARY_HEADING_ROUND")
 	var color := COLOR_STAY
 	var changed := false
 	match outcome:
 		"promoted":
-			headline.text = "Promoted to %s!" % tier_after_name
+			headline.text = Loc.f("SUMMARY_PROMOTED", [tier_after_name])
 			color = COLOR_UP
 			changed = true
 		"relegated":
-			headline.text = "Relegated to %s" % tier_after_name
+			headline.text = Loc.f("SUMMARY_RELEGATED", [tier_after_name])
 			color = COLOR_DOWN
 			changed = true
 		"inactive_relegated":
-			headline.text = "No games played: down to %s" % tier_after_name
+			headline.text = Loc.f("SUMMARY_INACTIVE_DOWN", [tier_after_name])
 			color = COLOR_DOWN
 			changed = true
 		"inactive_frozen":
-			headline.text = "No games played, still %s" % tier_before_name
+			headline.text = Loc.f("SUMMARY_INACTIVE_STAY", [tier_before_name])
 		_:
-			headline.text = "You stay in %s" % tier_before_name
+			headline.text = Loc.f("SUMMARY_STAYED", [tier_before_name])
 	headline.add_theme_color_override("font_color", color)
 	before.modulate = Ui.tier_color(str(summary.get("tier_before", "bronze")))
 	after.modulate = Ui.tier_color(str(summary.get("tier_after", summary.get("tier_before", "bronze"))))
@@ -87,18 +87,18 @@ func open(summary: Dictionary, tier_before_name: String, tier_after_name: String
 		chips.remove_child(child)
 		child.queue_free()
 	if int(summary.get("group_size", 0)) > 0:
-		chips.add_child(_chip("#%d of %d" % [int(summary.get("rank", 0)), int(summary.get("group_size", 0))], &"ChipPrimary", &"LabelOnDark"))
+		chips.add_child(_chip(Loc.f("SUMMARY_RANK", [int(summary.get("rank", 0)), int(summary.get("group_size", 0))]), &"ChipPrimary", &"LabelOnDark"))
 		if by_score:
-			chips.add_child(_chip("%d tier points" % int(summary.get("tier_points", 0)), &"Chip", &"LabelCaptionInk"))
+			chips.add_child(_chip(Loc.f("SUMMARY_TIER_POINTS", [int(summary.get("tier_points", 0))]), &"Chip", &"LabelCaptionInk"))
 		else:
-			chips.add_child(_chip("%d points" % int(summary.get("round_score", 0)), &"Chip", &"LabelCaptionInk"))
+			chips.add_child(_chip(Loc.f("SUMMARY_POINTS", [int(summary.get("round_score", 0))]), &"Chip", &"LabelCaptionInk"))
 	var best: Dictionary = summary.get("best_game", {})
 	if by_score:
-		body.text = "Reached %d points in %s" % [int(summary.get("tier_points", 0)), tier_before_name]
+		body.text = Loc.f("SUMMARY_REACHED", [int(summary.get("tier_points", 0)), tier_before_name])
 	elif not best.is_empty():
-		body.text = "Best game: %d points" % int(best.get("score", 0))
+		body.text = Loc.f("SUMMARY_BEST_GAME", [int(best.get("score", 0))])
 	elif int(summary.get("group_size", 0)) == 0:
-		body.text = "Play this round to climb."
+		body.text = Loc.t("SUMMARY_PLAY_TO_CLIMB")
 	else:
 		body.text = " "
 	visible = true

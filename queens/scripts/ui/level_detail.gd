@@ -42,20 +42,20 @@ func set_loading(loading: bool) -> void:
 ## time_text, wrong_placements, is_me, is_friend}], lock_text}
 func refresh(view: Dictionary) -> void:
 	level_id = str(view.get("level_id", ""))
-	title_label.text = "Level %d" % int(view.get("level_no", 0))
+	title_label.text = Loc.f("COMMON_LEVEL_N", [int(view.get("level_no", 0))])
 	thumb.regions = view.get("regions", [])
 	size_label.text = Fmt.size_text(int(view.get("size", 0)))
 	stars.set_stars(int(view.get("stars", 0)), 4)
-	diff_label.text = "Difficulty %d · par %s · %d players" % [int(view.get("difficulty", 0)), str(view.get("par_text", "")), int(view.get("players", 0))]
+	diff_label.text = Loc.f("DETAIL_META", [int(view.get("difficulty", 0)), str(view.get("par_text", "")), int(view.get("players", 0))])
 	var mine: Dictionary = view.get("mine", {})
 	if mine.is_empty():
-		mine_label.text = "Not played yet"
+		mine_label.text = Loc.t("LEVELS_NOT_PLAYED")
 	else:
-		mine_label.text = "Your best: %s · %s · %s · #%d" % [Fmt.points(int(mine.get("score", 0))), str(mine.get("time_text", "")), Fmt.mistakes(int(mine.get("mistakes", 0))), int(mine.get("rank", 0))]
+		mine_label.text = Loc.f("DETAIL_MINE", [Fmt.points(int(mine.get("score", 0))), str(mine.get("time_text", "")), Fmt.mistakes(int(mine.get("mistakes", 0))), int(mine.get("rank", 0))])
 	tabs.select(str(view.get("scope", "global")), false)
 	var lock_text := str(view.get("lock_text", ""))
 	_locked = lock_text != ""
-	play_button.text = "Play this level" if not _locked else "Unlocks in %s" % lock_text
+	play_button.text = Loc.t("DETAIL_PLAY") if not _locked else Loc.f("DETAIL_UNLOCKS_IN", [lock_text])
 	play_button.icon = load(LOCK_ICON) if _locked and ResourceLoader.exists(LOCK_ICON, "Texture2D") else null
 	play_button.theme_type_variation = &"ButtonPrimary" if not _locked else &"ButtonSecondary"
 	for child in list.get_children():
@@ -65,7 +65,7 @@ func refresh(view: Dictionary) -> void:
 	var scope := str(view.get("scope", "global"))
 	if entries.is_empty():
 		var note := Label.new()
-		note.text = "Nobody here yet." if scope != "friends" else "None of your friends has played this level."
+		note.text = Loc.t("DETAIL_EMPTY") if scope != "friends" else Loc.t("DETAIL_EMPTY_FRIENDS")
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		note.theme_type_variation = &"LabelMuted"
@@ -81,6 +81,7 @@ func refresh(view: Dictionary) -> void:
 
 func _cell(text: String, width: float, align: int, variation: StringName = &"LabelBody") -> Label:
 	var label := Label.new()
+	label.auto_translate_mode = Control.AUTO_TRANSLATE_MODE_DISABLED
 	label.text = text
 	label.horizontal_alignment = align
 	label.theme_type_variation = variation
@@ -113,7 +114,7 @@ func _entry_row(e: Dictionary) -> Control:
 	row.add_child(_rank_badge(int(e.get("rank", 0)), is_me))
 	var name := str(e.get("nickname", ""))
 	if is_me:
-		name += " (you)"
+		name = Loc.f("COMMON_YOU", [name])
 	row.add_child(_cell(name, 0, HORIZONTAL_ALIGNMENT_LEFT, &"LabelBodyBold" if is_me else &"LabelBody"))
 	if bool(e.get("is_friend", false)) and ResourceLoader.exists(HEART_ICON, "Texture2D"):
 		var heart := TextureRect.new()
@@ -127,7 +128,7 @@ func _entry_row(e: Dictionary) -> Control:
 	row.add_child(_cell("%d" % int(e.get("score", 0)), 80, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelBodyBold"))
 	row.add_child(_cell(str(e.get("time_text", "")), 80, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
 	var wrong := int(e.get("wrong_placements", 0))
-	row.add_child(_cell("clean" if wrong == 0 else "%d ✕" % wrong, 80, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
+	row.add_child(_cell(Loc.t("DETAIL_CLEAN") if wrong == 0 else Loc.f("DETAIL_WRONG", [wrong]), 80, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
 	panel.add_child(row)
 	return panel
 

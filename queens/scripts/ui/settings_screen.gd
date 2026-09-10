@@ -1,9 +1,11 @@
 extends Control
-## Settings: sound, motion and play options as toggles, the nickname, restore
-## purchases and how-to-play. Emits one `setting_changed` per toggle.
+## Settings: sound, motion and play options as toggles, the language, the
+## nickname, restore purchases and how-to-play. Emits one `setting_changed`
+## per toggle and `language_selected` for the flag row.
 
 signal back_requested
 signal setting_changed(key: String, value: bool)
+signal language_selected(code: String)
 signal rename_requested(nickname: String)
 signal restore_requested
 signal tutorial_requested
@@ -17,6 +19,7 @@ const TOGGLE_KEYS := ["sfx", "music", "haptics", "reduced_motion", "mistake_aler
 @onready var restore_button: Button = $Margin/VBox/Scroll/List/ProfileCard/VBox/RestoreButton
 @onready var tutorial_button: Button = $Margin/VBox/Scroll/List/PlayCard/VBox/TutorialButton
 @onready var version_label: Label = $Margin/VBox/Scroll/List/AboutCard/VBox/Version
+@onready var language: Segmented = $Margin/VBox/Scroll/List/LanguageCard/VBox/Language
 
 var _toggles: Dictionary = {}
 var _loading: bool = false
@@ -34,12 +37,17 @@ func _ready() -> void:
 	name_edit.text_submitted.connect(func(t: String) -> void: rename_requested.emit(t.strip_edges()))
 	restore_button.pressed.connect(restore_requested.emit)
 	tutorial_button.pressed.connect(tutorial_requested.emit)
+	language.selected.connect(func(code: String) -> void:
+		Sfx.play(&"button")
+		Sfx.haptic(8)
+		language_selected.emit(code))
 
 
 ## view: {sfx, music, haptics, reduced_motion, mistake_alerts, region_patterns,
-## nickname, purchases_available, version}
+## language_effective, nickname, purchases_available, version}
 func refresh(view: Dictionary) -> void:
 	_loading = true
+	language.select(str(view.get("language_effective", Loc.DEFAULT)), false)
 	for key in _toggles:
 		_toggles[key].button_pressed = bool(view.get(key, _toggles[key].button_pressed))
 	_loading = false

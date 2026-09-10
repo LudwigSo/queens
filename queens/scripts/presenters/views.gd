@@ -18,7 +18,7 @@ static func league_summary(standing: Dictionary, now: int) -> Dictionary:
 	var next_tier := str(rules.get("up_to", ""))
 	return {
 		"tier_id": str(standing.get("tier", standing.get("tier_id", "bronze"))),
-		"tier_name": str(standing.get("tier_name", "")),
+		"tier_name": LeagueRules.tier_label(str(standing.get("tier", standing.get("tier_id", "bronze")))),
 		"joined": bool(standing.get("joined", false)),
 		"rank": int(standing.get("my_rank", 0)),
 		"size": int(group.get("size", 0)),
@@ -38,17 +38,17 @@ static func option(step: int, pick: Dictionary, catalog: LevelCatalog) -> Dictio
 	var lv: Dictionary = pick.get("level", {})
 	var reason := str(pick.get("reason", "none"))
 	if lv.is_empty():
-		var text := "All cooling down"
+		var text := Loc.t("HOME_OPT_ALL_COOLING")
 		match reason:
 			"none_harder":
-				text = "No harder level free"
+				text = Loc.t("HOME_OPT_NO_HARDER")
 			"none_easier":
-				text = "No easier level free"
+				text = Loc.t("HOME_OPT_NO_EASIER")
 		return {"step": step, "enabled": false, "reason": text, "level_id": ""}
 	return {
 		"step": step,
 		"enabled": true,
-		"reason": "Closest available level" if reason == "nearest" else "",
+		"reason": Loc.t("HOME_OPT_NEAREST") if reason == "nearest" else "",
 		"level_id": str(lv["id"]),
 		"level_no": catalog.display_index(str(lv["id"])) + 1,
 		"size": int(lv["size"]),
@@ -61,9 +61,9 @@ static func best_text(save: SaveData, level_id: String) -> String:
 	if save.has_best_score(level_id):
 		var entry := save.level_entry(level_id)
 		var wrong := int(entry.get("best_wrong", 0))
-		return "Best %s · %s" % [Fmt.points(int(entry["best_score"])), "flawless" if wrong == 0 else Fmt.time(save.best_time(level_id))]
+		return Loc.f("DETAIL_BEST_SCORE", [Fmt.points(int(entry["best_score"])), Loc.t("MISTAKES_ZERO") if wrong == 0 else Fmt.time(save.best_time(level_id))])
 	if save.has_best(level_id):
-		return "Best %s" % Fmt.time(save.best_time(level_id))
+		return Loc.f("DETAIL_BEST_TIME", [Fmt.time(save.best_time(level_id))])
 	return ""
 
 
@@ -150,22 +150,23 @@ static func level_detail(lv: Dictionary, board_data: Dictionary, scope: String, 
 ## option dictionaries for the next game.
 static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: Dictionary, league_cfg: Dictionary, completions: int) -> Dictionary:
 	var badges: Array = []
+	var new_best := Loc.t("WIN_BADGE_NEW_BEST")
 	if bd["flawless"]:
-		badges.append("Flawless")
+		badges.append(Loc.t("WIN_BADGE_FLAWLESS"))
 	if bool(outcome.get("best_score_improved", false)) and completions > 1:
-		badges.append("New best")
-	if bool(outcome.get("best_time_improved", false)) and completions > 1 and not badges.has("New best"):
-		badges.append("Fastest yet")
+		badges.append(new_best)
+	if bool(outcome.get("best_time_improved", false)) and completions > 1 and not badges.has(new_best):
+		badges.append(Loc.t("WIN_BADGE_FASTEST"))
 	if result.elapsed_seconds > 0.0 and result.elapsed_seconds < bd["par_seconds"]:
-		badges.append("Under par")
+		badges.append(Loc.t("WIN_BADGE_UNDER_PAR"))
 	var stats := [
-		{"label": "Time", "value": Fmt.time(result.elapsed_seconds)},
-		{"label": "Par", "value": Fmt.time(float(bd["par_seconds"]))},
-		{"label": "Mistakes", "value": str(result.wrong_placements)},
-		{"label": "Undos", "value": str(result.undo_count)},
+		{"label": Loc.t("WIN_STAT_TIME"), "value": Fmt.time(result.elapsed_seconds)},
+		{"label": Loc.t("WIN_STAT_PAR"), "value": Fmt.time(float(bd["par_seconds"]))},
+		{"label": Loc.t("WIN_STAT_MISTAKES"), "value": str(result.wrong_placements)},
+		{"label": Loc.t("WIN_STAT_UNDOS"), "value": str(result.undo_count)},
 	]
 	if result.hint_count > 0:
-		stats.append({"label": "Hints", "value": str(result.hint_count)})
+		stats.append({"label": Loc.t("WIN_STAT_HINTS"), "value": str(result.hint_count)})
 	var factors := [
 		{"id": "accuracy", "value": float(bd["accuracy_factor"]), "pct": float(bd["accuracy_factor"])},
 		{"id": "speed", "value": float(bd["speed_factor"]), "pct": float(bd["speed_factor"]) / Scoring.SPEED_MAX},

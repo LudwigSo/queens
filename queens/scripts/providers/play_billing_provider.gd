@@ -32,7 +32,7 @@ func is_available() -> bool:
 
 func start() -> void:
 	if not has_plugin():
-		purchase_failed.emit("Google Play Billing plugin not installed")
+		purchase_failed.emit(Loc.t("ERR_BILLING_PLUGIN_MISSING"))
 		return
 	if _client != null:
 		return
@@ -41,7 +41,7 @@ func start() -> void:
 	_client.disconnected.connect(func() -> void: _connected = false)
 	_client.connect_error.connect(func(code: int, message: String) -> void:
 		_connected = false
-		purchase_failed.emit("Store connection failed (%d): %s" % [code, message]))
+		purchase_failed.emit(Loc.f("ERR_STORE_CONNECT", [code, message])))
 	_client.query_product_details_response.connect(_on_product_details)
 	_client.query_purchases_response.connect(_on_purchases_response)
 	_client.on_purchase_updated.connect(_on_purchases_response)
@@ -71,7 +71,7 @@ func query_products(product_ids: Array) -> void:
 
 func _on_product_details(response: Dictionary) -> void:
 	if int(response.get("response_code", 0)) != 0:
-		purchase_failed.emit("Store error: %s" % str(response.get("debug_message", "")))
+		purchase_failed.emit(Loc.f("ERR_STORE", [str(response.get("debug_message", ""))]))
 		return
 	var products := {}
 	for detail in response.get("product_details", []):
@@ -83,7 +83,7 @@ func _on_product_details(response: Dictionary) -> void:
 
 func purchase(product_id: String) -> void:
 	if _client == null or not _connected:
-		purchase_failed.emit("Store not connected")
+		purchase_failed.emit(Loc.t("ERR_STORE_NOT_CONNECTED"))
 		return
 	_client.purchase(product_id)
 
@@ -101,7 +101,7 @@ func _on_purchases_response(response: Dictionary) -> void:
 	if int(response.get("response_code", 0)) != 0:
 		var message := str(response.get("debug_message", ""))
 		if message != "":
-			purchase_failed.emit("Purchase failed: %s" % message)
+			purchase_failed.emit(Loc.f("ERR_PURCHASE", [message]))
 		restore_completed.emit([])
 		return
 	var owned: Array = []

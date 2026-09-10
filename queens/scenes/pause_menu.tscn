@@ -43,13 +43,13 @@ theme_override_constants/separation = 16
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelTitle"
-text = "Paused"
+text = "PAUSE_TITLE"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Level 21 · 7×7 · 1:42"
+text = "PAUSE_SUBTITLE"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Panel/VBox"]
@@ -60,23 +60,23 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 theme_type_variation = &"ButtonPrimary"
-text = "Resume"
+text = "PAUSE_RESUME"
 
 [node name="RestartButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme_type_variation = &"ButtonSecondary"
-text = "Restart level"
+text = "PAUSE_RESTART"
 
 [node name="SettingsButton" type="Button" parent="Panel/VBox"]
 visible = false
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme_type_variation = &"ButtonSecondary"
-text = "Settings"
+text = "PAUSE_SETTINGS"
 
 [node name="GiveUpButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 theme_type_variation = &"ButtonGhostMuted"
-text = "Give up"
+text = "PAUSE_GIVE_UP"

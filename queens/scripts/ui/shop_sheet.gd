@@ -54,14 +54,14 @@ func set_state(state: Dictionary) -> void:
 	if visible and _last_amount >= 0 and amount != _last_amount and is_inside_tree():
 		Motion.bump(energy_label, 1.2, Motion.SLOW)
 	_last_amount = amount
-	explain.text = "Unlimited energy: play as much as you like." if unlimited else "Every game you start costs one energy."
+	explain.text = Loc.t("SHOP_EXPLAIN_UNLIMITED") if unlimited else Loc.t("SHOP_EXPLAIN")
 	hint_banner.visible = blocked and not state.get("can_start", true)
 	watch_ad_button.visible = not unlimited
 	watch_ad_button.disabled = not state.get("ad_ready", false)
-	watch_ad_button.text = "Watch an ad · +%d" % int(state.get("ad_reward", 0)) if state.get("ad_ready", false) else "No ad right now"
+	watch_ad_button.text = Loc.f("SHOP_WATCH_AD", [int(state.get("ad_reward", 0))]) if state.get("ad_ready", false) else Loc.t("SHOP_NO_AD")
 	buy_button.visible = not unlimited
 	buy_button.disabled = not state.get("purchases_available", false)
-	buy_button.text = "Unlimited · %s" % state.get("price_text", "")
+	buy_button.text = Loc.f("SHOP_UNLIMITED", [str(state.get("price_text", ""))])
 	restore_button.visible = not unlimited and state.get("purchases_available", false)
 
 

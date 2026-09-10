@@ -166,6 +166,50 @@ pipeline outside it.
 The app name is still a placeholder ("Queens"); the wordmark, icon and
 package name (`export_presets.cfg`) change together once it is chosen.
 
+## Languages
+
+The game ships in English and German. On a fresh install it follows the
+device language (German on a German device, English everywhere else);
+Settings has a flag row that overrides that, and the choice is stored in the
+save file under `settings.language` (`""` means "follow the device").
+
+Every user-visible string lives in **`i18n/strings.csv`**, one row per string
+and one column per language:
+
+```
+key,en,de
+SETTINGS_TITLE,Settings,Einstellungen
+HOME_STREAK,%d day streak,%d Tage in Folge
+```
+
+Edit that file to change any wording; no code, no rebuild, no re-import.
+Rules for the file: UTF-8 without a byte order mark, a field containing a
+comma or a quote must be wrapped in double quotes, `%%` is a literal percent
+sign, and a row whose key starts with `#` is a section comment. The
+placeholders (`%s`, `%d`) must appear in the same order in every language.
+
+`scripts/loc.gd` (`Loc`) parses the file at startup and registers one
+translation per column, so scene text is a key (`text = "SETTINGS_TITLE"`,
+which Godot translates on its own and re-translates when the language
+changes) and code uses `Loc.t("KEY")`, `Loc.f("KEY", [args])` or
+`Loc.plural("BASE", n)` (which picks `BASE_ONE` or `BASE_OTHER`). Keys are
+`AREA_WHAT` in upper snake case. League tier ids stay English in the save
+file and in backend payloads; only their `TIER_*` display names are
+translated.
+
+`i18n/strings.csv.import` marks the file `importer="keep"` so the editor does
+not also import it as a translation resource. Do not delete it, or the
+strings end up registered twice.
+
+To add a language: add a column to the CSV, its code to `Loc.SUPPORTED` and
+`Loc.NAMES`, and a flag button to the language row in
+`scenes/settings_screen.tscn`. The test suite then requires a value in the
+new column for every key.
+
+The test suite checks that every key used by a script or a scene exists in
+the file, that no key in the file is unused, that no English text is left in
+a scene, and that the placeholders match between the languages.
+
 ## Running locally
 
 Requires Godot 4.7 or newer. Open the `queens` folder in the editor and press
@@ -194,6 +238,13 @@ summary). It needs a window:
 
 ```bash
 godot --path queens res://tests/screenshot.tscn -- build/shots
+```
+
+Pass a language as a second argument to shoot the same set in it (the files
+get a `_de` suffix), which is how the German layout is checked:
+
+```bash
+godot --path queens res://tests/screenshot.tscn -- build/shots de
 ```
 
 Progress is stored in `user://save.json` (see `scripts/save_data.gd`); a

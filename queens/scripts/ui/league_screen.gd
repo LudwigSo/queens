@@ -56,13 +56,13 @@ func refresh(standing: Dictionary, friends: Array, code: String, _nickname: Stri
 	_friends = friends
 	_code = code
 	var tier_id := str(standing.get("tier", "bronze"))
-	tier_label.text = "%s league" % standing.get("tier_name", "")
+	tier_label.text = Loc.f("LEAGUE_NAME", [str(standing.get("tier_name", ""))])
 	medal.modulate = Ui.tier_color(tier_id)
 	var rules: Dictionary = standing.get("rules", {})
-	var counting := "best %d games count" % int(rules.get("best_n", 15)) if str(rules.get("round_mode", "best_n")) == "best_n" else "every game counts"
+	var counting := Loc.f("LEAGUE_COUNT_BEST_N", [int(rules.get("best_n", 15))]) if str(rules.get("round_mode", "best_n")) == "best_n" else Loc.t("LEAGUE_COUNT_ALL")
 	var days := int(rules.get("round_days", 7))
-	var period := "Week" if days == 7 else "%d-day round" % days
-	info_label.text = "%s · %s\n%s ends in %s" % [standing.get("rules_text", ""), counting, period, round_left_text]
+	var period := Loc.t("LEAGUE_PERIOD_WEEK") if days == 7 else Loc.f("LEAGUE_PERIOD_DAYS", [days])
+	info_label.text = Loc.f("LEAGUE_INFO_RULES", [str(standing.get("rules_text", "")), counting]) + "\n" + Loc.f("LEAGUE_INFO_ENDS", [period, round_left_text])
 	# A tier that promotes by tier points shows the progress toward the next tier.
 	var need := int(rules.get("promo_score", 0))
 	var points_now := int(standing.get("my_tier_points", 0))
@@ -100,17 +100,17 @@ func _clear_list() -> void:
 
 func _fill_standings() -> void:
 	if not _standing.get("joined", false):
-		list.add_child(_note("Play a game to join this round's league."))
+		list.add_child(_note(Loc.t("LEAGUE_JOIN_NOTE")))
 		return
 	var group: Dictionary = _standing.get("group", {})
 	var rules: Dictionary = _standing.get("rules", {})
 	if rules.get("global", false):
 		var size := int(group.get("size", 0))
-		var note := "%s is one global standing of %d players." % [_standing.get("tier_name", ""), size]
+		var note := Loc.f("LEAGUE_GLOBAL_NOTE", [str(_standing.get("tier_name", "")), size])
 		if size > 100:
-			note += " Top 100 shown."
+			note += " " + Loc.t("LEAGUE_TOP_100")
 		if int(rules.get("up_count", -1)) >= 0:
-			note += " %d Challenger slot%s open this round." % [int(rules["up_count"]), "" if int(rules["up_count"]) == 1 else "s"]
+			note += " " + Loc.plural("LEAGUE_SLOTS_OPEN", int(rules["up_count"]))
 		list.add_child(_note(note))
 	var shown := 0
 	var rows: Array = []
@@ -134,7 +134,7 @@ func _fill_standings() -> void:
 
 func _fill_friends() -> void:
 	if _friends.is_empty():
-		list.add_child(_note("No friends yet. Swap codes to see each other here and land in the same league group."))
+		list.add_child(_note(Loc.t("LEAGUE_NO_FRIENDS")))
 		return
 	var rows: Array = []
 	for fr in _friends:
@@ -155,6 +155,7 @@ func _note(text: String) -> Label:
 
 func _cell(text: String, width: float, align: int, variation: StringName = &"LabelBody") -> Label:
 	var label := Label.new()
+	label.auto_translate_mode = Control.AUTO_TRANSLATE_MODE_DISABLED
 	label.text = text
 	label.horizontal_alignment = align
 	label.theme_type_variation = variation
@@ -214,11 +215,11 @@ func _member_row(m: Dictionary) -> Control:
 	row.add_child(_rank_badge(int(m.get("rank", 0)), is_me, zone))
 	var name := str(m.get("nickname", ""))
 	if is_me:
-		name += " (you)"
+		name = Loc.f("COMMON_YOU", [name])
 	row.add_child(_cell(name, 0, HORIZONTAL_ALIGNMENT_LEFT, &"LabelBodyBold" if is_me else &"LabelBody"))
 	if m.get("is_friend", false):
 		row.add_child(_icon(HEART_ICON, Ui.ERROR))
-	row.add_child(_cell("%d games" % int(m.get("games", 0)), 110, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
+	row.add_child(_cell(Loc.plural("LEAGUE_GAMES", int(m.get("games", 0))), 110, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
 	row.add_child(_cell("%d" % int(m.get("round_score", 0)), 90, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelBodyBold"))
 	panel.add_child(row)
 	return panel
@@ -238,7 +239,7 @@ func _friend_row(fr: Dictionary) -> Control:
 	tier.theme_type_variation = &"LabelCaptionInk"
 	tier_chip.add_child(tier)
 	row.add_child(tier_chip)
-	row.add_child(_cell("%d pts" % int(fr.get("round_score", 0)), 110, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
+	row.add_child(_cell(Fmt.points(int(fr.get("round_score", 0))), 110, HORIZONTAL_ALIGNMENT_RIGHT, &"LabelCaption"))
 	var remove := Button.new()
 	remove.theme_type_variation = &"ButtonIconGhost"
 	remove.custom_minimum_size = Vector2(44, 44)

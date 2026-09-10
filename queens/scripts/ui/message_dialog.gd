@@ -17,17 +17,21 @@ func _ready() -> void:
 	dim.gui_input.connect(_on_dim_input)
 
 
-func open(title: String, body: String, ok_text: String = "OK", cancel_text: String = "") -> void:
+## `ok_text` and `cancel_text` default to the translated OK / Cancel; an
+## empty `cancel_text` hides the cancel button.
+func open(title: String, body: String, ok_text: String = "", cancel_text: String = "") -> void:
 	title_label.text = title
 	body_label.text = body
-	ok_button.text = ok_text
-	cancel_button.text = cancel_text
+	ok_button.text = ok_text if ok_text != "" else Loc.t("DIALOG_OK")
 	cancel_button.visible = cancel_text != ""
+	cancel_button.text = cancel_text
 	visible = true
 
 
 ## Shows the dialog and waits for the answer.
-func ask(title: String, body: String, ok_text: String = "OK", cancel_text: String = "Cancel") -> bool:
+func ask(title: String, body: String, ok_text: String = "", cancel_text: String = "") -> bool:
+	if cancel_text == "":
+		cancel_text = Loc.t("DIALOG_CANCEL")
 	open(title, body, ok_text, cancel_text)
 	var confirmed: bool = await closed
 	return confirmed

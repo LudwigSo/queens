@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/settings_screen.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/chevron_left.svg" id="2_back"]
+[ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="3_segmented"]
+[ext_resource type="Texture2D" path="res://assets/flags/flag_de.svg" id="4_flag_de"]
+[ext_resource type="Texture2D" path="res://assets/flags/flag_gb.svg" id="5_flag_gb"]
 
 [node name="Settings" type="Control"]
 visible = false
@@ -42,7 +45,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"LabelTitle"
-text = "Settings"
+text = "SETTINGS_TITLE"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Margin/VBox/TopBar"]
@@ -70,26 +73,72 @@ theme_override_constants/separation = 4
 [node name="Heading" type="Label" parent="Margin/VBox/Scroll/List/SoundCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "SOUND & FEEL"
+text = "SETTINGS_SOUND_HEADING"
 
 [node name="sfx" type="CheckButton" parent="Margin/VBox/Scroll/List/SoundCard/VBox"]
 layout_mode = 2
 button_pressed = true
-text = "Sound effects"
+text = "SETTINGS_SFX"
 
 [node name="music" type="CheckButton" parent="Margin/VBox/Scroll/List/SoundCard/VBox"]
 layout_mode = 2
 button_pressed = true
-text = "Music"
+text = "SETTINGS_MUSIC"
 
 [node name="haptics" type="CheckButton" parent="Margin/VBox/Scroll/List/SoundCard/VBox"]
 layout_mode = 2
 button_pressed = true
-text = "Vibration"
+text = "SETTINGS_HAPTICS"
 
 [node name="reduced_motion" type="CheckButton" parent="Margin/VBox/Scroll/List/SoundCard/VBox"]
 layout_mode = 2
-text = "Reduce motion"
+text = "SETTINGS_REDUCED_MOTION"
+
+[node name="LanguageCard" type="PanelContainer" parent="Margin/VBox/Scroll/List"]
+layout_mode = 2
+theme_type_variation = &"Card"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Scroll/List/LanguageCard"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Heading" type="Label" parent="Margin/VBox/Scroll/List/LanguageCard/VBox"]
+layout_mode = 2
+theme_type_variation = &"LabelCaptionBold"
+text = "SETTINGS_LANGUAGE_HEADING"
+
+[node name="Language" type="HBoxContainer" parent="Margin/VBox/Scroll/List/LanguageCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+script = ExtResource("3_segmented")
+
+[node name="de" type="Button" parent="Margin/VBox/Scroll/List/LanguageCard/VBox/Language"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+auto_translate_mode = 2
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+toggle_mode = true
+text = "Deutsch"
+icon = ExtResource("4_flag_de")
+
+[node name="en" type="Button" parent="Margin/VBox/Scroll/List/LanguageCard/VBox/Language"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+auto_translate_mode = 2
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+toggle_mode = true
+text = "English"
+icon = ExtResource("5_flag_gb")
 
 [node name="PlayCard" type="PanelContainer" parent="Margin/VBox/Scroll/List"]
 layout_mode = 2
@@ -102,34 +151,34 @@ theme_override_constants/separation = 4
 [node name="Heading" type="Label" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "PLAYING"
+text = "SETTINGS_PLAY_HEADING"
 
 [node name="mistake_alerts" type="CheckButton" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
 layout_mode = 2
 button_pressed = true
-text = "Flash wrong queens"
+text = "SETTINGS_MISTAKE_ALERTS"
 
 [node name="MistakeNote" type="Label" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Off: mistakes only count in the score, the cell stays quiet."
+text = "SETTINGS_MISTAKE_NOTE"
 autowrap_mode = 3
 
 [node name="region_patterns" type="CheckButton" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
 layout_mode = 2
-text = "Region patterns"
+text = "SETTINGS_REGION_PATTERNS"
 
 [node name="PatternNote" type="Label" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Adds a line pattern to each colour, for colour-vision deficiency."
+text = "SETTINGS_PATTERN_NOTE"
 autowrap_mode = 3
 
 [node name="TutorialButton" type="Button" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 theme_type_variation = &"ButtonSecondary"
-text = "How to play"
+text = "SETTINGS_HOW_TO_PLAY"
 
 [node name="ProfileCard" type="PanelContainer" parent="Margin/VBox/Scroll/List"]
 layout_mode = 2
@@ -142,7 +191,7 @@ theme_override_constants/separation = 10
 [node name="Heading" type="Label" parent="Margin/VBox/Scroll/List/ProfileCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "PROFILE"
+text = "SETTINGS_PROFILE_HEADING"
 
 [node name="NameRow" type="HBoxContainer" parent="Margin/VBox/Scroll/List/ProfileCard/VBox"]
 layout_mode = 2
@@ -152,20 +201,20 @@ theme_override_constants/separation = 10
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "Your name"
+placeholder_text = "SETTINGS_NAME_PLACEHOLDER"
 max_length = 16
 
 [node name="NameButton" type="Button" parent="Margin/VBox/Scroll/List/ProfileCard/VBox/NameRow"]
 custom_minimum_size = Vector2(140, 64)
 layout_mode = 2
 theme_type_variation = &"ButtonSecondary"
-text = "Save"
+text = "SETTINGS_NAME_SAVE"
 
 [node name="RestoreButton" type="Button" parent="Margin/VBox/Scroll/List/ProfileCard/VBox"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_type_variation = &"ButtonGhost"
-text = "Restore purchases"
+text = "SETTINGS_RESTORE"
 
 [node name="AboutCard" type="PanelContainer" parent="Margin/VBox/Scroll/List"]
 layout_mode = 2
@@ -178,7 +227,7 @@ theme_override_constants/separation = 4
 [node name="Heading" type="Label" parent="Margin/VBox/Scroll/List/AboutCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaptionBold"
-text = "ABOUT"
+text = "SETTINGS_ABOUT_HEADING"
 
 [node name="Version" type="Label" parent="Margin/VBox/Scroll/List/AboutCard/VBox"]
 layout_mode = 2
@@ -188,5 +237,5 @@ text = "Queens 1.0"
 [node name="Credits" type="Label" parent="Margin/VBox/Scroll/List/AboutCard/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Fonts: Fredoka and Nunito (SIL Open Font License)."
+text = "SETTINGS_FONTS"
 autowrap_mode = 3

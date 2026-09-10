@@ -29,12 +29,12 @@ static func format_remaining(seconds: int) -> String:
 	@warning_ignore("integer_division")
 	var m := (seconds % 3600) / 60
 	if d > 0:
-		return "%dd %dh" % [d, h]
+		return Loc.f("COOLDOWN_D_H", [d, h])
 	if h > 0:
-		return "%dh %dm" % [h, m]
+		return Loc.f("COOLDOWN_H_M", [h, m])
 	if m > 0:
-		return "%dm" % m
-	return "<1m"
+		return Loc.f("COOLDOWN_M", [m])
+	return Loc.t("COOLDOWN_LT_1M")
 
 
 ## A whole period in words: "7 days", "1 day", "12 hours", "30 minutes".
@@ -42,11 +42,11 @@ static func format_period(seconds: int) -> String:
 	if seconds >= 86400 and seconds % 86400 == 0:
 		@warning_ignore("integer_division")
 		var d := seconds / 86400
-		return "1 day" if d == 1 else "%d days" % d
+		return Loc.plural("PERIOD_DAYS", d)
 	if seconds >= 3600 and seconds % 3600 == 0:
 		@warning_ignore("integer_division")
 		var h := seconds / 3600
-		return "1 hour" if h == 1 else "%d hours" % h
+		return Loc.plural("PERIOD_HOURS", h)
 	@warning_ignore("integer_division")
 	var m := maxi(1, seconds / 60)
-	return "1 minute" if m == 1 else "%d minutes" % m
+	return Loc.plural("PERIOD_MINUTES", m)

@@ -54,7 +54,7 @@ stretch_mode = 5
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelGold"
-text = "Solved!"
+text = "WIN_TITLE"
 horizontal_alignment = 1
 
 [node name="ScoreLabel" type="Label" parent="Panel/VBox"]
@@ -66,7 +66,7 @@ horizontal_alignment = 1
 [node name="PointsLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "points"
+text = "WIN_POINTS"
 horizontal_alignment = 1
 
 [node name="Badges" type="HBoxContainer" parent="Panel/VBox"]
@@ -104,13 +104,13 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"LabelCaptionInk"
-text = "Bronze league · #5 of 30 · safe"
+text = ""
 autowrap_mode = 3
 
 [node name="NextLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
-text = "Next game"
+text = "WIN_NEXT"
 horizontal_alignment = 1
 
 [node name="Next" type="HBoxContainer" parent="Panel/VBox"]
@@ -122,24 +122,24 @@ custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ButtonSecondary"
-text = "Easier"
+text = "STEP_EASIER"
 
 [node name="Same" type="Button" parent="Panel/VBox/Next"]
 custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ButtonPrimary"
-text = "Same"
+text = "STEP_SAME"
 
 [node name="Harder" type="Button" parent="Panel/VBox/Next"]
 custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ButtonSecondary"
-text = "Harder"
+text = "STEP_HARDER"
 
 [node name="HomeButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_type_variation = &"ButtonGhost"
-text = "Home"
+text = "WIN_HOME"
