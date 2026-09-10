@@ -38,7 +38,7 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 24
 
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2

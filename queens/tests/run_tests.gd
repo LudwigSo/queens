@@ -636,13 +636,13 @@ func _test_fake_providers() -> void:
 func _test_scoring() -> void:
 	# The fixture rows: (size, difficulty, wrong, seconds, expected score).
 	var rows := [
-		[6, 8.0, 0, 45.0, 208],
+		[6, 8.0, 0, 45.0, 223],
 		[6, 8.0, 0, 72.0, 166],
-		[6, 8.0, 3, 150.0, 56],
-		[10, 55.0, 0, 180.0, 1380],
+		[6, 8.0, 3, 150.0, 42],
+		[10, 55.0, 0, 180.0, 1420],
 		[10, 55.0, 0, 245.0, 1169],
-		[10, 55.0, 5, 600.0, 274],
-		[10, 55.0, 12, 900.0, 128],
+		[10, 55.0, 5, 600.0, 190],
+		[10, 55.0, 12, 900.0, 84],
 	]
 	for row in rows:
 		var d := {"size": row[0], "difficulty": row[1], "wrong_placements": row[2], "elapsed_seconds": row[3],
@@ -660,17 +660,24 @@ func _test_scoring() -> void:
 	_check(Scoring.score(forfeit) == 0, "forfeit scores 0")
 	var bd := Scoring.breakdown({"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "completed": true})
 	_check(bd["flawless"] and bd["base"] == 1169 and bd["par_seconds"] == 245.0, "breakdown carries base, par and flawless")
-	_check(is_equal_approx(bd["accuracy_factor"], 1.0) and not bd.has("undo_factor") and absf(bd["speed_factor"] - 1.1806) < 0.001, "breakdown factors, and no undo factor any more")
+	_check(is_equal_approx(bd["accuracy_factor"], 1.0) and not bd.has("undo_factor") and absf(bd["speed_factor"] - 1.2147) < 0.001, "breakdown factors, and no undo factor any more")
 	_check(not Scoring.breakdown({"size": 6, "difficulty": 8.0, "wrong_placements": 1, "elapsed_seconds": 10.0, "completed": true})["flawless"], "a wrong placement is not flawless")
 	_check(Scoring.speed_factor(0.0, 100.0) == Scoring.SPEED_MAX, "zero elapsed time hits the speed cap")
 	_check(absf(Scoring.speed_factor(1e9, 100.0) - Scoring.SPEED_MIN) < 1e-6, "very slow games hit the speed floor")
-	_check(is_equal_approx(Scoring.hint_factor(0), 1.0) and is_equal_approx(Scoring.hint_factor(2), 0.7) and Scoring.hint_factor(10) == Scoring.HINT_MIN, "hint factor: 15 %% per hint, floored")
+	# Both clamps sit exactly on the curve: x2 at a third of par, x0.5 at three times par.
+	_check(absf(Scoring.speed_factor(80.0, 240.0) - Scoring.SPEED_MAX) < 1e-6 and absf(Scoring.speed_factor(79.0, 240.0) - Scoring.SPEED_MAX) < 1e-6, "the speed cap is reached at par/3")
+	_check(absf(Scoring.speed_factor(720.0, 240.0) - Scoring.SPEED_MIN) < 1e-6 and is_equal_approx(Scoring.speed_factor(240.0, 240.0), 1.0), "x1 at par and the floor at three times par")
+	# Slower still costs less each time: the drop per extra par shrinks.
+	_check(Scoring.speed_factor(240.0, 240.0) - Scoring.speed_factor(480.0, 240.0) > Scoring.speed_factor(480.0, 240.0) - Scoring.speed_factor(720.0, 240.0), "the speed penalty eases off as the game drags on")
+	_check(is_equal_approx(Scoring.hint_factor(0), 1.0) and is_equal_approx(Scoring.hint_factor(2), 0.6) and Scoring.hint_factor(10) == Scoring.HINT_MIN, "hint factor: 20 %% per hint, floored")
 	var hinted := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "hint_count": 1, "completed": true}
-	_check(Scoring.score(hinted) == int(round(1380 * 0.85)) and not Scoring.breakdown(hinted)["flawless"], "a hint costs 15 %% and the flawless badge (got %d)" % Scoring.score(hinted))
-	_check(Scoring.breakdown(hinted)["hint_factor"] == 0.85, "breakdown carries the hint factor")
-	_check(is_equal_approx(Scoring.accuracy_factor(10), 0.2), "ten wrong placements keep a fifth of the score")
+	_check(Scoring.score(hinted) == int(round(1420 * 0.8)) and not Scoring.breakdown(hinted)["flawless"], "a hint costs 20 %% and the flawless badge (got %d)" % Scoring.score(hinted))
+	_check(is_equal_approx(Scoring.breakdown(hinted)["hint_factor"], 0.8), "breakdown carries the hint factor")
+	_check(is_equal_approx(Scoring.accuracy_factor(10), 1.0 / 6.0) and Scoring.accuracy_factor(100) == Scoring.ACCURACY_MIN, "ten wrong placements keep a sixth, and a tenth is the floor")
+	# No factor ever zeroes a solved board.
+	_check(Scoring.score({"size": 10, "difficulty": 55.0, "wrong_placements": 99, "elapsed_seconds": 1e6, "hint_count": 99, "completed": true}) > 0, "a solved board always scores something")
 	var stored := {"size": 6, "difficulty": 8.0, "wrong_placements": 0, "elapsed_seconds": 72.0, "completed": true, "par_seconds": 144.0}
-	_check(Scoring.score(stored) == 208, "a stored par is used instead of the formula")
+	_check(Scoring.score(stored) == 257, "a stored par is used instead of the formula")
 	# Weeks: Monday 2026-09-07 00:00 UTC starts a week; the second before belongs to the previous one.
 	var monday := 1788739200
 	var w := Scoring.week_index(monday)
@@ -1231,7 +1238,7 @@ func _test_views() -> void:
 	_check(Views.win(result, bd, outcome, {}, cfg.league, 2)["league"]["promoted_to_name"] == "Gold", "win league line names the new tier")
 	outcome["league"]["promoted_to"] = ""
 	_check(win["badges"] == ["New best", "Under par"], "win badges: new best and under par, no flawless with a hint (got %s)" % [win["badges"]])
-	_check(win["factors"].size() == 3 and win["factors"][2]["id"] == "hint" and absf(win["factors"][1]["pct"] - 0.96) < 0.001, "win factors include the hint and scale speed to its cap")
+	_check(win["factors"].size() == 3 and win["factors"][2]["id"] == "hint" and absf(win["factors"][1]["pct"] - 0.6) < 0.001, "win factors include the hint, and x1.00 speed fills half the bar")
 	_check(win["league"]["tier_name"] == "Silver" and win["league"]["rank"] == 3, "win league line")
 	_check(win["next"]["1"]["enabled"] and not win["next"]["0"]["enabled"] and not win["next"].has("-1"), "win next options")
 	_check(win["stats"].size() == 5 and win["stats"][4]["label"] == "Hints", "hint stat only when used")
@@ -1377,7 +1384,7 @@ func _test_loc() -> void:
 
 	var scene_files: Array = []
 	_files_under("res://scenes", ".tscn", scene_files)
-	var text_re := RegEx.create_from_string("(?m)^(?:text|placeholder_text) = \"(.*)\"$")
+	var text_re := RegEx.create_from_string("(?m)^(?:text|placeholder_text|tooltip_text) = \"(.*)\"$")
 	var no_letters := RegEx.create_from_string("^[^A-Za-z]*$")
 	var allowed := ["Queens", "Queens 1.0", "QN-ABC234", "Deutsch", "English"]
 	var stray := ""

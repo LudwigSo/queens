@@ -6,9 +6,9 @@ extends RefCounted
 ##
 ##   base     = 60 + 10 * size + 200 * (difficulty / 20)^1.6
 ##   par      = 30 + 3 * difficulty + 0.5 * size^2   (seconds)
-##   accuracy = 1 / (1 + 0.4 * wrong)                dominant factor
-##   speed    = clamp(0.5 + 0.5 * par / t, 0.5, 1.25) secondary, capped
-##   hint     = clamp(1 - 0.15 * hints, 0.4, 1)      hints are free but cost score
+##   accuracy = max(1 / (1 + 0.5 * wrong), 0.1)      dominant factor
+##   speed    = clamp((par / t)^0.631, 0.5, 2)       x2 at par/3, x1 at par
+##   hint     = clamp(1 - 0.2 * hints, 0.1, 1)       hints are free but cost score
 ##   score    = round(base * accuracy * speed * hint), 0 for a forfeit
 ##
 ## The base grows faster than the difficulty (exponent 1.6) but far slower
@@ -27,11 +27,13 @@ const DIFFICULTY_EXPONENT := 1.6
 const PAR_BASE := 30.0
 const PAR_PER_DIFFICULTY := 3.0
 const PAR_PER_CELL := 0.5           ## times size^2
-const K_WRONG := 0.4
-const SPEED_MIN := 0.5
-const SPEED_MAX := 1.25
-const HINT_PENALTY := 0.15
-const HINT_MIN := 0.4
+const K_WRONG := 0.5
+const ACCURACY_MIN := 0.1           ## a hopeless board still keeps a tenth
+const SPEED_MIN := 0.5              ## time alone never costs more than half
+const SPEED_MAX := 2.0
+const SPEED_EXPONENT := 0.6309297535714574   ## log2/log3: the clamps land on par/3 and 3*par
+const HINT_PENALTY := 0.2
+const HINT_MIN := 0.1
 
 const WEEK_SECONDS := 604800
 const WEEK_EPOCH_OFFSET := 345600   ## Unix epoch is a Thursday; Monday 1970-01-05 00:00 UTC.
@@ -47,13 +49,17 @@ static func par_seconds(difficulty: float, size: int) -> float:
 
 
 static func accuracy_factor(wrong_placements: int) -> float:
-	return 1.0 / (1.0 + K_WRONG * maxi(wrong_placements, 0))
+	return maxf(1.0 / (1.0 + K_WRONG * maxi(wrong_placements, 0)), ACCURACY_MIN)
 
 
+## A power law anchored at par: x1.00 at par, x2 from par/3 down and a tail
+## that flattens as it falls -- every further minute costs less than the one
+## before it -- until it rests on x0.5 at three times par. Both clamps meet
+## the curve exactly, so there is no step at either end.
 static func speed_factor(elapsed_seconds: float, par: float) -> float:
-	if elapsed_seconds <= 0.0:
+	if elapsed_seconds <= 0.0 or par <= 0.0:
 		return SPEED_MAX
-	return clampf(0.5 + 0.5 * par / elapsed_seconds, SPEED_MIN, SPEED_MAX)
+	return clampf(pow(par / elapsed_seconds, SPEED_EXPONENT), SPEED_MIN, SPEED_MAX)
 
 
 static func hint_factor(hint_count: int) -> float:

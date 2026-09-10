@@ -78,15 +78,17 @@ func set_hint(text: String, seconds: float = 0.0) -> void:
 		_hint_tween.tween_property(hint_label, "modulate:a", 1.0, Motion.d(Motion.BASE))
 
 
+## The chip keeps its slot in the header for the whole game and only fades,
+## so the first mistake cannot reflow the header, the board or the hint strip.
 func set_mistakes(n: int) -> void:
-	var was_visible := mistakes_chip.visible
+	var was_shown := mistakes_chip.modulate.a > 0.0
 	mistakes_label.text = str(n)
-	mistakes_chip.visible = n > 0
-	if n > 0 and is_inside_tree():
-		if was_visible:
-			Motion.bump(mistakes_chip, 1.25, Motion.SLOW)
-		else:
-			Motion.pop_in(mistakes_chip, Motion.BASE, 1.4)
+	if not is_inside_tree():
+		mistakes_chip.modulate.a = 1.0 if n > 0 else 0.0
+		return
+	Motion.fade(mistakes_chip, 1.0 if n > 0 else 0.0, Motion.BASE)
+	if n > 0 and was_shown:
+		Motion.bump(mistakes_chip, 1.25, Motion.SLOW)
 
 
 func set_hints_used(n: int) -> void:

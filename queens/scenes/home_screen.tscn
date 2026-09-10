@@ -1,8 +1,9 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/home_screen.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/star_row.gd" id="2_stars"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/gear.svg" id="3_gear"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/lightbulb.svg" id="10_bulb"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/bolt.svg" id="4_bolt"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/medal.svg" id="5_medal"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/chevron_right.svg" id="6_chev"]
@@ -34,12 +35,22 @@ theme_override_constants/separation = 20
 
 [node name="TopBar" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 12
 
 [node name="SettingsButton" type="Button" parent="Margin/VBox/TopBar"]
 custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 theme_type_variation = &"ButtonIcon"
 icon = ExtResource("3_gear")
+icon_alignment = 1
+expand_icon = true
+
+[node name="HowToPlayButton" type="Button" parent="Margin/VBox/TopBar"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+tooltip_text = "SETTINGS_HOW_TO_PLAY"
+theme_type_variation = &"ButtonIcon"
+icon = ExtResource("10_bulb")
 icon_alignment = 1
 expand_icon = true
 

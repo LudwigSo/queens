@@ -59,12 +59,17 @@ func refresh(standing: Dictionary, friends: Array, code: String, _nickname: Stri
 	tier_label.text = Loc.f("LEAGUE_NAME", [str(standing.get("tier_name", ""))])
 	medal.modulate = Ui.tier_color(tier_id)
 	var rules: Dictionary = standing.get("rules", {})
-	var counting := Loc.f("LEAGUE_COUNT_BEST_N", [int(rules.get("best_n", 15))]) if str(rules.get("round_mode", "best_n")) == "best_n" else Loc.t("LEAGUE_COUNT_ALL")
-	var days := int(rules.get("round_days", 7))
-	var period := Loc.t("LEAGUE_PERIOD_WEEK") if days == 7 else Loc.f("LEAGUE_PERIOD_DAYS", [days])
-	info_label.text = Loc.f("LEAGUE_INFO_RULES", [str(standing.get("rules_text", "")), counting]) + "\n" + Loc.f("LEAGUE_INFO_ENDS", [period, round_left_text])
-	# A tier that promotes by tier points shows the progress toward the next tier.
+	# A tier that promotes by tier points shows the progress toward the next tier
+	# instead. Neither the round length nor the best-N cap decides anything there,
+	# so naming them would only mislead.
 	var need := int(rules.get("promo_score", 0))
+	if need > 0:
+		info_label.text = str(standing.get("rules_text", ""))
+	else:
+		var counting := Loc.f("LEAGUE_COUNT_BEST_N", [int(rules.get("best_n", 15))]) if str(rules.get("round_mode", "best_n")) == "best_n" else Loc.t("LEAGUE_COUNT_ALL")
+		var days := int(rules.get("round_days", 7))
+		var period := Loc.t("LEAGUE_PERIOD_WEEK") if days == 7 else Loc.f("LEAGUE_PERIOD_DAYS", [days])
+		info_label.text = Loc.f("LEAGUE_INFO_RULES", [str(standing.get("rules_text", "")), counting]) + "\n" + Loc.f("LEAGUE_INFO_ENDS", [period, round_left_text])
 	var points_now := int(standing.get("my_tier_points", 0))
 	progress.visible = need > 0
 	progress_label.visible = need > 0

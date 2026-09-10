@@ -158,9 +158,11 @@ func _factor_row(id: String, value: float, pct: float, index: int) -> Control:
 	bar.custom_minimum_size = Vector2(0, 14)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if pct < 0.6:
+	# Coloured off the multiplier, not the fill: the speed bar is scaled so that
+	# x1.00 sits at half width, and a half-full speed bar is not a bad round.
+	if value < 0.6:
 		var fill := StyleBoxFlat.new()
-		fill.bg_color = Ui.ERROR if pct < 0.4 else Ui.WARNING
+		fill.bg_color = Ui.ERROR if value < 0.4 else Ui.WARNING
 		fill.set_corner_radius_all(Ui.RADIUS_PILL)
 		bar.add_theme_stylebox_override("fill", fill)
 	row.add_child(bar)

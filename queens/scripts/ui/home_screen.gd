@@ -8,11 +8,13 @@ signal overview_requested
 signal league_requested
 signal energy_pressed
 signal settings_requested
+signal tutorial_requested
 
 ## Translation keys, not text: a const cannot call into Loc.
 const STEP_KEYS := {-1: "STEP_EASIER", 0: "STEP_SAME", 1: "STEP_HARDER"}
 
 @onready var settings_button: Button = $Margin/VBox/TopBar/SettingsButton
+@onready var how_to_play_button: Button = $Margin/VBox/TopBar/HowToPlayButton
 @onready var energy_button: Button = $Margin/VBox/TopBar/EnergyButton
 @onready var streak_chip: PanelContainer = $Margin/VBox/Hero/StreakChip
 @onready var streak_label: Label = $Margin/VBox/Hero/StreakChip/HBox/StreakLabel
@@ -41,6 +43,7 @@ func _ready() -> void:
 	league_card.pressed.connect(league_requested.emit)
 	energy_button.pressed.connect(energy_pressed.emit)
 	settings_button.pressed.connect(settings_requested.emit)
+	how_to_play_button.pressed.connect(tutorial_requested.emit)
 	_selected_style = StyleBoxFlat.new()
 	_selected_style.bg_color = Ui.ME_BG
 	_selected_style.set_corner_radius_all(Ui.RADIUS_L)
@@ -104,7 +107,7 @@ func _refresh_league(league: Dictionary) -> void:
 	if int(league.get("promo_score", 0)) > 0:
 		# A tier that promotes by tier points: the progress replaces the zone.
 		league_line.text = Loc.f("HOME_LEAGUE_PROMO_LINE", [
-			int(league.get("rank", 0)), int(league.get("size", 0)), str(league.get("promo_text", "")), str(league.get("ends_in_text", ""))])
+			int(league.get("rank", 0)), int(league.get("size", 0)), str(league.get("promo_text", ""))])
 		return
 	league_line.text = Loc.f("HOME_LEAGUE_LINE", [
 		int(league.get("rank", 0)), int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe"))),

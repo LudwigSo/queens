@@ -61,7 +61,6 @@ var _plate_style: StyleBoxFlat
 
 var _board_rect: Rect2 = Rect2()
 var _cell_size: float = 0.0
-var _gap: float = 3.0
 
 var _pieces: Node2D
 var _crowns: Dictionary = {}          ## Vector2i -> Sprite2D
@@ -252,8 +251,9 @@ func _layout() -> void:
 	var side := minf(size.x, size.y) - 2.0 * PLATE_PAD
 	_cell_size = floorf(side / model.size_n)
 	side = _cell_size * model.size_n
-	_board_rect = Rect2((size - Vector2(side, side)) * 0.5, Vector2(side, side))
-	_gap = maxf(3.0, _cell_size * 0.05)
+	# The origin is floored: a half-pixel offset puts the thin separators on a
+	# pixel centre, where the unantialiased rasteriser drops some of them.
+	_board_rect = Rect2(((size - Vector2(side, side)) * 0.5).floor(), Vector2(side, side))
 
 
 func _draw() -> void:
@@ -290,13 +290,16 @@ func _draw() -> void:
 			if flash > 0.0:
 				draw_rect(rect, Color(Ui.ERROR, flash))
 
-	# Hairlines between cells of the same region.
-	var hair := Color(Ui.INK, 0.14)
+	# Hairlines between cells of the same region. The width follows the cell and
+	# keeps a two pixel floor, so the lines survive the canvas downscale on a
+	# small screen instead of thinning below one device pixel and flickering.
+	var hair := Color(Ui.INK, 0.20)
+	var hw := maxf(2.0, roundf(_cell_size * 0.03))
 	for i in range(1, n):
 		var x := _board_rect.position.x + i * _cell_size
 		var y := _board_rect.position.y + i * _cell_size
-		draw_rect(Rect2(x - 0.5, _board_rect.position.y, 1.0, _board_rect.size.y), hair)
-		draw_rect(Rect2(_board_rect.position.x, y - 0.5, _board_rect.size.x, 1.0), hair)
+		draw_rect(Rect2(x - hw * 0.5, _board_rect.position.y, hw, _board_rect.size.y), hair)
+		draw_rect(Rect2(_board_rect.position.x, y - hw * 0.5, _board_rect.size.x, hw), hair)
 
 	# Region borders: filled bars centred on the shared edge, extended by half
 	# their thickness so joints are square and gap-free.

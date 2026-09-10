@@ -48,9 +48,9 @@ Every solved game gets a score (`scripts/scoring.gd`):
 ```
 base     = 60 + 10 * size + 200 * (difficulty / 20)^1.6
 par      = 30 + 3 * difficulty + 0.5 * size^2   seconds
-accuracy = 1 / (1 + 0.4 * wrong placements)     the dominant factor
-speed    = clamp(0.5 + 0.5 * par / time, 0.5, 1.25)
-hint     = clamp(1 - 0.15 * hints, 0.4, 1)
+accuracy = max(1 / (1 + 0.5 * wrong placements), 0.1)   the dominant factor
+speed    = clamp((par / time)^0.631, 0.5, 2)
+hint     = clamp(1 - 0.2 * hints, 0.1, 1)
 score    = round(base * accuracy * speed * hint)
 ```
 

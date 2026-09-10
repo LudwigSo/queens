@@ -8,7 +8,6 @@ signal setting_changed(key: String, value: bool)
 signal language_selected(code: String)
 signal rename_requested(nickname: String)
 signal restore_requested
-signal tutorial_requested
 
 const TOGGLE_KEYS := ["sfx", "music", "haptics", "reduced_motion", "mistake_alerts", "region_patterns"]
 
@@ -17,7 +16,6 @@ const TOGGLE_KEYS := ["sfx", "music", "haptics", "reduced_motion", "mistake_aler
 @onready var name_edit: LineEdit = $Margin/VBox/Scroll/List/ProfileCard/VBox/NameRow/NameEdit
 @onready var name_button: Button = $Margin/VBox/Scroll/List/ProfileCard/VBox/NameRow/NameButton
 @onready var restore_button: Button = $Margin/VBox/Scroll/List/ProfileCard/VBox/RestoreButton
-@onready var tutorial_button: Button = $Margin/VBox/Scroll/List/PlayCard/VBox/TutorialButton
 @onready var version_label: Label = $Margin/VBox/Scroll/List/AboutCard/VBox/Version
 @onready var language: Segmented = $Margin/VBox/Scroll/List/LanguageCard/VBox/Language
 
@@ -36,7 +34,6 @@ func _ready() -> void:
 	name_button.pressed.connect(func() -> void: rename_requested.emit(name_edit.text.strip_edges()))
 	name_edit.text_submitted.connect(func(t: String) -> void: rename_requested.emit(t.strip_edges()))
 	restore_button.pressed.connect(restore_requested.emit)
-	tutorial_button.pressed.connect(tutorial_requested.emit)
 	language.selected.connect(func(code: String) -> void:
 		Sfx.play(&"button")
 		Sfx.haptic(8)

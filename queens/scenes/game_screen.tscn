@@ -51,12 +51,13 @@ alignment = 1
 
 [node name="ChipRow" type="HBoxContainer" parent="Margin/VBox/Header/Center"]
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 3
 theme_override_constants/separation = 8
 alignment = 1
 
 [node name="LevelChip" type="PanelContainer" parent="Margin/VBox/Header/Center/ChipRow"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"ChipWhite"
 
 [node name="HBox" type="HBoxContainer" parent="Margin/VBox/Header/Center/ChipRow/LevelChip"]
@@ -65,8 +66,10 @@ theme_override_constants/separation = 10
 
 [node name="LevelLabel" type="Label" parent="Margin/VBox/Header/Center/ChipRow/LevelChip/HBox"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"LabelCaptionInk"
 text = "7×7"
+text_overrun_behavior = 3
 
 [node name="Stars" type="HBoxContainer" parent="Margin/VBox/Header/Center/ChipRow/LevelChip/HBox"]
 layout_mode = 2
@@ -74,8 +77,9 @@ script = ExtResource("3_stars")
 icon_size = 18
 
 [node name="MistakesChip" type="PanelContainer" parent="Margin/VBox/Header/Center/ChipRow"]
-visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 2
+size_flags_vertical = 4
 theme_type_variation = &"ChipError"
 
 [node name="HBox" type="HBoxContainer" parent="Margin/VBox/Header/Center/ChipRow/MistakesChip"]
@@ -136,7 +140,7 @@ autowrap_mode = 3
 
 [node name="Actions" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 24
 
 [node name="HintButton" type="Button" parent="Margin/VBox/Actions"]
 custom_minimum_size = Vector2(0, 88)

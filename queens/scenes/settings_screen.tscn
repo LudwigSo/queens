@@ -174,12 +174,6 @@ theme_type_variation = &"LabelCaption"
 text = "SETTINGS_PATTERN_NOTE"
 autowrap_mode = 3
 
-[node name="TutorialButton" type="Button" parent="Margin/VBox/Scroll/List/PlayCard/VBox"]
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-theme_type_variation = &"ButtonSecondary"
-text = "SETTINGS_HOW_TO_PLAY"
-
 [node name="ProfileCard" type="PanelContainer" parent="Margin/VBox/Scroll/List"]
 layout_mode = 2
 theme_type_variation = &"Card"

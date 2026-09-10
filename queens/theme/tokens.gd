@@ -64,11 +64,11 @@ const FONT_SCORE := 88
 const FONT_DISPLAY := 64
 const FONT_TITLE := 44
 const FONT_HEADING := 32
-const FONT_BODY := 26
-const FONT_CAPTION := 20
+const FONT_BODY := 28
+const FONT_CAPTION := 22
 const FONT_BUTTON_L := 32
-const FONT_BUTTON_M := 26
-const FONT_BUTTON_S := 22
+const FONT_BUTTON_M := 28
+const FONT_BUTTON_S := 24
 
 # --- sizes and spacing ---------------------------------------------------------
 

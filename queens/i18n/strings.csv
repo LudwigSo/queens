@@ -55,7 +55,7 @@ HOME_COOLING,cooling down,gesperrt
 HOME_START_EASY,Start easy,Leicht starten
 HOME_LEAGUE_JOIN,Play a game to join this round,Spiel eine Runde und mach mit
 HOME_LEAGUE_LINE,#%d of %d · %s · %d pts · ends in %s,#%d von %d · %s · %d Pkt. · endet in %s
-HOME_LEAGUE_PROMO_LINE,#%d of %d · %s · ends in %s,#%d von %d · %s · endet in %s
+HOME_LEAGUE_PROMO_LINE,#%d of %d · %s,#%d von %d · %s
 LEAGUE_NAME,%s league,%s-Liga
 STEP_EASIER,Easier,Leichter
 STEP_SAME,Same,Gleich
@@ -65,7 +65,7 @@ HOME_OPT_NO_HARDER,No harder level free,Nichts Schwereres frei
 HOME_OPT_NO_EASIER,No easier level free,Nichts Leichteres frei
 HOME_OPT_NEAREST,Closest available level,Nächstes freies Level
 #,--- game screen ---,
-GAME_LEVEL_TITLE,Level %d · %s · diff %d,Level %d · %s · Schwierigkeit %d
+GAME_LEVEL_TITLE,Level %d · %s · diff %d,Level %d · %s · Schw. %d
 GAME_HINT_DEFAULT,"Tap to mark X, tap again for a queen. Drag to mark many.","Tippen setzt ein X, nochmal tippen eine Dame. Ziehen markiert mehrere."
 GAME_HINT,Hint,Tipp
 GAME_HINT_N,Hint · %d,Tipp · %d
