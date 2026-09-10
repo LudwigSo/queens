@@ -11,6 +11,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -46,9 +47,9 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
           export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
           mkdir -p build
+          "$ANDROID_HOME/platform-tools/adb" start-server
           godot --headless --import
-          godot --headless --install-android-build-template
-          godot --headless --export-release Android build/queens.apk
+          godot --headless --install-android-build-template --export-release Android build/queens.apk
 
       - name: Publish release
         env:
