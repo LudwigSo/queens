@@ -1,6 +1,6 @@
 extends Control
 ## The play screen: header chips, the board, a hint strip and the actions bar.
-## Owns the Board node and wires undo/clear itself; pause and hint requests
+## Owns the Board node and wires Clear itself; pause and hint requests
 ## are reported to the main script.
 
 signal pause_requested
@@ -17,7 +17,6 @@ const DEFAULT_HINT_KEY := "GAME_HINT_DEFAULT"
 @onready var timer_chip: PanelContainer = $Margin/VBox/Header/TimerChip
 @onready var timer_label: Label = $Margin/VBox/Header/TimerChip/HBox/TimerLabel
 @onready var hint_label: Label = $Margin/VBox/Hint
-@onready var undo_button: Button = $Margin/VBox/Actions/UndoButton
 @onready var hint_button: Button = $Margin/VBox/Actions/HintButton
 @onready var clear_button: Button = $Margin/VBox/Actions/ClearButton
 
@@ -29,7 +28,6 @@ var _hint_is_default: bool = true
 
 func _ready() -> void:
 	pause_button.pressed.connect(pause_requested.emit)
-	undo_button.pressed.connect(board.undo)
 	clear_button.pressed.connect(board.clear)
 	hint_button.pressed.connect(hint_requested.emit)
 	board.state_changed.connect(_on_board_changed)
@@ -45,7 +43,6 @@ func set_level(level_no: int, size: int, difficulty: int, star_count: int) -> vo
 	hint_label.text = Loc.t(DEFAULT_HINT_KEY)
 	_hint_is_default = true
 	hint_label.modulate.a = 1.0
-	undo_button.disabled = true
 	hint_button.disabled = false
 	clear_button.disabled = false
 
@@ -117,7 +114,6 @@ func bump_timer() -> void:
 
 
 func _on_board_changed() -> void:
-	undo_button.disabled = not board.can_undo()
 	if board.locked:
 		hint_button.disabled = true
 		clear_button.disabled = true

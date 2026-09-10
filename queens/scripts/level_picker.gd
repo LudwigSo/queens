@@ -4,8 +4,9 @@ extends RefCounted
 ## last game started.
 ##
 ## Levels are ranked by solver difficulty (LevelCatalog.ranked). A step moves
-## the target `step_fraction` of the list up or down; a band of
-## `band_fraction` around the target is the candidate pool. Levels on
+## the target `step_fraction_up` of the list up or `step_fraction_down`
+## down; a band of `band_fraction` around the target is the candidate pool.
+## The steps are short so "harder" is the next rung, not a leap. Levels on
 ## cooldown are excluded. "harder" only accepts a strictly higher difficulty
 ## and "easier" a strictly lower one, so ties never count as a step.
 ##
@@ -31,7 +32,8 @@ func pick(step: int, last: Dictionary, locked_ids: Dictionary, played_ids: Dicti
 	var n := ranked.size()
 	if n == 0:
 		return {"level": {}, "reason": "none", "step": step}
-	var step_ranks := ceili(n * config.step_fraction)
+	var step_fraction: float = config.step_fraction_up if step > 0 else config.step_fraction_down
+	var step_ranks := ceili(n * step_fraction)
 	var half := ceili(n * config.band_fraction)
 
 	var has_last := false

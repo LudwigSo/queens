@@ -7,7 +7,7 @@ signal home_requested
 signal closed
 
 ## Translation keys, not text: a const cannot call into Loc.
-const FACTOR_KEYS := {"accuracy": "FACTOR_ACCURACY", "speed": "FACTOR_SPEED", "undo": "FACTOR_UNDO", "hint": "FACTOR_HINT"}
+const FACTOR_KEYS := {"accuracy": "FACTOR_ACCURACY", "speed": "FACTOR_SPEED", "hint": "FACTOR_HINT"}
 
 @onready var dim: ColorRect = $Dim
 @onready var panel: PanelContainer = $Panel

@@ -20,7 +20,6 @@ var completed: bool = false
 var queens_placed: int = 0
 var wrong_placements: int = 0          ## Queens placed on a non-solution cell.
 var queens_removed: int = 0
-var undo_count: int = 0
 var clear_count: int = 0
 var hint_count: int = 0                ## Hints used; free, but they cost score.
 var taps: int = 0
@@ -46,7 +45,6 @@ func to_dict() -> Dictionary:
 		"queens_placed": queens_placed,
 		"wrong_placements": wrong_placements,
 		"queens_removed": queens_removed,
-		"undo_count": undo_count,
 		"clear_count": clear_count,
 		"hint_count": hint_count,
 		"taps": taps,
@@ -72,7 +70,6 @@ static func from_dict(d: Dictionary) -> GameResult:
 	r.queens_placed = int(d.get("queens_placed", 0))
 	r.wrong_placements = int(d.get("wrong_placements", 0))
 	r.queens_removed = int(d.get("queens_removed", 0))
-	r.undo_count = int(d.get("undo_count", 0))
 	r.clear_count = int(d.get("clear_count", 0))
 	r.hint_count = int(d.get("hint_count", 0))
 	r.taps = int(d.get("taps", 0))

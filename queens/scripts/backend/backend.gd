@@ -13,7 +13,7 @@ extends Node
 ##                    created_at, stats}
 ##   ScoreBreakdown  see Scoring.breakdown()
 ##   LeaderboardEntry {rank, player_id, nickname, score, time_seconds,
-##                    wrong_placements, undo_count, achieved_at, is_me, is_friend}
+##                    wrong_placements, achieved_at, is_me, is_friend}
 ##   LeagueGroup     {group_id, tier, round_index, size, promote_count,
 ##                    relegate_count, members: [member + rank + zone]}
 ##   LeagueStanding  {tier, tier_name, round_index, round_days, round_ends_at,

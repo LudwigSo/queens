@@ -67,7 +67,6 @@ HOME_OPT_NEAREST,Closest available level,Nächstes freies Level
 #,--- game screen ---,
 GAME_LEVEL_TITLE,Level %d · %s · diff %d,Level %d · %s · Schwierigkeit %d
 GAME_HINT_DEFAULT,"Tap to mark X, tap again for a queen. Drag to mark many.","Tippen setzt ein X, nochmal tippen eine Dame. Ziehen markiert mehrere."
-GAME_UNDO,Undo,Zurück
 GAME_HINT,Hint,Tipp
 GAME_HINT_N,Hint · %d,Tipp · %d
 GAME_CLEAR,Clear,Leeren
@@ -180,10 +179,10 @@ WIN_BADGE_FLAWLESS,Flawless,Fehlerfrei
 WIN_BADGE_NEW_BEST,New best,Neuer Bestwert
 WIN_BADGE_FASTEST,Fastest yet,Schnellste Zeit
 WIN_BADGE_UNDER_PAR,Under par,Unter Par
+WIN_STAT_BASE,Base,Basis
 WIN_STAT_TIME,Time,Zeit
 WIN_STAT_PAR,Par,Par
 WIN_STAT_MISTAKES,Mistakes,Fehler
-WIN_STAT_UNDOS,Undos,Zurück
 WIN_STAT_HINTS,Hints,Tipps
 WIN_STAT_DETAILS,Details,Details
 WIN_FACTOR,×%s,×%s
@@ -192,7 +191,6 @@ WIN_LEAGUE_PROMO_LINE,%s league · %s · #%d of %d,%s-Liga · %s · #%d von %d
 WIN_PROMOTED,Promoted to %s league!,Aufstieg in die %s-Liga!
 FACTOR_ACCURACY,Accuracy,Präzision
 FACTOR_SPEED,Speed,Tempo
-FACTOR_UNDO,Undo,Zurück
 FACTOR_HINT,Hints,Tipps
 #,--- round summary ---,
 SUMMARY_HEADING_ROUND,LAST ROUND,LETZTE RUNDE

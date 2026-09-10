@@ -8,7 +8,7 @@ extends RefCounted
 ##   last_game     {level_id, difficulty, started_at} or {} - the last game *started*
 ##   current_game  marker of a running game (so a killed app yields a forfeit) or {}
 ##   levels        level id -> {last_started_at, plays, completions, best_time (fastest),
-##                 best_score, best_score_time, best_wrong, best_undo, best_result_id,
+##                 best_score, best_score_time, best_wrong, best_result_id,
 ##                 best_at (all of the highest-scoring run)}
 ##   results       finished games, newest last, capped
 ##   pending_results  results not yet accepted by the backend
@@ -73,7 +73,6 @@ static func level_defaults() -> Dictionary:
 		"best_time": 0.0,
 		"best_score_time": 0.0,
 		"best_wrong": 0,
-		"best_undo": 0,
 		"best_result_id": "",
 		"best_at": 0,
 	}
@@ -356,7 +355,6 @@ func update_best_score(level_id: String, result: Dictionary) -> bool:
 	entry["best_score"] = score
 	entry["best_wrong"] = wrong
 	entry["best_score_time"] = time
-	entry["best_undo"] = int(result.get("undo_count", 0))
 	entry["best_result_id"] = str(result.get("result_id", ""))
 	entry["best_at"] = int(result.get("finished_at", 0))
 	mark_changed()

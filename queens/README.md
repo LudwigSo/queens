@@ -16,8 +16,9 @@ played game. A first run starts with an interactive tutorial (replayable
 from Settings).
 
 On the board: tap a cell to mark it X, tap again for a queen, tap a third
-time to clear. Drag across cells to paint or erase X marks as one stroke
-(one undo step). Long-press an empty cell to place a queen straight away.
+time to clear. Drag across cells to paint or erase X marks in one stroke.
+Long-press an empty cell to place a queen straight away. There is no undo
+button: a tap takes a queen back and *Clear* wipes the board.
 Placing a queen automatically X-marks its row, column, region and the
 cells around it. A queen on a wrong cell flashes red (switchable in
 Settings); two queens that attack each other shake and stay red.
@@ -45,14 +46,19 @@ Android when their plugins are installed.
 Every solved game gets a score (`scripts/scoring.gd`):
 
 ```
-base     = 10 * difficulty + 10 * size
+base     = 60 + 10 * size + 200 * (difficulty / 20)^1.6
 par      = 30 + 3 * difficulty + 0.5 * size^2   seconds
 accuracy = 1 / (1 + 0.4 * wrong placements)     the dominant factor
 speed    = clamp(0.5 + 0.5 * par / time, 0.5, 1.25)
-undo     = clamp(1 - 0.01 * undos, 0.85, 1)
 hint     = clamp(1 - 0.15 * hints, 0.4, 1)
-score    = round(base * accuracy * speed * undo * hint)
+score    = round(base * accuracy * speed * hint)
 ```
+
+The base points are shown on the win panel next to time, par and mistakes.
+They grow faster than the difficulty does (exponent 1.6) but far slower
+than an exponential, so the level list spans 149 points for the easiest
+board to 1351 for the hardest: a hard board is worth about nine easy ones,
+while the flat part keeps an easy board from feeling pointless.
 
 A wrong placement is a queen put on a cell that is not part of the
 solution; it counts the moment it is placed, so marking with X first and

@@ -10,15 +10,14 @@ extends RefCounted
 ## column, region and the 8 surrounding cells). Those automatic marks are
 ## removed again when the queen is removed. Manual marks are kept.
 ##
-## A drag "stroke" paints or erases manual marks across many cells and is one
-## undo step. Queens are never created or removed by a stroke.
+## A drag "stroke" paints or erases manual marks across many cells in one
+## go. Queens are never created or removed by a stroke.
 
 signal state_changed
 signal solved
 signal tapped(r: int, c: int)                    ## Every player tap on a cell.
 signal queen_placed(r: int, c: int, correct: bool)  ## correct = the cell is in the solution.
 signal queen_removed(r: int, c: int)
-signal undone                                   ## A successful undo.
 signal cleared                                  ## The player pressed Clear.
 signal stroke_ended(cells_changed: int)         ## A drag stroke that changed something.
 signal hint_applied(kind: String, cells: Array)  ## A hint changed the board.
@@ -32,7 +31,6 @@ var solution: Array = []
 var cells: Array = []        ## Cell per [row][col] - what the player set.
 var auto_marks: Array = []   ## Number of queens forcing an X on [row][col].
 var conflicts: Dictionary = {}
-var history: Array = []
 var locked: bool = false
 
 var _stroke: int = Stroke.NONE
@@ -58,7 +56,6 @@ func reset() -> void:
 		marks.fill(0)
 		cells.append(row)
 		auto_marks.append(marks)
-	history.clear()
 	conflicts.clear()
 	locked = false
 	_stroke = Stroke.NONE
@@ -70,21 +67,6 @@ func reset() -> void:
 func clear() -> void:
 	reset()
 	cleared.emit()
-
-
-func can_undo() -> bool:
-	return not history.is_empty() and not locked
-
-
-func undo() -> void:
-	if not can_undo():
-		return
-	var snap: Dictionary = history.pop_back()
-	cells = snap["cells"]
-	auto_marks = snap["auto"]
-	_recompute_conflicts()
-	state_changed.emit()
-	undone.emit()
 
 
 func queen_count() -> int:
@@ -112,16 +94,11 @@ func is_wrong_queen(r: int, c: int) -> bool:
 	return cells[r][c] == Cell.QUEEN and not is_correct_cell(r, c)
 
 
-func snapshot() -> Dictionary:
-	return {"cells": cells.duplicate(true), "auto": auto_marks.duplicate(true)}
-
-
 # --- taps -----------------------------------------------------------------------
 
 func tap(r: int, c: int) -> void:
 	if locked or not in_bounds(r, c):
 		return
-	history.append(snapshot())
 	tapped.emit(r, c)
 	match cells[r][c]:
 		Cell.EMPTY:
@@ -147,7 +124,6 @@ func _tap(r: int, c: int) -> void:
 func place_directly(r: int, c: int) -> bool:
 	if locked or not in_bounds(r, c) or cells[r][c] == Cell.QUEEN:
 		return false
-	history.append(snapshot())
 	tapped.emit(r, c)
 	_place_queen(r, c)
 	_after_change()
@@ -177,7 +153,6 @@ func begin_stroke(mode: int) -> void:
 		return
 	_stroke = mode
 	_stroke_changed = 0
-	history.append(snapshot())
 
 
 func in_stroke() -> bool:
@@ -199,21 +174,19 @@ func stroke_cell(r: int, c: int) -> bool:
 	return true
 
 
-## Returns how many cells the stroke changed. An empty stroke leaves no undo step.
+## Returns how many cells the stroke changed.
 func end_stroke() -> int:
 	if _stroke == Stroke.NONE:
 		return 0
 	_stroke = Stroke.NONE
 	var changed := _stroke_changed
 	_stroke_changed = 0
-	if changed == 0:
-		history.pop_back()
-	else:
+	if changed > 0:
 		stroke_ended.emit(changed)
 	return changed
 
 
-## Marks several cells as one undo step (used by hints).
+## Marks several cells in one go (used by hints).
 func apply_marks(targets: Array, kind: String) -> void:
 	if locked:
 		return
@@ -223,14 +196,13 @@ func apply_marks(targets: Array, kind: String) -> void:
 		if stroke_cell(p.x, p.y):
 			changed.append(p)
 	_stroke = Stroke.NONE
-	if changed.is_empty():
-		history.pop_back()
-		return
 	_stroke_changed = 0
+	if changed.is_empty():
+		return
 	hint_applied.emit(kind, changed)
 
 
-## Places a queen as a hint (one undo step).
+## Places a queen as a hint.
 func apply_queen(r: int, c: int, kind: String) -> void:
 	if place_directly(r, c):
 		hint_applied.emit(kind, [Vector2i(r, c)])

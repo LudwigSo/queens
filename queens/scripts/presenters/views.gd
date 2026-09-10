@@ -160,17 +160,16 @@ static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: D
 	if result.elapsed_seconds > 0.0 and result.elapsed_seconds < bd["par_seconds"]:
 		badges.append(Loc.t("WIN_BADGE_UNDER_PAR"))
 	var stats := [
+		{"label": Loc.t("WIN_STAT_BASE"), "value": str(int(bd["base"]))},
 		{"label": Loc.t("WIN_STAT_TIME"), "value": Fmt.time(result.elapsed_seconds)},
 		{"label": Loc.t("WIN_STAT_PAR"), "value": Fmt.time(float(bd["par_seconds"]))},
 		{"label": Loc.t("WIN_STAT_MISTAKES"), "value": str(result.wrong_placements)},
-		{"label": Loc.t("WIN_STAT_UNDOS"), "value": str(result.undo_count)},
 	]
 	if result.hint_count > 0:
 		stats.append({"label": Loc.t("WIN_STAT_HINTS"), "value": str(result.hint_count)})
 	var factors := [
 		{"id": "accuracy", "value": float(bd["accuracy_factor"]), "pct": float(bd["accuracy_factor"])},
 		{"id": "speed", "value": float(bd["speed_factor"]), "pct": float(bd["speed_factor"]) / Scoring.SPEED_MAX},
-		{"id": "undo", "value": float(bd["undo_factor"]), "pct": float(bd["undo_factor"])},
 	]
 	if result.hint_count > 0:
 		factors.append({"id": "hint", "value": float(bd.get("hint_factor", 1.0)), "pct": float(bd.get("hint_factor", 1.0))})

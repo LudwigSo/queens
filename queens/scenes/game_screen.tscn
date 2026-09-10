@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/game_screen.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/board.gd" id="2_board"]
@@ -6,7 +6,6 @@
 [ext_resource type="Texture2D" path="res://assets/icons/line/pause.svg" id="4_pause"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/clock.svg" id="5_clock"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/close.svg" id="6_close"]
-[ext_resource type="Texture2D" path="res://assets/icons/line/undo.svg" id="7_undo"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/lightbulb.svg" id="8_bulb"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/eraser.svg" id="9_eraser"]
 
@@ -138,15 +137,6 @@ autowrap_mode = 3
 [node name="Actions" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
-
-[node name="UndoButton" type="Button" parent="Margin/VBox/Actions"]
-custom_minimum_size = Vector2(0, 88)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"ButtonSecondary"
-disabled = true
-text = "GAME_UNDO"
-icon = ExtResource("7_undo")
 
 [node name="HintButton" type="Button" parent="Margin/VBox/Actions"]
 custom_minimum_size = Vector2(0, 88)

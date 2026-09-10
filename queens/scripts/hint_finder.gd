@@ -145,7 +145,7 @@ static func _reveal(m: BoardModel, cands: Array[Vector2i]) -> Dictionary:
 	return {"kind": "reveal", "cells": [p], "unit": _row_cells(m, best_row), "place": p, "marks": [], "text_key": "HINT_REVEAL"}
 
 
-## Applies a hint to the model as one undo step. Returns the cells changed.
+## Applies a hint to the model. Returns the cells changed.
 static func apply(m: BoardModel, hint: Dictionary) -> Array:
 	match str(hint.get("kind", "none")):
 		"single", "reveal":

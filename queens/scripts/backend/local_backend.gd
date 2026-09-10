@@ -251,9 +251,11 @@ func submit_result(result: Dictionary) -> Dictionary:
 	response["zone"] = standing["zone"]
 	response["tier_points"] = tier_points()
 	response["promo_score"] = int(standing["rules"]["promo_score"])
+	# Stored before the promotion check so the promoting game itself can be
+	# the best game of the round the summary reports.
+	results[id] = {"result": result.duplicate(true), "response": response}
 	if completed and LeagueRules.reaches_promo(LeagueRules.tier(league_cfg(), tier_id()), tier_points()):
 		response["promoted_to"] = _promote_by_score(index, standing)
-	results[id] = {"result": result.duplicate(true), "response": response}
 	_save()
 	standing_changed.emit()
 	return ok(response)
@@ -569,7 +571,7 @@ func _entry_from_result(r: Dictionary, score: int) -> Dictionary:
 	return {
 		"rank": 0, "player_id": player_id(), "nickname": str(data["profile"].get("nickname", "")),
 		"score": score, "time_seconds": float(r.get("elapsed_seconds", 0.0)),
-		"wrong_placements": int(r.get("wrong_placements", 0)), "undo_count": int(r.get("undo_count", 0)),
+		"wrong_placements": int(r.get("wrong_placements", 0)),
 		"achieved_at": int(r.get("finished_at", 0)), "is_me": true, "is_friend": false,
 	}
 
@@ -599,7 +601,7 @@ func _synthetic_level_entry(level: Dictionary, key: String, who_id: String, nick
 	var score := int(round(base * Scoring.accuracy_factor(wrong) * Scoring.speed_factor(time, par)))
 	return {
 		"rank": 0, "player_id": who_id, "nickname": nickname, "score": score, "time_seconds": snappedf(time, 0.1),
-		"wrong_placements": wrong, "undo_count": int(_hash01(key + ":u") * 4),
+		"wrong_placements": wrong,
 		"achieved_at": now_utc() - int(_hash01(key + ":t") * 30 * 86400), "is_me": false, "is_friend": is_friend,
 	}
 

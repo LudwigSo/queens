@@ -40,7 +40,6 @@ func attach(board: BoardModel) -> void:
 	board.tapped.connect(_on_tapped)
 	board.queen_placed.connect(_on_queen_placed)
 	board.queen_removed.connect(_on_queen_removed)
-	board.undone.connect(_on_undone)
 	board.cleared.connect(_on_cleared)
 	board.stroke_ended.connect(_on_stroke_ended)
 	board.hint_applied.connect(_on_hint_applied)
@@ -52,7 +51,6 @@ func detach() -> void:
 	_board.tapped.disconnect(_on_tapped)
 	_board.queen_placed.disconnect(_on_queen_placed)
 	_board.queen_removed.disconnect(_on_queen_removed)
-	_board.undone.disconnect(_on_undone)
 	_board.cleared.disconnect(_on_cleared)
 	_board.stroke_ended.disconnect(_on_stroke_ended)
 	_board.hint_applied.disconnect(_on_hint_applied)
@@ -99,7 +97,6 @@ func to_marker() -> Dictionary:
 		"queens_placed": result.queens_placed,
 		"wrong_placements": result.wrong_placements,
 		"queens_removed": result.queens_removed,
-		"undo_count": result.undo_count,
 		"clear_count": result.clear_count,
 		"hint_count": result.hint_count,
 		"taps": result.taps,
@@ -124,7 +121,6 @@ static func forfeit_from_marker(marker: Dictionary, level: Dictionary, player_id
 	r.queens_placed = int(marker.get("queens_placed", 0))
 	r.wrong_placements = int(marker.get("wrong_placements", 0))
 	r.queens_removed = int(marker.get("queens_removed", 0))
-	r.undo_count = int(marker.get("undo_count", 0))
 	r.clear_count = int(marker.get("clear_count", 0))
 	r.hint_count = int(marker.get("hint_count", 0))
 	r.taps = int(marker.get("taps", 0))
@@ -146,10 +142,6 @@ func _on_queen_placed(_r: int, _c: int, correct: bool) -> void:
 
 func _on_queen_removed(_r: int, _c: int) -> void:
 	result.queens_removed += 1
-
-
-func _on_undone() -> void:
-	result.undo_count += 1
 
 
 func _on_cleared() -> void:

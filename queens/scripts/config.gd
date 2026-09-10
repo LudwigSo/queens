@@ -16,10 +16,14 @@ var unlimited_product_id: String = "queens_unlimited_energy"
 ## Price shown before the store has answered (or on desktop).
 var unlimited_price_fallback: String = "2.99 €"
 
-## Level picker: "harder"/"easier" move this fraction of the ranked level list.
-var step_fraction: float = 0.20
+## Level picker: "harder" moves this fraction of the ranked level list up.
+## Small on purpose - the next board should feel like a step, not a wall.
+var step_fraction_up: float = 0.08
+## Level picker: "easier" moves this fraction of the list down. A bit larger
+## than the step up, so a player who is stuck lands somewhere comfortable.
+var step_fraction_down: float = 0.12
 ## Level picker: half-width of the candidate band as a fraction of the list.
-var band_fraction: float = 0.075
+var band_fraction: float = 0.05
 ## Level picker: the first game is picked around this quantile (from the easy end).
 var initial_quartile: float = 0.25
 

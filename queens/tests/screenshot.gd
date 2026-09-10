@@ -5,6 +5,9 @@ extends Node
 ##   godot --path queens res://tests/screenshot.tscn -- <output_dir> [locale]
 ## With a locale ("de") the shots are taken in that language and the files
 ## get a "_de" suffix.
+##
+## The window is resized to the design resolution first, so the shots come
+## out at 720x1280 whatever the window override in project.godot says.
 
 const MainScene := preload("res://scenes/main.tscn")
 const SAVE_PATH := "user://screenshot_save.json"
@@ -13,6 +16,7 @@ var _locale: String = ""   ## "" keeps the device language (English in CI).
 
 
 func _ready() -> void:
+	_use_design_resolution()
 	var out_dir := "user://"
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
@@ -57,7 +61,7 @@ func _ready() -> void:
 		await _frames(1)
 	_touch(board.cell_center(5, 2), false)
 	await _frames(1)
-	print("drag test: row 5 marks = %s %s %s (expected 1 1 1), undo steps = %d" % [board.cells[5][0], board.cells[5][1], board.cells[5][2], board.model.history.size()])
+	print("drag test: row 5 marks = %s %s %s (expected 1 1 1)" % [board.cells[5][0], board.cells[5][1], board.cells[5][2]])
 	board.reset()
 	# Place the first two solution queens and one deliberately conflicting queen.
 	board._tap(0, sol[0])
@@ -192,18 +196,34 @@ func _ready() -> void:
 	get_tree().quit()
 
 
+## Godot's design resolution, so a window override cannot shrink the shots
+## or move the synthetic touches off their cells.
+func _use_design_resolution() -> void:
+	var design := Vector2i(
+		int(ProjectSettings.get_setting("display/window/size/viewport_width", 720)),
+		int(ProjectSettings.get_setting("display/window/size/viewport_height", 1280)))
+	if DisplayServer.window_get_size() != design:
+		DisplayServer.window_set_size(design)
+		get_window().size = design
+
+
+## Input arrives in window coordinates; the board reports canvas ones.
+func _to_window(pos: Vector2) -> Vector2:
+	return get_viewport().get_screen_transform() * pos
+
+
 func _touch(pos: Vector2, pressed: bool) -> void:
 	var ev := InputEventScreenTouch.new()
 	ev.index = 0
 	ev.pressed = pressed
-	ev.position = pos
+	ev.position = _to_window(pos)
 	Input.parse_input_event(ev)
 
 
 func _drag(pos: Vector2) -> void:
 	var ev := InputEventScreenDrag.new()
 	ev.index = 0
-	ev.position = pos
+	ev.position = _to_window(pos)
 	Input.parse_input_event(ev)
 
 

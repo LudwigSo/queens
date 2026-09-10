@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless test runner. Run with:
 ##   godot --headless --path queens --script tests/run_tests.gd
 ## Checks that every level has a unique id and exactly one solution and that the
-## board logic (auto-marking, undo, conflict detection, win detection) behaves.
+## board logic (auto-marking, conflict detection, win detection) behaves.
 
 const Levels := preload("res://scripts/levels.gd")
 const BoardScript := preload("res://scripts/board_model.gd")
@@ -175,11 +175,7 @@ func _test_board_logic() -> void:
 				any_auto = true
 	_check(not any_auto, "removing queen clears its auto marks")
 
-	# Undo restores previous state.
-	board.undo()
-	_check(board.cells[0][0] == BoardScript.Cell.QUEEN and board.auto_marks[0][1] == 1, "undo restores queen and auto marks")
 	board.reset()
-	_check(not board.can_undo(), "reset clears history")
 
 	# Two queens in the same row conflict; auto marks stack and unstack.
 	board._tap(0, 0)
@@ -336,12 +332,6 @@ func _test_game_session() -> void:
 	_check(session.result.queens_placed == 1 and session.result.wrong_placements == 1, "wrong queen counted")
 	board._tap(0, wrong_col)  # remove
 	_check(session.result.queens_removed == 1 and session.result.wrong_placements == 1, "removal keeps the mistake")
-	board.undo()
-	_check(session.result.undo_count == 1, "undo counted")
-	board.undo()
-	board.undo()
-	board.undo()  # history exhausted: only three real undos in total
-	_check(session.result.undo_count == 3, "only effective undos are counted")
 	board._tap(0, sol[0])
 	board._tap(0, sol[0])
 	_check(session.result.queens_placed == 2 and session.result.wrong_placements == 1, "correct queen is not a mistake")
@@ -434,8 +424,10 @@ func _test_level_picker() -> void:
 	rng.seed = 12345
 	var picker := LevelPicker.new(catalog, cfg, rng)
 	var n := catalog.ranked.size()
-	var step_ranks := ceili(n * cfg.step_fraction)
+	var step_up := ceili(n * cfg.step_fraction_up)
+	var step_down := ceili(n * cfg.step_fraction_down)
 	var half := ceili(n * cfg.band_fraction)
+	_check(cfg.step_fraction_up <= cfg.step_fraction_down and cfg.step_fraction_up <= 0.1, "the step up is short and no longer than the step down")
 	@warning_ignore("integer_division")
 	var median: Dictionary = catalog.ranked[n / 2]
 	var last := {"level_id": median["id"], "difficulty": median["difficulty"]}
@@ -452,11 +444,11 @@ func _test_level_picker() -> void:
 	var harder := picker.pick(1, last, {})
 	var hr := catalog.rank_of(harder["level"]["id"])
 	_check(harder["reason"] == "band", "harder finds a band level")
-	_check(hr >= i0 + step_ranks - half and hr <= i0 + step_ranks + half, "harder lands one step up")
+	_check(hr >= i0 + step_up - half and hr <= i0 + step_up + half, "harder lands one step up")
 	_check(float(harder["level"]["difficulty"]) > float(median["difficulty"]), "harder is strictly harder")
 	var easier := picker.pick(-1, last, {})
 	var er := catalog.rank_of(easier["level"]["id"])
-	_check(er >= i0 - step_ranks - half and er <= i0 - step_ranks + half, "easier lands one step down")
+	_check(er >= i0 - step_down - half and er <= i0 - step_down + half, "easier lands one step down")
 	_check(float(easier["level"]["difficulty"]) < float(median["difficulty"]), "easier is strictly easier")
 	var same := picker.pick(0, last, {})
 	var sr := catalog.rank_of(same["level"]["id"])
@@ -465,14 +457,14 @@ func _test_level_picker() -> void:
 
 	# Band fully locked: nearest allowed level on the right side.
 	var locked := {}
-	for i in range(i0 + step_ranks - half, i0 + step_ranks + half + 1):
+	for i in range(i0 + step_up - half, i0 + step_up + half + 1):
 		locked[catalog.ranked[i]["id"]] = true
 	var nearest := picker.pick(1, last, locked)
 	_check(nearest["reason"] == "nearest", "locked band falls back to nearest")
 	_check(not locked.has(nearest["level"]["id"]), "nearest is not locked")
 	_check(float(nearest["level"]["difficulty"]) > float(median["difficulty"]), "nearest keeps the side rule")
 	var nr := catalog.rank_of(nearest["level"]["id"])
-	_check(absi(nr - (i0 + step_ranks)) <= half + 3, "nearest is adjacent to the band")
+	_check(absi(nr - (i0 + step_up)) <= half + 3, "nearest is adjacent to the band")
 
 	# No level on that side at all.
 	var hardest: Dictionary = catalog.ranked[n - 1]
@@ -642,38 +634,43 @@ func _test_fake_providers() -> void:
 
 
 func _test_scoring() -> void:
-	# The fixture rows from the design: (size, difficulty, wrong, seconds, undos, expected score).
+	# The fixture rows: (size, difficulty, wrong, seconds, expected score).
 	var rows := [
-		[6, 8.0, 0, 45.0, 0, 175],
-		[6, 8.0, 0, 72.0, 0, 140],
-		[6, 8.0, 3, 150.0, 4, 45],
-		[10, 55.0, 0, 180.0, 0, 767],
-		[10, 55.0, 0, 245.0, 0, 650],
-		[10, 55.0, 5, 600.0, 8, 140],
-		[10, 55.0, 12, 900.0, 15, 61],
+		[6, 8.0, 0, 45.0, 208],
+		[6, 8.0, 0, 72.0, 166],
+		[6, 8.0, 3, 150.0, 56],
+		[10, 55.0, 0, 180.0, 1380],
+		[10, 55.0, 0, 245.0, 1169],
+		[10, 55.0, 5, 600.0, 274],
+		[10, 55.0, 12, 900.0, 128],
 	]
 	for row in rows:
 		var d := {"size": row[0], "difficulty": row[1], "wrong_placements": row[2], "elapsed_seconds": row[3],
-			"undo_count": row[4], "completed": true}
-		_check(Scoring.score(d) == row[5], "score %dx%d diff %d w=%d t=%d u=%d is %d (got %d)" % [row[0], row[0], row[1], row[2], row[3], row[4], row[5], Scoring.score(d)])
+			"completed": true}
+		_check(Scoring.score(d) == row[4], "score %dx%d diff %d w=%d t=%d is %d (got %d)" % [row[0], row[0], row[1], row[2], row[3], row[4], Scoring.score(d)])
 	_check(Scoring.par_seconds(8.0, 6) == 72.0 and Scoring.par_seconds(55.0, 10) == 245.0, "par times of the fixtures")
-	_check(Scoring.base(8.0, 6) == 140 and Scoring.base(55.0, 10) == 650, "base points of the fixtures")
-	var forfeit := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 10.0, "undo_count": 0, "completed": false}
+	_check(Scoring.base(8.0, 6) == 166 and Scoring.base(55.0, 10) == 1169, "base points of the fixtures")
+	# The base grows faster than the difficulty but nowhere near exponentially.
+	var b_easy := Scoring.base(10.0, 6)
+	var b_mid := Scoring.base(20.0, 6)
+	var b_hard := Scoring.base(40.0, 6)
+	_check(b_mid - b_easy < b_hard - b_mid, "the base curve steepens with difficulty")
+	_check(float(b_hard) / float(b_easy) < 8.0 and float(b_hard) / float(b_easy) > 2.5, "quadrupling the difficulty is worth 2.5x .. 8x, not 16x")
+	var forfeit := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 10.0, "completed": false}
 	_check(Scoring.score(forfeit) == 0, "forfeit scores 0")
-	var bd := Scoring.breakdown({"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "undo_count": 0, "completed": true})
-	_check(bd["flawless"] and bd["base"] == 650 and bd["par_seconds"] == 245.0, "breakdown carries base, par and flawless")
-	_check(is_equal_approx(bd["accuracy_factor"], 1.0) and is_equal_approx(bd["undo_factor"], 1.0) and absf(bd["speed_factor"] - 1.1806) < 0.001, "breakdown factors")
-	_check(not Scoring.breakdown({"size": 6, "difficulty": 8.0, "wrong_placements": 1, "elapsed_seconds": 10.0, "undo_count": 0, "completed": true})["flawless"], "a wrong placement is not flawless")
+	var bd := Scoring.breakdown({"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "completed": true})
+	_check(bd["flawless"] and bd["base"] == 1169 and bd["par_seconds"] == 245.0, "breakdown carries base, par and flawless")
+	_check(is_equal_approx(bd["accuracy_factor"], 1.0) and not bd.has("undo_factor") and absf(bd["speed_factor"] - 1.1806) < 0.001, "breakdown factors, and no undo factor any more")
+	_check(not Scoring.breakdown({"size": 6, "difficulty": 8.0, "wrong_placements": 1, "elapsed_seconds": 10.0, "completed": true})["flawless"], "a wrong placement is not flawless")
 	_check(Scoring.speed_factor(0.0, 100.0) == Scoring.SPEED_MAX, "zero elapsed time hits the speed cap")
 	_check(absf(Scoring.speed_factor(1e9, 100.0) - Scoring.SPEED_MIN) < 1e-6, "very slow games hit the speed floor")
-	_check(Scoring.undo_factor(100) == Scoring.UNDO_MIN and Scoring.undo_factor(0) == 1.0, "undo factor is bounded")
 	_check(is_equal_approx(Scoring.hint_factor(0), 1.0) and is_equal_approx(Scoring.hint_factor(2), 0.7) and Scoring.hint_factor(10) == Scoring.HINT_MIN, "hint factor: 15 %% per hint, floored")
-	var hinted := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "undo_count": 0, "hint_count": 1, "completed": true}
-	_check(Scoring.score(hinted) == int(round(767 * 0.85)) and not Scoring.breakdown(hinted)["flawless"], "a hint costs 15 %% and the flawless badge (got %d)" % Scoring.score(hinted))
+	var hinted := {"size": 10, "difficulty": 55.0, "wrong_placements": 0, "elapsed_seconds": 180.0, "hint_count": 1, "completed": true}
+	_check(Scoring.score(hinted) == int(round(1380 * 0.85)) and not Scoring.breakdown(hinted)["flawless"], "a hint costs 15 %% and the flawless badge (got %d)" % Scoring.score(hinted))
 	_check(Scoring.breakdown(hinted)["hint_factor"] == 0.85, "breakdown carries the hint factor")
 	_check(is_equal_approx(Scoring.accuracy_factor(10), 0.2), "ten wrong placements keep a fifth of the score")
-	var stored := {"size": 6, "difficulty": 8.0, "wrong_placements": 0, "elapsed_seconds": 72.0, "undo_count": 0, "completed": true, "par_seconds": 144.0}
-	_check(Scoring.score(stored) == 175, "a stored par is used instead of the formula")
+	var stored := {"size": 6, "difficulty": 8.0, "wrong_placements": 0, "elapsed_seconds": 72.0, "completed": true, "par_seconds": 144.0}
+	_check(Scoring.score(stored) == 208, "a stored par is used instead of the formula")
 	# Weeks: Monday 2026-09-07 00:00 UTC starts a week; the second before belongs to the previous one.
 	var monday := 1788739200
 	var w := Scoring.week_index(monday)
@@ -685,7 +682,7 @@ func _test_scoring() -> void:
 	var cfg := GameConfig.new()
 	var save := SaveData.new()
 	save.data = SaveData.defaults(cfg)
-	var base := {"level_id": "L", "completed": true, "result_id": "r1", "finished_at": 100, "elapsed_seconds": 60.0, "wrong_placements": 1, "undo_count": 0, "score": 100}
+	var base := {"level_id": "L", "completed": true, "result_id": "r1", "finished_at": 100, "elapsed_seconds": 60.0, "wrong_placements": 1, "score": 100}
 	_check(save.record_result(base, 10)["best_score_improved"], "first completion sets the best score")
 	var worse := base.duplicate()
 	worse.merge({"result_id": "r2", "score": 90}, true)
@@ -840,7 +837,7 @@ func _test_local_backend() -> void:
 	_check(bots_playing > 10, "bots have played by Wednesday")
 
 	var result := {"result_id": "r-1", "player_id": "player-1", "level_id": lv["id"], "size": lv["size"], "difficulty": lv["difficulty"],
-		"completed": true, "elapsed_seconds": 40.0, "wrong_placements": 0, "undo_count": 0, "started_at": clock[0] - 60,
+		"completed": true, "elapsed_seconds": 40.0, "wrong_placements": 0, "started_at": clock[0] - 60,
 		"finished_at": clock[0], "week_index": 2957}
 	var sub := backend.submit_result(result)
 	_check(sub["ok"] and sub["data"]["breakdown"]["score"] == Scoring.score(result), "submit computes the score")
@@ -1065,12 +1062,11 @@ func _test_board_strokes() -> void:
 		if m.cells[2][c] == BoardModel.Cell.MARK:
 			painted += 1
 	_check(painted == 4, "four manual marks painted")
-	_check(m.history.size() == 1, "a stroke is one undo step")
-	m.undo()
-	_check(m.cells[2][0] == BoardModel.Cell.EMPTY and m.cells[2][3] == BoardModel.Cell.EMPTY and not m.can_undo(), "one undo removes the whole stroke")
-	# An empty stroke leaves no history.
+	m.clear()
+	_check(m.cells[2][0] == BoardModel.Cell.EMPTY and m.cells[2][3] == BoardModel.Cell.EMPTY, "clear wipes a painted stroke")
+	# An empty stroke reports nothing.
 	m.begin_stroke(BoardModel.Stroke.PAINT)
-	_check(m.end_stroke() == 0 and m.history.is_empty(), "an empty stroke leaves no undo step")
+	_check(m.end_stroke() == 0, "an empty stroke changes nothing")
 	# Erase strokes only touch manual marks; queens and auto marks are safe.
 	m.tap(0, 0)
 	m.tap(0, 0)  # queen at (0,0): row 0 and column 0 auto-marked
@@ -1090,7 +1086,6 @@ func _test_board_strokes() -> void:
 	m.reset()
 	_check(m.place_directly(1, 1) and m.cells[1][1] == BoardModel.Cell.QUEEN, "place_directly puts a queen on an empty cell")
 	_check(not m.place_directly(1, 1), "place_directly does nothing on a queen")
-	_check(m.history.size() == 1, "place_directly is one undo step")
 
 
 func _test_hint_finder() -> void:
@@ -1162,10 +1157,8 @@ func _test_board_view() -> void:
 	_check(view.get_node("Pieces").get_child_count() == 1, "one crown sprite after placing a queen")
 	_check(changes.size() == 2, "view re-emits state_changed per move")
 	_check(view.cell_rect(0, 0).size.x > 0.0 and view.cell_center(1, 1) != view.cell_center(0, 0), "cells are laid out")
-	view.undo()
-	view.undo()
-	_check(view.get_node("Pieces").get_child_count() == 0 or not view.get_node("Pieces").get_child(0).visible or true, "undo removes the crown")
-	_check(view.queen_count() == 0 and not view.can_undo(), "undo pass-through works")
+	view.clear()
+	_check(view.queen_count() == 0, "clear removes the crown through the view")
 	view.queue_free()
 	Motion.instant = false
 
@@ -1217,7 +1210,7 @@ func _test_views() -> void:
 	_check(home["last"]["level_no"] == 4 and home["streak"]["days"] == 1, "home view after a game shows the last level and the streak")
 	var card := Views.level_card(lv, save, catalog, now + 60, cfg.cooldown_seconds)
 	_check(card["locked"] and card["lock_text"] == "6d 23h" and card["best_text"] == "" and card["played"], "a started level is locked with a countdown")
-	save.record_result({"level_id": lv["id"], "completed": true, "result_id": "r1", "finished_at": now, "elapsed_seconds": 61.0, "wrong_placements": 0, "undo_count": 0, "score": 120}, 10)
+	save.record_result({"level_id": lv["id"], "completed": true, "result_id": "r1", "finished_at": now, "elapsed_seconds": 61.0, "wrong_placements": 0, "score": 120}, 10)
 	card = Views.level_card(lv, save, catalog, now + 8 * 86400, cfg.cooldown_seconds)
 	_check(not card["locked"] and card["best_text"] == "Best 120 pts · flawless", "an unlocked played level shows its best")
 	var other := Views.level_card(levels[0], save, catalog, now, cfg.cooldown_seconds)
@@ -1228,10 +1221,9 @@ func _test_views() -> void:
 	var result := GameResult.new()
 	result.elapsed_seconds = 70.0
 	result.wrong_placements = 0
-	result.undo_count = 2
 	result.hint_count = 1
 	result.score = 300
-	var bd := {"base": 400, "par_seconds": 100.0, "accuracy_factor": 1.0, "speed_factor": 1.2, "undo_factor": 0.98, "hint_factor": 0.85, "flawless": false}
+	var bd := {"base": 400, "par_seconds": 100.0, "accuracy_factor": 1.0, "speed_factor": 1.2, "hint_factor": 0.85, "flawless": false}
 	var outcome := {"best_score_improved": true, "best_time_improved": true, "league": {"tier": "silver", "round_score": 900, "group_rank": 3, "group_size": 30, "zone": "safe", "tier_points": 4200, "promo_score": 10000, "promoted_to": ""}}
 	var win := Views.win(result, bd, outcome, {1: {"size": 8, "enabled": true}, 0: {"size": 7, "enabled": false}}, cfg.league, 2)
 	_check(win["league"]["promo_text"] == "4200 / 10000 pts to Gold" and win["league"]["promoted_to_name"] == "", "win league line shows the tier points progress")
@@ -1239,10 +1231,11 @@ func _test_views() -> void:
 	_check(Views.win(result, bd, outcome, {}, cfg.league, 2)["league"]["promoted_to_name"] == "Gold", "win league line names the new tier")
 	outcome["league"]["promoted_to"] = ""
 	_check(win["badges"] == ["New best", "Under par"], "win badges: new best and under par, no flawless with a hint (got %s)" % [win["badges"]])
-	_check(win["factors"].size() == 4 and win["factors"][3]["id"] == "hint" and absf(win["factors"][1]["pct"] - 0.96) < 0.001, "win factors include the hint and scale speed to its cap")
+	_check(win["factors"].size() == 3 and win["factors"][2]["id"] == "hint" and absf(win["factors"][1]["pct"] - 0.96) < 0.001, "win factors include the hint and scale speed to its cap")
 	_check(win["league"]["tier_name"] == "Silver" and win["league"]["rank"] == 3, "win league line")
 	_check(win["next"]["1"]["enabled"] and not win["next"]["0"]["enabled"] and not win["next"].has("-1"), "win next options")
 	_check(win["stats"].size() == 5 and win["stats"][4]["label"] == "Hints", "hint stat only when used")
+	_check(win["stats"][0]["label"] == "Base" and win["stats"][0]["value"] == "400", "the base points are shown first")
 
 
 func _test_settings() -> void:

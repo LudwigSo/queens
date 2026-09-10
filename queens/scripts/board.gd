@@ -170,18 +170,6 @@ func clear() -> void:
 	Sfx.haptic(20)
 
 
-func undo() -> void:
-	if not model.can_undo():
-		return
-	model.undo()
-	Sfx.play(&"undo")
-	Sfx.haptic(12)
-
-
-func can_undo() -> bool:
-	return model.can_undo()
-
-
 func queen_count() -> int:
 	return model.queen_count()
 
