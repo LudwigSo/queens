@@ -22,7 +22,7 @@ const CROWN_PATHS := {
 	"gold": "res://assets/board/crown_gold.svg",
 }
 
-const PLATE_PAD := 12.0
+const PLATE_PAD := 8.0
 const CROWN_SCALE := 0.74
 const MARK_SCALE_MANUAL := 0.44
 const MARK_SCALE_AUTO := 0.32
@@ -56,7 +56,6 @@ var locked: bool:
 	get: return model.locked
 
 var _mark: Texture2D
-var _tile_style: StyleBoxFlat
 var _crown_tex: Dictionary = {}
 var _plate_style: StyleBoxFlat
 
@@ -113,15 +112,11 @@ func _setup() -> void:
 		return
 	_setup_done = true
 	_mark = _load_tex(MARK_PATH)
-	_tile_style = StyleBoxFlat.new()
-	_tile_style.anti_aliasing = true
-	_tile_style.corner_detail = 6
 	for key in CROWN_PATHS:
 		_crown_tex[key] = _load_tex(CROWN_PATHS[key])
 	_plate_style = StyleBoxFlat.new()
 	_plate_style.bg_color = Ui.PLATE
-	_plate_style.set_corner_radius_all(Ui.RADIUS_L)
-	_plate_style.corner_detail = 12
+	_plate_style.set_corner_radius_all(0)
 	_plate_style.shadow_size = 14
 	_plate_style.shadow_color = Ui.SHADOW_STRONG
 	_plate_style.shadow_offset = Vector2(0, 8)
@@ -283,46 +278,49 @@ func _draw() -> void:
 		plate = Rect2(center - plate.size * 0.5 * _plate_scale, plate.size * _plate_scale)
 	draw_style_box(_plate_style, plate)
 
-	# Region blobs: the darker tint fills each region as one shape.
-	for r in n:
-		for c in n:
-			var col := Ui.region_color(int(model.regions[r][c]))
-			draw_rect(_cell_rect(r, c), col.darkened(0.22))
-
-	# Grooves between regions, in the plate colour.
-	var groove := _gap * 2.0
-	for r in n:
-		for c in n:
-			var rect := _cell_rect(r, c)
-			if c + 1 < n and model.regions[r][c] != model.regions[r][c + 1]:
-				draw_line(Vector2(rect.end.x, rect.position.y - 1), Vector2(rect.end.x, rect.end.y + 1), Ui.PLATE, groove)
-			if r + 1 < n and model.regions[r][c] != model.regions[r + 1][c]:
-				draw_line(Vector2(rect.position.x - 1, rect.end.y), Vector2(rect.end.x + 1, rect.end.y), Ui.PLATE, groove)
-
-	# Tiles: flat colour, rounded corners, no gloss.
+	# Cells: one flat colour per region, filling the whole cell.
 	for r in n:
 		for c in n:
 			var p := Vector2i(r, c)
 			var col := Ui.region_color(int(model.regions[r][c]))
-			var rect := _cell_rect(r, c).grow(-_gap)
+			var rect := _cell_rect(r, c)
 			if p == _pressed_cell:
-				rect = rect.grow(-_cell_size * 0.03)
 				col = col.darkened(0.10)
-			_draw_tile(rect, col)
+			draw_rect(rect, col)
 			if region_patterns:
 				_draw_pattern(rect, int(model.regions[r][c]))
 			var bright: float = _bright.get(p, 0.0)
 			if bright > 0.0:
-				_draw_overlay(rect, Color(1, 1, 1, bright))
+				draw_rect(rect, Color(1, 1, 1, bright))
 			var glow: float = _glow.get(p, 0.0)
 			if glow > 0.0:
-				_draw_overlay(rect, Color(Ui.HINT_GLOW, glow))
+				draw_rect(rect, Color(Ui.HINT_GLOW, glow))
 			var pulse: float = _pulse.get(p, 0.0)
 			if pulse > 0.0:
-				_draw_overlay(rect, Color(Ui.ERROR, pulse))
+				draw_rect(rect, Color(Ui.ERROR, pulse))
 			var flash: float = _flash.get(p, 0.0)
 			if flash > 0.0:
-				_draw_overlay(rect, Color(Ui.ERROR, flash))
+				draw_rect(rect, Color(Ui.ERROR, flash))
+
+	# Hairlines between cells of the same region.
+	var hair := Color(Ui.INK, 0.14)
+	for i in range(1, n):
+		var x := _board_rect.position.x + i * _cell_size
+		var y := _board_rect.position.y + i * _cell_size
+		draw_rect(Rect2(x - 0.5, _board_rect.position.y, 1.0, _board_rect.size.y), hair)
+		draw_rect(Rect2(_board_rect.position.x, y - 0.5, _board_rect.size.x, 1.0), hair)
+
+	# Region borders: filled bars centred on the shared edge, extended by half
+	# their thickness so joints are square and gap-free.
+	var t := _border_width()
+	var h := t * 0.5
+	for r in n:
+		for c in n:
+			var rect := _cell_rect(r, c)
+			if c + 1 < n and model.regions[r][c] != model.regions[r][c + 1]:
+				draw_rect(Rect2(rect.end.x - h, rect.position.y - h, t, rect.size.y + t), Ui.PLATE)
+			if r + 1 < n and model.regions[r][c] != model.regions[r + 1][c]:
+				draw_rect(Rect2(rect.position.x - h, rect.end.y - h, rect.size.x + t, t), Ui.PLATE)
 
 	# Marks.
 	for r in n:
@@ -352,17 +350,11 @@ func _draw() -> void:
 
 	# Ring on the last changed queen cell.
 	if _ring > 0.0 and model.in_bounds(_last_cell.x, _last_cell.y):
-		draw_rect(_cell_rect(_last_cell.x, _last_cell.y).grow(-_gap), Color(Ui.INK, _ring * 0.35), false, 2.0)
+		draw_rect(_cell_rect(_last_cell.x, _last_cell.y).grow(-_border_width() * 0.5 - 1.0), Color(Ui.INK, _ring * 0.35), false, 2.0)
 
 
-func _draw_tile(rect: Rect2, color: Color) -> void:
-	_tile_style.bg_color = color
-	_tile_style.set_corner_radius_all(int(maxf(4.0, rect.size.x * 0.16)))
-	draw_style_box(_tile_style, rect)
-
-
-func _draw_overlay(rect: Rect2, color: Color) -> void:
-	_draw_tile(rect, color)
+func _border_width() -> float:
+	return maxf(5.0, roundf(_cell_size * 0.08))
 
 
 ## Colour-vision aid: a distinct line pattern per region at low contrast.
