@@ -12,7 +12,10 @@ extends RefCounted
 ## `players_per_slot` players of the tier below open one slot, between
 ## `min_slots` and `max_slots`. The tier below it (`up_mode` "openings")
 ## promotes exactly as many players as slots are open after the top tier's
-## own relegation.
+## own relegation. A tier with `up_mode` "score" (Bronze, Silver) promotes
+## by tier points instead: the player moves up the moment the sum of all
+## game scores since entering the tier reaches `promo_score`; its rounds
+## only rank the group and promote nobody at their end.
 ##
 ## A member is {player_id, nickname, round_score, games, last_submit_at,
 ## is_me, is_friend, is_bot}; evaluate() adds rank and zone.
@@ -32,6 +35,7 @@ const OUTCOME_INACTIVE_RELEGATED := "inactive_relegated"
 
 const UP_MODE_PCT := "pct"
 const UP_MODE_OPENINGS := "openings"
+const UP_MODE_SCORE := "score"
 
 
 static func tier_index(cfg: Dictionary, tier_id: String) -> int:
@@ -82,6 +86,19 @@ static func is_capped(cfg: Dictionary, tier_id: String) -> bool:
 
 static func up_mode(cfg: Dictionary, tier_id: String) -> String:
 	return str(tier(cfg, tier_id).get("up_mode", UP_MODE_PCT))
+
+
+## Tier points needed to leave a score-mode tier, 0 for every other tier.
+static func promo_score(tier_cfg: Dictionary) -> int:
+	if str(tier_cfg.get("up_mode", UP_MODE_PCT)) != UP_MODE_SCORE:
+		return 0
+	return maxi(0, int(tier_cfg.get("promo_score", 0)))
+
+
+## Whether `tier_points` promote out of a score-mode tier.
+static func reaches_promo(tier_cfg: Dictionary, tier_points: int) -> bool:
+	var need := promo_score(tier_cfg)
+	return need > 0 and tier_points >= need
 
 
 # --- rounds -----------------------------------------------------------------
@@ -163,15 +180,19 @@ static func sort_members(members: Array) -> Array:
 
 ## How many go up and down in a group of `n` whose leader scored
 ## `leader_score`. `up_count` >= 0 replaces the tier's percentage with a
-## fixed number (the openings of a capped tier above).
+## fixed number (the openings of a capped tier above). A score-mode tier
+## promotes nobody at the end of a round, whatever its `up_pct` says.
 static func counts(n: int, tier_cfg: Dictionary, cfg: Dictionary, leader_score: int, up_count: int = -1) -> Dictionary:
 	if n <= 0:
 		return {"up": 0, "down": 0}
-	var wants_up := up_count > 0 if up_count >= 0 else int(tier_cfg.get("up_pct", 0)) > 0
+	var by_score := promo_score(tier_cfg) > 0
+	var wants_up := (up_count > 0 if up_count >= 0 else int(tier_cfg.get("up_pct", 0)) > 0) and not by_score
 	if n < int(cfg.get("min_group_size", 5)):
 		var up_tiny := 1 if leader_score >= int(tier_cfg.get("min_promo_score", 0)) and wants_up else 0
 		return {"up": up_tiny, "down": 0}
-	var up := mini(up_count, n) if up_count >= 0 else int(round(int(tier_cfg.get("up_pct", 0)) / 100.0 * n))
+	var up := 0
+	if not by_score:
+		up = mini(up_count, n) if up_count >= 0 else int(round(int(tier_cfg.get("up_pct", 0)) / 100.0 * n))
 	var down := int(round(int(tier_cfg.get("down_pct", 0)) / 100.0 * n))
 	if up + down > n:
 		down = n - up
@@ -229,13 +250,17 @@ static func apply(cfg: Dictionary, tier_id: String, outcome: String) -> String:
 
 
 ## "Top 20 % promote · bottom 20 % relegate". `up_count` >= 0 names a fixed
-## number of promotions ("Top 3 promote to Challenger"); `up_to` is the
-## name of the tier above, shown only with a fixed number.
+## number of promotions ("Top 3 promote to Challenger"); a score-mode tier
+## reads "Reach 3000 points to promote to Silver". `up_to` is the name of
+## the tier above, shown only in those two cases.
 static func rules_text(tier_cfg: Dictionary, up_count: int = -1, up_to: String = "") -> String:
 	var parts: Array = []
-	if up_count >= 0:
+	var to_text := (" to " + up_to) if up_to != "" else ""
+	if promo_score(tier_cfg) > 0:
+		parts.append("Reach %d points to promote%s" % [promo_score(tier_cfg), to_text])
+	elif up_count >= 0:
 		if up_count > 0:
-			parts.append("Top %d promote%s" % [up_count, (" to " + up_to) if up_to != "" else ""])
+			parts.append("Top %d promote%s" % [up_count, to_text])
 		else:
 			parts.append("No slot open%s" % [(" in " + up_to) if up_to != "" else ""])
 	elif int(tier_cfg.get("up_pct", 0)) > 0:

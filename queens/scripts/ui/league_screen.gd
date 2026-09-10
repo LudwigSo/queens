@@ -15,6 +15,8 @@ const CLOSE_ICON := "res://assets/icons/line/close.svg"
 @onready var medal: TextureRect = $Margin/VBox/TierCard/HBox/Medal
 @onready var tier_label: Label = $Margin/VBox/TierCard/HBox/Text/TierLabel
 @onready var info_label: Label = $Margin/VBox/TierCard/HBox/Text/InfoLabel
+@onready var progress: ProgressBar = $Margin/VBox/TierCard/HBox/Text/Progress
+@onready var progress_label: Label = $Margin/VBox/TierCard/HBox/Text/ProgressLabel
 @onready var tabs: Segmented = $Margin/VBox/Tabs
 @onready var friends_panel: VBoxContainer = $Margin/VBox/FriendsPanel
 @onready var code_label: Label = $Margin/VBox/FriendsPanel/CodeRow/CodeChip/HBox/CodeLabel
@@ -61,6 +63,15 @@ func refresh(standing: Dictionary, friends: Array, code: String, _nickname: Stri
 	var days := int(rules.get("round_days", 7))
 	var period := "Week" if days == 7 else "%d-day round" % days
 	info_label.text = "%s · %s\n%s ends in %s" % [standing.get("rules_text", ""), counting, period, round_left_text]
+	# A tier that promotes by tier points shows the progress toward the next tier.
+	var need := int(rules.get("promo_score", 0))
+	var points_now := int(standing.get("my_tier_points", 0))
+	progress.visible = need > 0
+	progress_label.visible = need > 0
+	if need > 0:
+		progress.max_value = need
+		progress.value = mini(points_now, need)
+		progress_label.text = Fmt.progress(points_now, need, str(rules.get("up_to", "")))
 	code_label.text = code
 	tabs.select(tab, false)
 	show_tab(tab)

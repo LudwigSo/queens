@@ -82,9 +82,16 @@ func show_result(view: Dictionary) -> void:
 	league_card.visible = not league.is_empty()
 	if not league.is_empty():
 		medal.modulate = Ui.tier_color(str(league.get("tier_id", "bronze")))
-		league_label.text = "%s league · %d pts · #%d of %d · %s" % [
-			str(league.get("tier_name", "")), int(league.get("score", 0)), int(league.get("rank", 0)),
-			int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe")))]
+		if str(league.get("promoted_to_name", "")) != "":
+			medal.modulate = Ui.tier_color(str(league.get("promoted_to", "bronze")))
+			league_label.text = "Promoted to %s league!" % str(league.get("promoted_to_name", ""))
+		elif int(league.get("promo_score", 0)) > 0:
+			league_label.text = "%s league · %s · #%d of %d" % [
+				str(league.get("tier_name", "")), str(league.get("promo_text", "")), int(league.get("rank", 0)), int(league.get("size", 0))]
+		else:
+			league_label.text = "%s league · %d pts · #%d of %d · %s" % [
+				str(league.get("tier_name", "")), int(league.get("score", 0)), int(league.get("rank", 0)),
+				int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe")))]
 
 	var next: Dictionary = view.get("next", {})
 	for pair in [[easier_button, -1], [same_button, 0], [harder_button, 1]]:

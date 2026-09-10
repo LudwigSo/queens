@@ -52,7 +52,7 @@ func _ready() -> void:
 
 
 ## view: {nickname, energy:{amount, unlimited}, league:{tier_id, tier_name, joined,
-## rank, size, zone, score, ends_in_text}, streak:{days}, last:{level_no, size,
+## rank, size, zone, score, promo_score, promo_text, ends_in_text}, streak:{days}, last:{level_no, size,
 ## difficulty, stars}|{}, options:[{step, level_no, size, difficulty, stars, enabled, reason}]}
 func refresh(view: Dictionary) -> void:
 	var energy: Dictionary = view.get("energy", {})
@@ -99,6 +99,11 @@ func _refresh_league(league: Dictionary) -> void:
 	medal.modulate = Ui.tier_color(str(league.get("tier_id", "bronze")))
 	if not bool(league.get("joined", false)):
 		league_line.text = "Play a game to join this round"
+		return
+	if int(league.get("promo_score", 0)) > 0:
+		# A tier that promotes by tier points: the progress replaces the zone.
+		league_line.text = "#%d of %d · %s · ends in %s" % [
+			int(league.get("rank", 0)), int(league.get("size", 0)), str(league.get("promo_text", "")), str(league.get("ends_in_text", ""))]
 		return
 	league_line.text = "#%d of %d · %s · %d pts · ends in %s" % [
 		int(league.get("rank", 0)), int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe"))),

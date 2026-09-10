@@ -65,21 +65,27 @@ Every solved game also counts for the league. Each tier plays in rounds:
 three days in Bronze, a calendar week (Monday to Sunday, UTC) everywhere
 else. Your round score is the sum of your best 15 games of the round, so
 grinding beyond that only helps by replacing a weaker game. Up to Platinum
-you play in a group of up to 30 players of the same tier; at the end of the
-round the top share moves up a tier and, from Platinum on, the bottom share
-moves down:
+you play in a group of up to 30 players of the same tier. From Gold on, the
+end of the round moves the top share up a tier and, from Platinum on, the
+bottom share down. Bronze and Silver promote by *tier points* instead:
 
 | Tier | round | up | down | round without a game |
 | --- | --- | --- | --- | --- |
-| Bronze | 3 days | 50 % | none | stay |
-| Silver | week | 40 % | none | stay |
+| Bronze | 3 days | 3000 tier points, at once | none | stay |
+| Silver | week | 10000 tier points, at once | none | stay |
 | Gold | week | 20 % | never | stay |
 | Platinum | week | 15 % | 25 % | relegate |
 | Diamond | week | open Challenger slots | 20 % | relegate |
 | Challenger | week | – | bottom half | relegate |
 
-Bronze and Silver are the on-ramp: short rounds, big promotion shares, no
-way down. Gold is a floor: once you are Gold you are never relegated, not
+Bronze and Silver are the on-ramp. Every solved game adds its score to
+your tier points; the moment they reach the threshold you move up, on the
+spot, into the round of the next tier that is already running, and the
+counter restarts at 0 (it also restarts on every other tier change). Their
+rounds are a leaderboard for company: the standings and the timer are
+there, but nobody moves at the end of one, and there is no way down. The
+thresholds are `promo_score` per tier in `scripts/config.gd`. Gold is a
+floor: once you are Gold you are never relegated, not
 even for an idle week. Platinum and Diamond are where skill decides and
 players move in both directions. Diamond is one global standing of everyone
 in the tier and has no cap. Because nobody ever drops below Gold, the tiers
@@ -92,8 +98,8 @@ Challenger drops back to Diamond, and Diamond promotes exactly as many
 players as slots are then open. As Diamond grows, so do the Challenger
 slots, until the cap of 50 is reached.
 
-A promotion out of a 3-day Bronze round joins the Silver week that is
-already running. The rules live in `GameConfig.league` (`scripts/config.gd`)
+A promotion always joins the round of the next tier that is already
+running. The rules live in `GameConfig.league` (`scripts/config.gd`)
 and the maths in `scripts/league_rules.gd`. Each level also has its own
 leaderboard (best score per player, plus a "fastest flawless" view),
 reachable from the level overview.

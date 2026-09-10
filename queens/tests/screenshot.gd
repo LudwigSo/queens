@@ -140,7 +140,7 @@ func _ready() -> void:
 	main.debug.show_league()
 	await _frames(2)
 	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
-	print("league: joined = %s, rank %d of %d, round score %d, zone %s" % [standing["joined"], standing["my_rank"], standing["group"]["size"], standing["my_round_score"], standing["zone"]])
+	print("league: joined = %s, rank %d of %d, round score %d, zone %s, tier points %d / %d" % [standing["joined"], standing["my_rank"], standing["group"]["size"], standing["my_round_score"], standing["zone"], standing["my_tier_points"], standing["rules"]["promo_score"]])
 	_save(out_dir + "11_league_standings.png")
 	main.league.show_tab("friends")
 	main._on_add_friend("QN-ABC234")
@@ -170,9 +170,15 @@ func _ready() -> void:
 	# Round summary modal (fabricated: the real one only appears after a round).
 	main.debug.show_home()
 	await _frames(1)
-	main.round_summary.open({"round_index": 1, "outcome": "promoted", "rank": 4, "group_size": 30, "round_score": 4120, "best_game": {"score": 540}}, "Bronze", "Silver")
+	main.round_summary.open({"round_index": 1, "outcome": "promoted", "rank": 4, "group_size": 30, "round_score": 4120, "best_game": {"score": 540}}, "Gold", "Platinum")
 	await _frames(2)
 	_save(out_dir + "14_round_summary.png")
+	main.round_summary.close()
+	await _frames(1)
+	# A promotion by tier points (Bronze -> Silver, mid-round).
+	main.round_summary.open({"round_index": 1, "outcome": "promoted", "reason": "score", "rank": 3, "group_size": 30, "round_score": 1850, "tier_points": 3120, "best_game": {"score": 540}}, "Bronze", "Silver")
+	await _frames(2)
+	_save(out_dir + "14b_promotion.png")
 	main.round_summary.close()
 	get_tree().quit()
 

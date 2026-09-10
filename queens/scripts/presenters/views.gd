@@ -8,8 +8,14 @@ extends RefCounted
 # --- shared pieces ------------------------------------------------------------------
 
 ## LeagueStanding -> the summary the home card and the win overlay show.
+## `promo_text` ("1240 / 3000 pts to Silver") is set only in a tier that
+## promotes by tier points.
 static func league_summary(standing: Dictionary, now: int) -> Dictionary:
 	var group: Dictionary = standing.get("group", {})
+	var rules: Dictionary = standing.get("rules", {})
+	var need := int(rules.get("promo_score", 0))
+	var points_now := int(standing.get("my_tier_points", 0))
+	var next_tier := str(rules.get("up_to", ""))
 	return {
 		"tier_id": str(standing.get("tier", standing.get("tier_id", "bronze"))),
 		"tier_name": str(standing.get("tier_name", "")),
@@ -18,6 +24,10 @@ static func league_summary(standing: Dictionary, now: int) -> Dictionary:
 		"size": int(group.get("size", 0)),
 		"zone": str(standing.get("zone", "safe")),
 		"score": int(standing.get("my_round_score", 0)),
+		"tier_points": points_now,
+		"promo_score": need,
+		"next_tier_name": next_tier,
+		"promo_text": Fmt.progress(points_now, need, next_tier) if need > 0 else "",
 		"ends_in_s": int(standing.get("round_ends_at", 0)) - now,
 		"ends_in_text": Cooldown.format_remaining(int(standing.get("round_ends_at", 0)) - now),
 	}
@@ -166,13 +176,23 @@ static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: D
 	var league := {}
 	var lg: Dictionary = outcome.get("league", {})
 	if not lg.is_empty():
+		var tier := str(lg.get("tier", "bronze"))
+		var need := int(lg.get("promo_score", 0))
+		var points_now := int(lg.get("tier_points", 0))
+		var promoted_to := str(lg.get("promoted_to", ""))
+		var above := LeagueRules.promote_tier(league_cfg, tier)
 		league = {
-			"tier_id": str(lg.get("tier", "bronze")),
-			"tier_name": LeagueRules.tier_name(league_cfg, str(lg.get("tier", ""))),
+			"tier_id": tier,
+			"tier_name": LeagueRules.tier_name(league_cfg, tier),
 			"score": int(lg.get("round_score", 0)),
 			"rank": int(lg.get("group_rank", 0)),
 			"size": int(lg.get("group_size", 0)),
 			"zone": str(lg.get("zone", "safe")),
+			"tier_points": points_now,
+			"promo_score": need,
+			"promo_text": Fmt.progress(points_now, need, LeagueRules.tier_name(league_cfg, above) if above != tier else "") if need > 0 else "",
+			"promoted_to": promoted_to,
+			"promoted_to_name": LeagueRules.tier_name(league_cfg, promoted_to) if promoted_to != "" else "",
 		}
 	var next_view := {}
 	for step in next:

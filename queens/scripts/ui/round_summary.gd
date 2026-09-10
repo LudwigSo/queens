@@ -1,5 +1,6 @@
 extends Control
-## Once-per-round modal: how the last league round ended. Shows the medal
+## Once-per-round modal: how the last league round ended, or (reason
+## "score") a promotion earned mid-round by tier points. Shows the medal
 ## before and after (the new one flips in), a headline coloured by outcome,
 ## stat chips and confetti on a promotion.
 
@@ -11,6 +12,7 @@ const COLOR_DOWN := Ui.ERROR
 
 @onready var dim: ColorRect = $Dim
 @onready var panel: PanelContainer = $Panel
+@onready var title: Label = $Panel/VBox/Title
 @onready var before: TextureRect = $Panel/VBox/Medals/Before
 @onready var arrow: TextureRect = $Panel/VBox/Medals/Arrow
 @onready var after: TextureRect = $Panel/VBox/Medals/After
@@ -55,6 +57,8 @@ func _ready() -> void:
 func open(summary: Dictionary, tier_before_name: String, tier_after_name: String) -> void:
 	round_index = int(summary.get("round_index", -1))
 	var outcome := str(summary.get("outcome", "stayed"))
+	var by_score := str(summary.get("reason", "round")) == "score"
+	title.text = "PROMOTION" if by_score else "LAST ROUND"
 	var color := COLOR_STAY
 	var changed := false
 	match outcome:
@@ -84,9 +88,14 @@ func open(summary: Dictionary, tier_before_name: String, tier_after_name: String
 		child.queue_free()
 	if int(summary.get("group_size", 0)) > 0:
 		chips.add_child(_chip("#%d of %d" % [int(summary.get("rank", 0)), int(summary.get("group_size", 0))], &"ChipPrimary", &"LabelOnDark"))
-		chips.add_child(_chip("%d points" % int(summary.get("round_score", 0)), &"Chip", &"LabelCaptionInk"))
+		if by_score:
+			chips.add_child(_chip("%d tier points" % int(summary.get("tier_points", 0)), &"Chip", &"LabelCaptionInk"))
+		else:
+			chips.add_child(_chip("%d points" % int(summary.get("round_score", 0)), &"Chip", &"LabelCaptionInk"))
 	var best: Dictionary = summary.get("best_game", {})
-	if not best.is_empty():
+	if by_score:
+		body.text = "Reached %d points in %s" % [int(summary.get("tier_points", 0)), tier_before_name]
+	elif not best.is_empty():
 		body.text = "Best game: %d points" % int(best.get("score", 0))
 	elif int(summary.get("group_size", 0)) == 0:
 		body.text = "Play this round to climb."

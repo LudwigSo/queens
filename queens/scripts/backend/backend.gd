@@ -9,7 +9,8 @@ extends Node
 ## HTTP implementation can own request nodes.
 ##
 ## Record shapes (all Dictionaries):
-##   PlayerProfile   {player_id, nickname, friend_code, tier, created_at, stats}
+##   PlayerProfile   {player_id, nickname, friend_code, tier, tier_points,
+##                    created_at, stats}
 ##   ScoreBreakdown  see Scoring.breakdown()
 ##   LeaderboardEntry {rank, player_id, nickname, score, time_seconds,
 ##                    wrong_placements, undo_count, achieved_at, is_me, is_friend}
@@ -17,14 +18,19 @@ extends Node
 ##                    relegate_count, members: [member + rank + zone]}
 ##   LeagueStanding  {tier, tier_name, round_index, round_days, round_ends_at,
 ##                    joined, group, my_rank, my_round_score, my_games, zone,
-##                    rules, rules_text}
-##   RoundSummary    {round_index, tier_before, tier_after, outcome, rank,
-##                    group_size, round_score, best_game, seen}
+##                    my_tier_points, rules, rules_text}
+##                    rules: {up_pct, down_pct, up_count, up_mode, promo_score,
+##                    up_to, best_n, round_mode, round_days, global, floor}
+##   RoundSummary    {round_index, tier_before, tier_after, outcome, reason,
+##                    rank, group_size, round_score, tier_points, best_game,
+##                    seen}; reason "round" (a round ended) or "score" (the
+##                    tier points reached promo_score mid-round)
 ##   FriendEntry     {player_id, nickname, tier, round_score, friend_since}
 ##
 ## A round is the scoring period of a tier (3 days in Bronze, a week
 ## elsewhere; see LeagueRules). Round indices are only comparable within one
-## tier.
+## tier. Tier points are the sum of every solved game's score since the
+## player entered the tier; they restart at 0 with every tier change.
 
 signal standing_changed
 
@@ -67,7 +73,9 @@ func start_game(_level_id: String) -> Dictionary:
 
 
 ## Idempotent per result_id. Returns {breakdown, round_score, group_rank,
-## group_size, zone, tier}.
+## group_size, zone, tier, round_index, tier_points, promo_score,
+## promoted_to}; `promoted_to` is the id of the new tier when this game
+## reached the tier's promo_score, else "".
 func submit_result(_result: Dictionary) -> Dictionary:
 	return fail("not implemented")
 

@@ -32,6 +32,12 @@ static func points(n: int) -> String:
 	return "%d pts" % n
 
 
+## "1240 / 3000 pts to Silver": tier points toward the next tier.
+static func progress(points_now: int, need: int, next_tier: String) -> String:
+	var text := "%d / %d pts" % [points_now, need]
+	return text + (" to " + next_tier if next_tier != "" else "")
+
+
 static func zone(zone_id: String) -> String:
 	match zone_id:
 		"promote":

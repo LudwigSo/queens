@@ -36,8 +36,11 @@ var backend_path: String = "user://backend_local.json"
 ## relegated at the end of the round, what happens in a round without a
 ## game, and the score a leader of a tiny group needs.
 ##
-## Bronze and Silver are the on-ramp: short rounds, large promotion share,
-## no relegation. Gold is a floor: once reached it is never lost. Platinum
+## Bronze and Silver are the on-ramp: `up_mode` "score" promotes the moment
+## the player's tier points (every solved game's score, added up while the
+## player stays in the tier) reach `promo_score`; their rounds only rank the
+## group and nobody moves at the end of one, nobody relegates. Gold is a
+## floor: once reached it is never lost. Platinum
 ## and Diamond are skill-based with movement in both directions; Diamond is
 ## uncapped and, since nobody drops below Gold, grows slowly as the player
 ## base matures. Challenger is the capped top: one slot per
@@ -49,8 +52,8 @@ var league: Dictionary = {
 	"round_mode": "best_n",
 	"round_best_n": 15,
 	"tiers": [
-		{"id": "bronze", "name": "Bronze", "round_days": 3, "up_pct": 50, "down_pct": 0, "inactive": "stay", "min_promo_score": 300},
-		{"id": "silver", "name": "Silver", "round_days": 7, "up_pct": 40, "down_pct": 0, "inactive": "stay", "min_promo_score": 800},
+		{"id": "bronze", "name": "Bronze", "round_days": 3, "up_mode": "score", "promo_score": 3000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
+		{"id": "silver", "name": "Silver", "round_days": 7, "up_mode": "score", "promo_score": 10000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
 		{"id": "gold", "name": "Gold", "round_days": 7, "up_pct": 20, "down_pct": 0, "inactive": "stay", "floor": true, "min_promo_score": 1500},
 		{"id": "platinum", "name": "Platinum", "round_days": 7, "up_pct": 15, "down_pct": 25, "inactive": "relegate", "min_promo_score": 2500},
 		{"id": "diamond", "name": "Diamond", "round_days": 7, "up_mode": "openings", "up_pct": 0, "down_pct": 20, "inactive": "relegate", "min_promo_score": 0, "global": true},

@@ -226,13 +226,20 @@ func _show_home(back: bool = false) -> void:
 		router.go_back_to("home")
 	else:
 		router.go("home", true)
+	await _present_pending_summary()
+
+
+## Shows the unseen round summary (a closed round, or a promotion by tier
+## points) as a modal on top of whatever is open.
+func _present_pending_summary() -> void:
 	var summary: Dictionary = (await App.backend.get_round_summary())["data"]
-	if not summary.is_empty() and not round_summary.visible:
-		var cfg: Dictionary = App.config.league
-		round_summary.open(summary,
-			LeagueRules.tier_name(cfg, str(summary.get("tier_before", ""))),
-			LeagueRules.tier_name(cfg, str(summary.get("tier_after", ""))))
-		router.present(round_summary)
+	if summary.is_empty() or round_summary.visible:
+		return
+	var cfg: Dictionary = App.config.league
+	round_summary.open(summary,
+		LeagueRules.tier_name(cfg, str(summary.get("tier_before", ""))),
+		LeagueRules.tier_name(cfg, str(summary.get("tier_after", ""))))
+	router.present(round_summary)
 
 
 func _on_round_summary_closed(round_index: int) -> void:
@@ -565,3 +572,6 @@ func _on_solved() -> void:
 		await get_tree().create_timer(delay).timeout
 	win_overlay.show_result(view)
 	router.present(win_overlay)
+	if str(outcome.get("league", {}).get("promoted_to", "")) != "":
+		# The game just earned a promotion: celebrate on top of the overlay.
+		await _present_pending_summary()

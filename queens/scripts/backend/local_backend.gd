@@ -15,7 +15,7 @@ extends Backend
 ## week since LAUNCH_WEEK, Challenger is always full at its slot count, so
 ## the Challenger slots (and with them the Diamond promotions) grow slowly.
 
-const FORMAT := 2
+const FORMAT := 3
 const BOT_NAMES := [
 	"Mira", "Jonas", "Aiko", "Luca", "Priya", "Noah", "Zara", "Elias", "Ines", "Theo",
 	"Nadia", "Oskar", "Lena", "Mateo", "Sofia", "Emil", "Yara", "Finn", "Alma", "Kai",
@@ -78,12 +78,16 @@ func init() -> Dictionary:
 	data = defaults()
 	if FileAccess.file_exists(path):
 		var loaded := SaveData.read_json(path)
-		if int(loaded.get("format", 1)) < FORMAT:
+		var format := int(loaded.get("format", 1))
+		if format < 2:
 			# Format 2 replaced calendar weeks with per-tier rounds: the open
 			# week and the old summaries are dropped, profile and results stay.
 			for key in ["weeks", "current_week", "pending_summary", "history"]:
 				loaded.erase(key)
-			loaded["format"] = FORMAT
+		if format < 3 and not (loaded.get("profile", {}) as Dictionary).is_empty():
+			# Format 3 added the tier points counter.
+			loaded["profile"]["tier_points"] = int(loaded["profile"].get("tier_points", 0))
+		loaded["format"] = FORMAT
 		for key in loaded:
 			data[key] = loaded[key]
 	_rollover()
@@ -125,6 +129,7 @@ func register_player(player_id: String, nickname: String) -> Dictionary:
 			"nickname": nickname,
 			"friend_code": friend_code_for(player_id),
 			"tier": league_cfg()["tiers"][0]["id"],
+			"tier_points": 0,
 			"created_at": now_utc(),
 			"stats": {"games": 0, "flawless": 0, "best_score": 0, "rounds_played": 0},
 		}
@@ -153,6 +158,26 @@ func player_id() -> String:
 
 func tier_id() -> String:
 	return str(data["profile"].get("tier", league_cfg()["tiers"][0]["id"]))
+
+
+## Sum of every solved game's score since the player entered the tier.
+func tier_points() -> int:
+	return int(data["profile"].get("tier_points", 0))
+
+
+## Moves the player; the tier points restart with a new tier.
+func _set_tier(new_tier: String) -> void:
+	if new_tier != tier_id():
+		data["profile"]["tier_points"] = 0
+	data["profile"]["tier"] = new_tier
+
+
+func _record_summary(summary: Dictionary) -> void:
+	data["pending_summary"] = summary
+	var history: Array = data["history"]
+	history.append(summary)
+	while history.size() > HISTORY_CAP:
+		history.pop_front()
 
 
 # --- rounds and results -----------------------------------------------------
@@ -205,9 +230,11 @@ func submit_result(result: Dictionary) -> Dictionary:
 	# A game finished in a round that has already closed still counts, in the open round.
 	var finished := int(result.get("finished_at", now_utc()))
 	var index := maxi(current_round(), LeagueRules.round_index(league_cfg(), tier_id(), finished))
-	var response := {"breakdown": bd, "round_score": 0, "group_rank": 0, "group_size": 0, "zone": "", "tier": tier_id(), "round_index": index}
+	var completed := bool(result.get("completed", false))
+	var response := {"breakdown": bd, "round_score": 0, "group_rank": 0, "group_size": 0, "zone": "", "tier": tier_id(), "round_index": index,
+		"tier_points": 0, "promo_score": 0, "promoted_to": ""}
 	var rd := _join(index)
-	if bool(result.get("completed", false)):
+	if completed:
 		(rd["scores"] as Array).append(int(bd["score"]))
 		rd["games"] = int(rd["games"]) + 1
 		rd["last_submit_at"] = finished
@@ -216,15 +243,49 @@ func submit_result(result: Dictionary) -> Dictionary:
 		if bd["flawless"]:
 			stats["flawless"] = int(stats.get("flawless", 0)) + 1
 		stats["best_score"] = maxi(int(stats.get("best_score", 0)), int(bd["score"]))
+		data["profile"]["tier_points"] = tier_points() + int(bd["score"])
 	var standing := _standing_for(index)
 	response["round_score"] = standing["my_round_score"]
 	response["group_rank"] = standing["my_rank"]
 	response["group_size"] = standing["group"]["size"]
 	response["zone"] = standing["zone"]
+	response["tier_points"] = tier_points()
+	response["promo_score"] = int(standing["rules"]["promo_score"])
+	if completed and LeagueRules.reaches_promo(LeagueRules.tier(league_cfg(), tier_id()), tier_points()):
+		response["promoted_to"] = _promote_by_score(index, standing)
 	results[id] = {"result": result.duplicate(true), "response": response}
 	_save()
 	standing_changed.emit()
 	return ok(response)
+
+
+## The tier points reached the tier's promo_score: the player moves up right
+## now and joins the round of the new tier that is already running. The
+## abandoned round is forgotten; the summary shows the final standing in it.
+## Returns the new tier id, or "" when there is no tier above.
+func _promote_by_score(index: int, standing: Dictionary) -> String:
+	var cfg := league_cfg()
+	var tier := tier_id()
+	var above := LeagueRules.promote_tier(cfg, tier)
+	if above == tier:
+		return ""
+	var summary := {
+		"round_index": index, "tier_before": tier, "tier_after": above,
+		"outcome": LeagueRules.OUTCOME_PROMOTED, "reason": "score",
+		"rank": int(standing["my_rank"]), "group_size": int(standing["group"].get("size", 0)),
+		"round_score": int(standing["my_round_score"]), "tier_points": tier_points(),
+		"best_game": _best_game_between(LeagueRules.round_start(cfg, tier, index), LeagueRules.round_end(cfg, tier, index)),
+		"seen": false,
+	}
+	_record_summary(summary)
+	_set_tier(above)
+	data["current_round"] = LeagueRules.round_index(cfg, above, now_utc())
+	var rounds: Dictionary = data["rounds"]
+	var keep := _round_key(above, int(data["current_round"]))
+	for key in rounds.keys():
+		if key != keep:
+			rounds.erase(key)
+	return above
 
 
 ## Median score of the player's last completed games; what the bots aim at.
@@ -371,11 +432,14 @@ func _standing_for(index: int) -> Dictionary:
 		"my_round_score": 0,
 		"my_games": 0,
 		"zone": "",
+		"my_tier_points": tier_points(),
 		"rules": {"up_pct": tier_cfg.get("up_pct", 0), "down_pct": tier_cfg.get("down_pct", 0), "up_count": up_count,
+			"up_mode": LeagueRules.up_mode(cfg, tier), "promo_score": LeagueRules.promo_score(tier_cfg),
+			"up_to": LeagueRules.tier_name(cfg, above) if above != tier else "",
 			"best_n": cfg.get("round_best_n", 15), "round_mode": cfg.get("round_mode", "best_n"),
 			"round_days": LeagueRules.round_days(cfg, tier),
 			"global": LeagueRules.is_global(cfg, tier), "floor": LeagueRules.is_floor(cfg, tier)},
-		"rules_text": LeagueRules.rules_text(tier_cfg, up_count, LeagueRules.tier_name(cfg, above) if up_count >= 0 else ""),
+		"rules_text": LeagueRules.rules_text(tier_cfg, up_count, LeagueRules.tier_name(cfg, above) if above != tier else ""),
 	}
 	if not rd["joined"]:
 		return standing
@@ -418,12 +482,7 @@ func _rollover() -> void:
 		var ends := LeagueRules.round_end(cfg, tier, index)
 		if ends > now_utc():
 			break
-		var summary := _close_round(tier, index)
-		data["pending_summary"] = summary
-		var history: Array = data["history"]
-		history.append(summary)
-		while history.size() > HISTORY_CAP:
-			history.pop_front()
+		_record_summary(_close_round(tier, index))
 		data["current_round"] = LeagueRules.round_index(cfg, tier_id(), ends)
 	# Forget rounds that are no longer open.
 	var rounds: Dictionary = data["rounds"]
@@ -440,8 +499,8 @@ func _close_round(tier: String, index: int) -> Dictionary:
 	var ends := LeagueRules.round_end(cfg, tier, index)
 	var summary := {
 		"round_index": index, "tier_before": tier, "tier_after": tier,
-		"outcome": LeagueRules.OUTCOME_STAYED, "rank": 0, "group_size": 0, "round_score": 0,
-		"best_game": {}, "seen": false,
+		"outcome": LeagueRules.OUTCOME_STAYED, "reason": "round", "rank": 0, "group_size": 0, "round_score": 0,
+		"tier_points": tier_points(), "best_game": {}, "seen": false,
 	}
 	if rd.is_empty() or not bool(rd.get("joined", false)):
 		summary["outcome"] = LeagueRules.inactive_outcome(tier_cfg)
@@ -455,7 +514,7 @@ func _close_round(tier: String, index: int) -> Dictionary:
 		summary["group_size"] = (ev["members"] as Array).size()
 		summary["best_game"] = _best_game_between(LeagueRules.round_start(cfg, tier, index), ends)
 	summary["tier_after"] = LeagueRules.apply(cfg, tier, summary["outcome"])
-	data["profile"]["tier"] = summary["tier_after"]
+	_set_tier(summary["tier_after"])
 	return summary
 
 
