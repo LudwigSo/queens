@@ -119,7 +119,10 @@ pipeline outside it.
 
 * **Tokens**: `theme/tokens.gd` (`Ui`) holds every colour, radius, spacing
   and font size. Runtime drawing code (the board, list rows) reads the same
-  constants.
+  constants. The primary is a forest green (`#1f7f52`) and the neutrals
+  carry its hue; the success colour is a mint-teal so it stays distinct.
+  The boot splash colour in `project.godot`, the splash scene and the ink
+  crown's jewels (`../tools/gen_crowns.py`) repeat the primary by hand.
 * **Theme**: `theme/theme.tres` is *generated* by
   `theme/theme_builder.gd` from the tokens; never edit it by hand. It also
   writes the glossy 9-patch button textures under `assets/ui/`. Rebuild

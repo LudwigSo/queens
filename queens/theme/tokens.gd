@@ -5,38 +5,40 @@ extends RefCounted
 ## and any runtime drawing code (board, list rows) read these constants.
 
 # --- colours ------------------------------------------------------------------
+# Forest green primary; the neutrals below carry the same hue at low
+# saturation. SUCCESS is a mint-teal so "correct" stays distinct from it.
 
-const PRIMARY := Color("6b4eff")
-const PRIMARY_LIGHT := Color("9c88ff")
-const PRIMARY_DARK := Color("4a31d9")
+const PRIMARY := Color("1f7f52")
+const PRIMARY_LIGHT := Color("5fbf8a")
+const PRIMARY_DARK := Color("145a3a")
 const SECONDARY := Color("ffb627")
 const SECONDARY_LIGHT := Color("ffd666")
 const SECONDARY_DARK := Color("d98e00")
 
-const SUCCESS := Color("1dbf8a")
-const SUCCESS_BG := Color("ddf7ec")
+const SUCCESS := Color("14b1a4")
+const SUCCESS_BG := Color("d8f4f1")
 const WARNING := Color("f5a524")
 const WARNING_BG := Color("fff0d6")
 const ERROR := Color("e5484d")
 const ERROR_BG := Color("fde2e4")
 
-const BG := Color("f6f4fb")
+const BG := Color("f4fbf8")
 const SURFACE_0 := Color("ffffff")
-const SURFACE_1 := Color("f1eefa")
-const SURFACE_2 := Color("e7e2f7")
-const OUTLINE := Color("d9d3ee")
+const SURFACE_1 := Color("eefaf4")
+const SURFACE_2 := Color("e2f7ed")
+const OUTLINE := Color("d3eee1")
 
-const INK := Color("1f1b3a")
-const MUTED := Color("5e5a7a")
-const FAINT := Color("9a96b4")
+const INK := Color("1b3a2b")
+const MUTED := Color("5a7a6b")
+const FAINT := Color("96b4a6")
 const ON_PRIMARY := Color("ffffff")
 
 const PLATE := Color("2a2c3e")
-const SCRIM := Color(0.122, 0.106, 0.227, 0.55)
-const SHADOW := Color(0.122, 0.106, 0.227, 0.10)
-const SHADOW_STRONG := Color(0.122, 0.106, 0.227, 0.22)
+const SCRIM := Color(0.106, 0.227, 0.169, 0.55)
+const SHADOW := Color(0.106, 0.227, 0.169, 0.10)
+const SHADOW_STRONG := Color(0.106, 0.227, 0.169, 0.22)
 
-const ME_BG := Color("eeeaff")
+const ME_BG := Color("eafff5")
 const HINT_GLOW := Color("ffb703")
 
 ## League tier colours by tier id.

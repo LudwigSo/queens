@@ -8,7 +8,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "queens", "
 
 VARIANTS = {
     # name: (top, bottom, outline, jewel)
-    "crown_ink": ("#4a4670", "#1f1b3a", "#12102a", "#9c88ff"),
+    "crown_ink": ("#4a4670", "#1f1b3a", "#12102a", "#5fbf8a"),
     "crown_red": ("#ff8a8e", "#d63c42", "#8f2227", "#ffe0e2"),
     "crown_gold": ("#ffe082", "#f2a20c", "#a86a00", "#fff6d5"),
 }

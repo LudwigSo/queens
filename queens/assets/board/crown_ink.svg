@@ -7,9 +7,9 @@
 <path d="M22 100V44l20 18 22-36 22 36 20-18v56z" fill="url(#b)" stroke="#12102a" stroke-width="5" stroke-linejoin="round"/>
 <rect x="22" y="86" width="84" height="14" fill="#12102a" fill-opacity="0.35"/>
 <path d="M30 48l12 12 22-34 22 34 12-12v16H30z" fill="url(#s)"/>
-<circle cx="64" cy="26" r="7" fill="#9c88ff" stroke="#12102a" stroke-width="3"/>
-<circle cx="22" cy="44" r="6" fill="#9c88ff" stroke="#12102a" stroke-width="3"/>
-<circle cx="106" cy="44" r="6" fill="#9c88ff" stroke="#12102a" stroke-width="3"/>
-<circle cx="64" cy="76" r="8" fill="#9c88ff" stroke="#12102a" stroke-width="3"/>
+<circle cx="64" cy="26" r="7" fill="#5fbf8a" stroke="#12102a" stroke-width="3"/>
+<circle cx="22" cy="44" r="6" fill="#5fbf8a" stroke="#12102a" stroke-width="3"/>
+<circle cx="106" cy="44" r="6" fill="#5fbf8a" stroke="#12102a" stroke-width="3"/>
+<circle cx="64" cy="76" r="8" fill="#5fbf8a" stroke="#12102a" stroke-width="3"/>
 <ellipse cx="60" cy="82" rx="18" ry="4" fill="#ffffff" fill-opacity="0.18"/>
 </svg>
