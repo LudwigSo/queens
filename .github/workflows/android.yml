@@ -22,6 +22,30 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Prepare signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          # Secrets pasted into the web UI often carry a trailing newline; strip it.
+          ks="$RUNNER_TEMP/release.keystore"
+          alias=$(printf '%s' "$KEY_ALIAS" | tr -d '[:space:]')
+          pass=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '[:cntrl:]')
+          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$ks"
+
+          if ! keytool -list -keystore "$ks" -storepass "$pass" -alias "$alias" >/dev/null 2>&1; then
+            echo "::error::Keystore rejected the alias or password. keytool says:"
+            keytool -list -keystore "$ks" -storepass "$pass" 2>&1 | head -20
+            echo "Alias names above come from the keystore itself; the ANDROID_KEY_ALIAS secret shows as ***."
+            exit 1
+          fi
+          echo "Keystore, alias and password check out."
+
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$ks" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=$alias" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=$pass" >> "$GITHUB_ENV"
+
       - name: Install Godot and export templates
         run: |
           BASE=https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable
@@ -40,12 +64,7 @@ jobs:
 
       - name: Export signed APK
         working-directory: queens
-        env:
-          GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEY_ALIAS }}
-          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
           mkdir -p build
           "$ANDROID_HOME/platform-tools/adb" start-server
           godot --headless --import
