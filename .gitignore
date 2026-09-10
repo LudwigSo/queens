@@ -3,3 +3,4 @@ queens/build/
 __pycache__/
 *.keystore
 *.jks
+queens/android/
