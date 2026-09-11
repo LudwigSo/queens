@@ -18,6 +18,12 @@ func play_step(step: int) -> void:
 	main._play_step(step)
 
 
+## Presses one of the win panel's next-game buttons, through its real signal.
+func win_next(step: int) -> void:
+	var button: Button = {-1: main.win_overlay.easier_button, 0: main.win_overlay.same_button, 1: main.win_overlay.harder_button}[step]
+	button.pressed.emit()
+
+
 func screen() -> String:
 	return main.router.current()
 

@@ -69,6 +69,53 @@ func clear() -> void:
 	cleared.emit()
 
 
+## Player action: wipe everything the player cannot already tell is wrong.
+## A queen survives when it stands on a solution cell and nothing is currently
+## clashing with it - which is exactly the queen the board never flagged, so
+## keeping it gives away nothing the player was not already shown. Marks always
+## go, automatic ones together with the queen that forced them.
+func clear_kept() -> void:
+	if locked:
+		return
+	var keep: Array[Vector2i] = []
+	for p in queens():
+		if is_correct_cell(p.x, p.y) and not conflicts.has(p):
+			keep.append(p)
+	if keep.is_empty():
+		clear()
+		return
+	for r in size_n:
+		cells[r].fill(Cell.EMPTY)
+		auto_marks[r].fill(0)
+	conflicts.clear()
+	_stroke = Stroke.NONE
+	for p in keep:
+		_restore_queen(p.x, p.y)
+	_recompute_conflicts()
+	cleared.emit()
+	state_changed.emit()
+
+
+## Clears one cell: a queen comes off, a manual X goes away, and a cell that is
+## only marked because of a queen elsewhere is left alone (remove that queen
+## instead). Returns whether anything changed.
+func clear_cell(r: int, c: int) -> bool:
+	if locked or not in_bounds(r, c):
+		return false
+	match cells[r][c]:
+		Cell.QUEEN:
+			tapped.emit(r, c)
+			_remove_queen(r, c)
+			_after_change()
+			return true
+		Cell.MARK:
+			tapped.emit(r, c)
+			cells[r][c] = Cell.EMPTY
+			_after_change()
+			return true
+	return false
+
+
 func queen_count() -> int:
 	var n := 0
 	for row in cells:
@@ -215,6 +262,14 @@ func _place_queen(r: int, c: int) -> void:
 	for p in affected_cells(r, c):
 		auto_marks[p.x][p.y] += 1
 	queen_placed.emit(r, c, is_correct_cell(r, c))
+
+
+## Puts a queen back without reporting a placement: `clear_kept` rebuilds the
+## automatic marks from scratch, and the queens it keeps were placed long ago.
+func _restore_queen(r: int, c: int) -> void:
+	cells[r][c] = Cell.QUEEN
+	for p in affected_cells(r, c):
+		auto_marks[p.x][p.y] += 1
 
 
 func _remove_queen(r: int, c: int) -> void:

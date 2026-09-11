@@ -34,8 +34,10 @@ func _ready() -> void:
 	home_button.pressed.connect(func() -> void: close(); home_requested.emit())
 
 
+## The panel stays up until the game has actually started (main.start_game
+## closes it). A start that is refused - no energy, level on cooldown - must
+## leave the player something to press.
 func _choose(step: int) -> void:
-	close()
 	next_requested.emit(step)
 
 

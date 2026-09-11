@@ -33,6 +33,7 @@ var current_level: int = -1
 var session: GameSession = null ## The running game, null between games.
 var detail_scope: String = "global"
 var _options: Dictionary = {}   ## step -> pick (the level each home card would start)
+var _pending_start: Dictionary = {}  ## a start refused for lack of energy, retried after a refill
 var _req: int = 0               ## Request token: drops stale backend answers.
 
 
@@ -68,7 +69,7 @@ func _ready() -> void:
 	energy_dialog.watch_ad_pressed.connect(_on_watch_ad)
 	energy_dialog.buy_pressed.connect(_on_buy_unlimited)
 	energy_dialog.restore_pressed.connect(_on_restore_purchase)
-	energy_dialog.closed.connect(_resume_game)
+	energy_dialog.closed.connect(_on_energy_dialog_closed)
 	App.energy.changed.connect(_refresh_energy)
 	App.ads.availability_changed.connect(func(_ready: bool) -> void: _refresh_energy())
 	App.ads.ad_progress.connect(energy_dialog.set_status)
@@ -106,6 +107,8 @@ func _ready() -> void:
 	round_summary.closed.connect(_on_round_summary_closed)
 	message_dialog.closed.connect(_on_dialog_closed)
 	Motion.make_all_pressable(self)
+	SafeArea.apply(self)
+	get_window().size_changed.connect(func() -> void: SafeArea.apply(self))
 	_boot()
 
 
@@ -265,6 +268,21 @@ func _open_energy_dialog(blocked: bool) -> void:
 	energy_dialog.open(blocked)
 	energy_dialog.set_state(_energy_state())
 	router.present(energy_dialog)
+
+
+## Closing the sheet resumes a paused game, and picks the refused start back up
+## once there is energy for it: the player asked for that game, watched an ad for
+## it, and should not have to ask again.
+func _on_energy_dialog_closed() -> void:
+	_resume_game()
+	if _pending_start.is_empty():
+		return
+	if not App.energy.can_start():
+		_pending_start.clear()
+		return
+	var pending := _pending_start.duplicate()
+	_pending_start.clear()
+	start_game(pending["level"], str(pending.get("note", "")))
 
 
 func _on_watch_ad() -> void:
@@ -451,8 +469,10 @@ func start_game(level: Dictionary, note: String = "") -> void:
 		router.present(message_dialog)
 		return
 	if not App.energy.can_start():
+		_pending_start = {"level": level, "note": note}
 		_open_energy_dialog(true)
 		return
+	_pending_start.clear()
 	if session != null and not session.finished:
 		end_game(false)
 	if router.current() == "home" and not win_overlay.visible:
@@ -469,6 +489,7 @@ func start_game(level: Dictionary, note: String = "") -> void:
 	board.input_enabled = true
 	board.mistake_alerts = bool(App.save.setting("mistake_alerts"))
 	board.region_patterns = bool(App.save.setting("region_patterns"))
+	board.erase_mode = false
 	board.load_level(level)
 	game_screen.set_level(App.catalog.display_index(level["id"]) + 1, int(level["size"]), int(level["difficulty"]), int(level.get("stars", 0)))
 	game_screen.set_timer_text(Fmt.time(0.0))
@@ -508,8 +529,14 @@ func _resume_game() -> void:
 		session.resume()
 
 
+## Pause needs a running game. With a finished one the game screen has nothing
+## left to offer, so the button goes home rather than doing nothing at all.
 func _open_pause() -> void:
-	if session == null or session.finished or pause_menu.visible or win_overlay.visible:
+	if pause_menu.visible or win_overlay.visible:
+		return
+	if session == null or session.finished:
+		if router.current() == "game":
+			_show_home(true)
 		return
 	_pause_game(true)
 	var lv: Dictionary = levels[current_level] if current_level >= 0 else {}
@@ -528,7 +555,7 @@ func _on_restart() -> void:
 	var confirmed: bool = await message_dialog.closed
 	if confirmed:
 		pause_menu.visible = false
-		board.clear()
+		board.clear(false)
 		_resume_game()
 
 

@@ -62,6 +62,19 @@ func _ready() -> void:
 	_touch(board.cell_center(5, 2), false)
 	await _frames(1)
 	print("drag test: row 5 marks = %s %s %s (expected 1 1 1)" % [board.cells[5][0], board.cells[5][1], board.cells[5][2]])
+
+	# The eraser, through the real button and the real touch path: one tap takes
+	# a mark off instead of promoting it to a queen.
+	main.game_screen.erase_button.button_pressed = true
+	await _frames(1)
+	_touch(board.cell_center(5, 1), true)
+	await _frames(1)
+	_touch(board.cell_center(5, 1), false)
+	await _frames(1)
+	print("eraser: mode = %s, cell (5,1) = %s (expected 0), mistakes = %d" % [board.erase_mode, board.cells[5][1], main.session.result.wrong_placements])
+	main.game_screen.erase_button.button_pressed = false
+	await _frames(1)
+	print("eraser off: mode = %s" % board.erase_mode)
 	board.reset()
 	# Place the first two solution queens and one deliberately conflicting queen.
 	board._tap(0, sol[0])
@@ -106,6 +119,20 @@ func _ready() -> void:
 	print("win overlay visible = %s" % main.win_overlay.visible)
 	_save(out_dir + "04b_win_overlay.png")
 
+	# Regression: "Next game" with an empty tank must not strand the player on a
+	# solved board. The panel stays up behind the energy sheet.
+	var energy_before: int = App.energy.amount()
+	App.save.data["energy"]["amount"] = 0
+	App.energy.grant(0)
+	main.debug.win_next(0)
+	await _frames(2)
+	print("blocked from the win panel: sheet = %s, panel still up = %s, screen = %s" % [main.energy_dialog.visible, main.win_overlay.visible, main.debug.screen()])
+	main.energy_dialog.close()
+	await _frames(2)
+	print("sheet closed without a refill: panel still up = %s, no game started = %s" % [main.win_overlay.visible, main.session.finished])
+	App.save.data["energy"]["amount"] = energy_before
+	App.energy.grant(0)
+
 	# Easier / Same / Harder: a harder level than the one just played.
 	var last_difficulty: float = main.levels[index]["difficulty"]
 	main.debug.play_step(1)
@@ -137,8 +164,14 @@ func _ready() -> void:
 	await _frames(1)
 	print("after fake purchase: unlimited = %s, buy button visible = %s" % [App.energy.is_unlimited(), main.energy_dialog.buy_button.visible])
 	_save(out_dir + "09_energy_unlimited.png")
+	# Closing the sheet picks the refused start back up, so the refill lands in
+	# the game the player asked for instead of on an empty screen.
 	main.energy_dialog.close()
-	await _frames(1)
+	await _frames(3)
+	print("after closing the sheet: screen = %s, timer running = %s" % [main.debug.screen(), main.debug.timer_running()])
+	main.end_game(false)
+	main.debug.show_home()
+	await _frames(2)
 
 	main.debug.show_levels()
 	await _frames(2)

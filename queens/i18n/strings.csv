@@ -65,16 +65,18 @@ HOME_OPT_NO_HARDER,No harder level free,Nichts Schwereres frei
 HOME_OPT_NO_EASIER,No easier level free,Nichts Leichteres frei
 HOME_OPT_NEAREST,Closest available level,Nächstes freies Level
 #,--- game screen ---,
-GAME_LEVEL_TITLE,Level %d · %s · diff %d,Level %d · %s · Schw. %d
+GAME_LEVEL_TITLE,Level %d · diff %d,Level %d · Schw. %d
 GAME_HINT_DEFAULT,"Tap to mark X, tap again for a queen. Drag to mark many.","Tippen setzt ein X, nochmal tippen eine Dame. Ziehen markiert mehrere."
 GAME_HINT,Hint,Tipp
 GAME_HINT_N,Hint · %d,Tipp · %d
-GAME_CLEAR,Clear,Leeren
+GAME_CLEAR,Clear board,Feld leeren
+GAME_ERASE,Erase,Radieren
+GAME_ERASE_ON,Eraser on: tap a cell to clear it.,Radierer an: Tipp ein Feld an und es wird geleert.
 #,--- hints ---,
 HINT_NONE,Nothing left to hint.,Hier gibt es nichts mehr zu verraten.
 HINT_NONE_ENCOURAGE,Nothing left to hint. You're almost there!,Hier gibt es nichts mehr zu verraten. Du hast es fast!
 HINT_WRONG_QUEEN,This queen can't be right. Tap it to remove it.,"Diese Dame kann nicht stimmen. Tipp sie an, um sie zu entfernen."
-HINT_WRONG_MARK,One of your X marks is wrong. Tap it to clear it.,"Eines deiner X ist falsch. Tipp es an, um es zu löschen."
+HINT_WRONG_MARK,One of your X marks is wrong. Use the eraser to clear it.,"Eines deiner X ist falsch. Nimm den Radierer, um es zu löschen."
 HINT_SINGLE_ROW,Only one spot left in this row.,In dieser Zeile ist nur noch ein Feld möglich.
 HINT_SINGLE_COL,Only one spot left in this column.,In dieser Spalte ist nur noch ein Feld möglich.
 HINT_SINGLE_REGION,Only one spot left in this region.,In diesem Bereich ist nur noch ein Feld möglich.
@@ -137,7 +139,7 @@ LEVELS_CARD_META,%s · diff %d,%s · Schwierigkeit %d
 LEVELS_NOT_PLAYED,Not played yet,Noch nicht gespielt
 DETAIL_BEST_SCORE,Best %s · %s,Bester %s · %s
 DETAIL_BEST_TIME,Best %s,Beste %s
-DETAIL_META,Difficulty %d · par %s · %d players,Schwierigkeit %d · Par %s · %d Spieler
+DETAIL_META,Difficulty %d · target %s · %d players,Schwierigkeit %d · Ziel %s · %d Spieler
 DETAIL_MINE,Your best: %s · %s · %s · #%d,Dein Bestwert: %s · %s · %s · #%d
 DETAIL_PLAY,Play this level,Dieses Level spielen
 DETAIL_UNLOCKS_IN,Unlocks in %s,Frei in %s
@@ -178,10 +180,10 @@ WIN_HOME,Home,Startseite
 WIN_BADGE_FLAWLESS,Flawless,Fehlerfrei
 WIN_BADGE_NEW_BEST,New best,Neuer Bestwert
 WIN_BADGE_FASTEST,Fastest yet,Schnellste Zeit
-WIN_BADGE_UNDER_PAR,Under par,Unter Par
+WIN_BADGE_UNDER_PAR,Under target,Unter Zielzeit
 WIN_STAT_BASE,Base,Basis
 WIN_STAT_TIME,Time,Zeit
-WIN_STAT_PAR,Par,Par
+WIN_STAT_PAR,Target time,Zielzeit
 WIN_STAT_MISTAKES,Mistakes,Fehler
 WIN_STAT_HINTS,Hints,Tipps
 WIN_STAT_DETAILS,Details,Details
@@ -189,7 +191,7 @@ WIN_FACTOR,×%s,×%s
 WIN_LEAGUE_LINE,%s league · %d pts · #%d of %d · %s,%s-Liga · %d Pkt. · #%d von %d · %s
 WIN_LEAGUE_PROMO_LINE,%s league · %s · #%d of %d,%s-Liga · %s · #%d von %d
 WIN_PROMOTED,Promoted to %s league!,Aufstieg in die %s-Liga!
-FACTOR_ACCURACY,Accuracy,Präzision
+FACTOR_ACCURACY,Mistakes,Fehler
 FACTOR_SPEED,Speed,Tempo
 FACTOR_HINT,Hints,Tipps
 #,--- round summary ---,
@@ -231,6 +233,9 @@ SETTINGS_FONTS,Fonts: Fredoka and Nunito (SIL Open Font License).,Schriften: Fre
 TUT_TITLE,How to play,So wird gespielt
 TUT_SKIP,Skip,Überspringen
 TUT_NEXT,Next,Weiter
+TUT_SHOW_ME,Show me,Zeig mir
+TUT_FINISH,Finish,Fertig
+TUT_NUDGE,Tap the glowing cell.,Tipp das leuchtende Feld an.
 TUT_STEP_1,"One queen in every row, column and colour region. Queens never touch, not even diagonally.","Eine Dame in jeder Zeile, Spalte und Farbregion. Damen berühren sich nie, auch nicht diagonal."
 TUT_STEP_2,Tap a cell once to mark it with an X. Try the glowing cell.,Tipp ein Feld einmal an für ein X. Probier das leuchtende Feld.
 TUT_STEP_3,Tap it again to place a queen.,"Tipp nochmal drauf, um eine Dame zu setzen."

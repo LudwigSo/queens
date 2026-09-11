@@ -10,10 +10,12 @@ extends Control
 ##
 ## Input: single-finger touch. Tap cycles a cell (see BoardModel.tap), a drag
 ## paints or erases X marks as one stroke, a long press places a queen directly.
+## With `erase_mode` on, a tap clears the cell instead and a drag rubs out marks.
 
 signal state_changed
 signal solved
 signal celebration_finished
+signal blocked_tap(cell: Vector2i)   ## Tutorial: a tap outside `allowed_cells`.
 
 const MARK_PATH := "res://assets/board/mark.svg"
 const CROWN_PATHS := {
@@ -28,6 +30,8 @@ const MARK_SCALE_MANUAL := 0.44
 const MARK_SCALE_AUTO := 0.32
 const MARK_ALPHA_MANUAL := 0.62
 const MARK_ALPHA_AUTO := 0.30
+const TARGET_ALPHA_MIN := 0.35
+const TARGET_ALPHA_MAX := 0.78
 const LONG_PRESS_SECONDS := 0.45
 const SLOP_PX := 14.0
 
@@ -37,6 +41,7 @@ var model: BoardModel = BoardModel.new()
 var input_enabled: bool = true
 var mistake_alerts: bool = true
 var allowed_cells: Array = []        ## Tutorial: only these cells accept input (empty = all).
+var erase_mode: bool = false         ## Eraser: a tap clears the cell it hits.
 var region_patterns: bool = false    ## Colour-vision aid: pattern overlay per region.
 
 # Pass-throughs so callers and tests can keep using the board as before.
@@ -72,6 +77,9 @@ var _mark_scale: Dictionary = {}      ## scale factor of the X mark
 var _pulse: Dictionary = {}           ## conflict red overlay
 var _flash: Dictionary = {}           ## mistake flash
 var _glow: Dictionary = {}            ## hint amber overlay
+var _target: Dictionary = {}          ## tutorial "tap here" cells -> true
+var _target_pulse: float = 0.55       ## shared breathing value of every target
+var _target_tween: Tween = null
 var _bright: Dictionary = {}          ## win white overlay
 var _ring: float = 0.0
 var _last_cell: Vector2i = Vector2i(-1, -1)
@@ -154,12 +162,18 @@ func reset() -> void:
 	_reset_view()
 
 
-func clear() -> void:
+## Wipes the board. By default the queens the board never flagged stay put
+## (BoardModel.clear_kept); `keep_solved = false` wipes everything, which is what
+## Restart promises.
+func clear(keep_solved: bool = true) -> void:
 	if model.locked:
 		return
 	var had_pieces := not _crowns.is_empty() or _any_marks()
 	_suppress_diff = true
-	model.clear()
+	if keep_solved:
+		model.clear_kept()
+	else:
+		model.clear()
 	_suppress_diff = false
 	if had_pieces:
 		_animate_clear()
@@ -210,6 +224,38 @@ func set_glow(targets: Array, seconds: float = 0.0) -> void:
 func clear_glow() -> void:
 	_glow.clear()
 	queue_redraw()
+
+
+## Marks the cells a scripted step wants tapped. Unlike the hint glow these
+## breathe and carry a ring drawn over the region borders, so they read on every
+## region colour instead of looking like one more pastel.
+func set_target(targets: Array) -> void:
+	_target.clear()
+	for p in targets:
+		_target[p] = true
+	_start_target_pulse()
+	queue_redraw()
+
+
+func clear_target() -> void:
+	_target.clear()
+	if _target_tween != null and _target_tween.is_valid():
+		_target_tween.kill()
+	_target_tween = null
+	queue_redraw()
+
+
+func _start_target_pulse() -> void:
+	if _target_tween != null and _target_tween.is_valid():
+		return
+	if _target.is_empty() or not Motion.effects_enabled() or not is_inside_tree():
+		_target_pulse = TARGET_ALPHA_MAX
+		return
+	_target_tween = create_tween().set_loops()
+	_target_tween.tween_method(func(v: float) -> void: _target_pulse = v; queue_redraw(),
+		TARGET_ALPHA_MIN, TARGET_ALPHA_MAX, 0.7).set_trans(Tween.TRANS_SINE)
+	_target_tween.tween_method(func(v: float) -> void: _target_pulse = v; queue_redraw(),
+		TARGET_ALPHA_MAX, TARGET_ALPHA_MIN, 0.7).set_trans(Tween.TRANS_SINE)
 
 
 ## Applies a hint from HintFinder with its animations.
@@ -312,6 +358,15 @@ func _draw() -> void:
 				draw_rect(Rect2(rect.end.x - h, rect.position.y - h, t, rect.size.y + t), Ui.PLATE)
 			if r + 1 < n and model.regions[r][c] != model.regions[r + 1][c]:
 				draw_rect(Rect2(rect.position.x - h, rect.end.y - h, rect.size.x + t, t), Ui.PLATE)
+
+	# Scripted targets, over the borders so the ring closes on every side.
+	if not _target.is_empty():
+		var ring_w := maxf(5.0, _cell_size * 0.09)
+		for p in _target:
+			var rect := _cell_rect(p.x, p.y)
+			draw_rect(rect, Color(Ui.HINT_GLOW, _target_pulse))
+			draw_rect(rect.grow(-ring_w * 0.5), Color(Ui.HINT_GLOW, 1.0), false, ring_w)
+			draw_rect(rect.grow(-ring_w * 1.6), Color(1, 1, 1, _target_pulse * 0.5), false, maxf(2.0, ring_w * 0.35))
 
 	# Marks.
 	for r in n:
@@ -499,6 +554,7 @@ func _reset_view() -> void:
 	_flash.clear()
 	_glow.clear()
 	_bright.clear()
+	clear_target()
 	_ring = 0.0
 	_pressed_cell = Vector2i(-1, -1)
 	_plate_scale = 1.0
@@ -687,15 +743,19 @@ func _pulse_scalar(property: String, from: float, to: float, secs: float) -> voi
 
 
 func _animate_clear() -> void:
-	# Cascade: rows shrink away top to bottom, then the plate settles.
-	var by_row := {}
+	# Cascade: rows shrink away top to bottom, then the plate settles. Only the
+	# pieces that actually went are animated - a preserving clear leaves the
+	# queens it kept, and the marks their own presence still justifies, alone.
 	for p in _crowns.keys():
-		_remove_crown(p, true)
+		if model.cells[p.x][p.y] != BoardModel.Cell.QUEEN:
+			_remove_crown(p, true)
 	_mark_alpha.clear()
 	_mark_scale.clear()
 	if Motion.effects_enabled() and is_inside_tree():
 		for r in model.size_n:
 			for c in model.size_n:
+				if model.is_marked(r, c):
+					continue
 				if _prev_cells[r][c] == BoardModel.Cell.MARK or _prev_auto[r][c] > 0:
 					var p := Vector2i(r, c)
 					_mark_alpha[p] = 1.0
@@ -819,7 +879,11 @@ func _allowed(p: Vector2i) -> bool:
 
 func _begin(index: int, pos: Vector2) -> void:
 	var p := _cell_at(pos)
-	if p.x < 0 or not _allowed(p):
+	if p.x < 0:
+		return
+	if not _allowed(p):
+		# Say no out loud: a silently swallowed tap reads as a broken game.
+		blocked_tap.emit(p)
 		return
 	_finger = index
 	_gesture = Gesture.PRESSED
@@ -836,7 +900,8 @@ func _move(pos: Vector2) -> void:
 	if _gesture == Gesture.PRESSED:
 		if pos.distance_to(_press_pos) < maxf(SLOP_PX, _cell_size * 0.2):
 			return
-		var mode := model.stroke_mode_for(_press_cell.x, _press_cell.y)
+		# The eraser always rubs out; otherwise the start cell picks the mode.
+		var mode := BoardModel.Stroke.ERASE if erase_mode else model.stroke_mode_for(_press_cell.x, _press_cell.y)
 		_pressed_cell = Vector2i(-1, -1)
 		if mode == BoardModel.Stroke.NONE:
 			# Started on a queen or an automatic mark: the drag does nothing.
@@ -867,7 +932,12 @@ func _end(_pos: Vector2) -> void:
 		Gesture.DRAGGING:
 			model.end_stroke()
 		Gesture.PRESSED:
-			if not _long_press_done:
+			if erase_mode:
+				_last_cell = _press_cell
+				if model.clear_cell(_press_cell.x, _press_cell.y):
+					Sfx.play(&"tap_unmark")
+					Sfx.haptic(10)
+			elif not _long_press_done:
 				_last_cell = _press_cell
 				var was_queen: bool = model.cells[_press_cell.x][_press_cell.y] == BoardModel.Cell.QUEEN
 				var was_marked := model.is_marked(_press_cell.x, _press_cell.y)
@@ -889,7 +959,7 @@ func _cancel_gesture() -> void:
 
 
 func _process(delta: float) -> void:
-	if _gesture != Gesture.PRESSED or _long_press_done:
+	if _gesture != Gesture.PRESSED or _long_press_done or erase_mode:
 		return
 	_press_time += delta
 	if _press_time >= LONG_PRESS_SECONDS:

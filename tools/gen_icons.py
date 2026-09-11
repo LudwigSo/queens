@@ -56,6 +56,7 @@ ICONS = {
     "menu": f'<path {S} d="M10 18h44M10 32h44M10 46h44"/>',
     "medal": f'<circle {S} cx="32" cy="40" r="16"/><path {S} d="M22 26 14 6h12l6 12 6-12h12l-8 20"/>',
     "arrow_right": f'<path {S} d="M10 32h44M36 14l18 18-18 18"/>',
+    "trash": f'<path {S} d="M10 16h44"/><path {S} d="M24 16v-4a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v4"/><path {S} d="M16 16l3 36a6 6 0 0 0 6 5h14a6 6 0 0 0 6-5l3-36"/><path {S} d="M27 26v20M37 26v20"/>',
     "sparkle": f'<path {F} d="M32 4l5 17 17 5-17 5-5 17-5-17-17-5 17-5z"/><path {F} d="M50 40l2.5 7.5L60 50l-7.5 2.5L50 60l-2.5-7.5L40 50l7.5-2.5z"/>',
 }
 

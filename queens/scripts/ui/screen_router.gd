@@ -72,8 +72,7 @@ func back() -> bool:
 ## Shows a modal (a Control with `Dim` and `Panel` children and a `closed`
 ## signal). The caller does its own `open()`; this only animates and tracks.
 func present(modal: Control) -> void:
-	if _modals.has(modal):
-		return
+	_modals.erase(modal)
 	_modals.append(modal)
 	modal.visible = true
 	var dim := modal.get_node_or_null("Dim")
@@ -88,14 +87,13 @@ func present(modal: Control) -> void:
 			Motion.pop_in(p, Motion.SLOW, 0.94)
 		else:
 			Motion.pop_in(panel)
-	if modal.has_signal("closed") and not modal.closed.is_connected(_on_modal_closed):
-		modal.closed.connect(_on_modal_closed.bind(modal), CONNECT_ONE_SHOT | CONNECT_DEFERRED)
-
-
-func _on_modal_closed(_a = null, modal: Control = null) -> void:
-	if modal == null:
-		return
-	_modals.erase(modal)
+	if modal.has_signal("closed"):
+		# A lambda, not a bound method: `closed` carries no arguments on some
+		# modals and one on others, and bound arguments come last, so a fixed
+		# signature would silently miss half of them.
+		modal.closed.connect(
+			func(_a = null, _b = null) -> void: _modals.erase(modal),
+			CONNECT_ONE_SHOT | CONNECT_DEFERRED)
 
 
 func dismiss(modal: Control) -> void:

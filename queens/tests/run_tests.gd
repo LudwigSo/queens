@@ -30,9 +30,11 @@ func _initialize() -> void:
 		_test_level(i, levels[i])
 	_test_board_logic()
 	_test_board_strokes()
+	_test_clearing()
 	_test_hint_finder()
 	_test_board_view()
 	_test_views()
+	_test_tutorial()
 	_test_streak()
 	_test_settings()
 	_test_loc()
@@ -1049,6 +1051,54 @@ func _test_android_providers_degrade() -> void:
 	shop.free()
 
 
+## Erasing: one cell at a time, and a Clear that spares the queens the board
+## never had anything to say about.
+func _test_clearing() -> void:
+	var m: BoardModel = BoardScript.new()
+	var lv: Dictionary = levels[0]
+	var sol: Array = lv["solution"]
+	m.load_level(lv)
+
+	# clear_cell: a manual X goes, a queen comes off with its automatic marks,
+	# and a cell that is only marked because of a queen elsewhere is untouched.
+	m._tap(3, 3)
+	_check(m.cells[3][3] == BoardScript.Cell.MARK and m.clear_cell(3, 3) and m.cells[3][3] == BoardScript.Cell.EMPTY, "clear_cell wipes a manual X")
+	_check(not m.clear_cell(3, 3), "clear_cell on an empty cell changes nothing")
+	m.place_directly(0, int(sol[0]))
+	var side: Vector2i = m.affected_cells(0, int(sol[0]))[0]
+	_check(m.auto_marks[side.x][side.y] > 0 and not m.clear_cell(side.x, side.y), "clear_cell leaves an automatic mark to its queen")
+	_check(m.clear_cell(0, int(sol[0])) and m.queen_count() == 0 and m.auto_marks[side.x][side.y] == 0, "clear_cell takes a queen and its automatic marks")
+
+	# clear_kept: only a queen that is right *and* clash-free survives. Every
+	# other kind is one the board already showed the player was suspect.
+	m.reset()
+	var kept := Vector2i(0, int(sol[0]))      # right, and nothing near it
+	var right_but_clashing := Vector2i(1, int(sol[1]))
+	var wrong_and_clashing := Vector2i(2, int(sol[1]))   # touches the one above
+	var wrong_but_quiet := Vector2i(4, 1)     # not row 4's answer, clashes with nothing
+	for p in [kept, right_but_clashing, wrong_and_clashing, wrong_but_quiet]:
+		m.place_directly(p.x, p.y)
+	m._tap(5, 4)   # a cell no queen already marks, so the tap leaves an X
+	_check(m.conflicts.has(right_but_clashing) and m.conflicts.has(wrong_and_clashing)
+		and not m.conflicts.has(kept) and not m.conflicts.has(wrong_but_quiet), "only the touching pair is flagged")
+	m.clear_kept()
+	_check(m.queen_count() == 1 and m.cells[kept.x][kept.y] == BoardScript.Cell.QUEEN, "clear keeps only the queen that is right and unflagged")
+	_check(m.cells[5][4] != BoardScript.Cell.MARK, "clear wipes the manual marks")
+	var expected_auto := m.affected_cells(kept.x, kept.y).size()
+	var auto_total := 0
+	for row in m.auto_marks:
+		for v in row:
+			auto_total += v
+	_check(auto_total == expected_auto, "clear rebuilds the automatic marks from the queens it kept (%d vs %d)" % [auto_total, expected_auto])
+
+	# Nothing worth keeping: the board goes back to empty.
+	m.reset()
+	m.place_directly(2, 0)
+	m.place_directly(3, 0)
+	m.clear_kept()
+	_check(m.queen_count() == 0, "clear with nothing to keep empties the board")
+
+
 func _test_board_strokes() -> void:
 	var m: BoardModel = BoardScript.new()
 	var lv: Dictionary = levels[0]
@@ -1164,9 +1214,80 @@ func _test_board_view() -> void:
 	_check(view.get_node("Pieces").get_child_count() == 1, "one crown sprite after placing a queen")
 	_check(changes.size() == 2, "view re-emits state_changed per move")
 	_check(view.cell_rect(0, 0).size.x > 0.0 and view.cell_center(1, 1) != view.cell_center(0, 0), "cells are laid out")
+	# A queen on a solution cell with nothing clashing is one the board never
+	# flagged, so Clear leaves it (and its crown) where it is.
 	view.clear()
-	_check(view.queen_count() == 0, "clear removes the crown through the view")
+	_check(view.queen_count() == 1 and view.get_node("Pieces").get_child_count() == 1, "clear keeps a queen the board never flagged")
+	# (4, 1) is not this level's answer for row 4 and clashes with nothing, so it
+	# is a wrong queen the board only ever reported through the mistake counter.
+	view._tap(4, 1)
+	view._tap(4, 1)
+	_check(view.queen_count() == 2 and not view.model.conflicts.has(Vector2i(4, 1)), "a second, wrong but clash-free queen is placed")
+	view.clear()
+	_check(view.queen_count() == 1 and view.cells[0][sol[0]] == BoardModel.Cell.QUEEN, "clear drops the wrong queen and keeps the right one")
+	view.clear(false)
+	_check(view.queen_count() == 0, "clear(false) wipes the board through the view")
 	view.queue_free()
+	Motion.instant = false
+
+
+## The tutorial must be impossible to get stuck in: every step runs its own move
+## from the button, and a tap it does not accept says so instead of going quiet.
+func _test_tutorial() -> void:
+	Motion.instant = true
+	var tut: Control = load("res://scenes/tutorial.tscn").instantiate()
+	root.add_child(tut)
+	# The runner never starts the main loop, so nothing gets NOTIFICATION_READY
+	# on its own and the scene's @onready references would stay null. Only the
+	# tutorial node needs it; the board sets itself up from load_level.
+	tut.notification(Node.NOTIFICATION_READY)
+	var board: Board = tut.board
+	board.size = Vector2(600, 600)
+	var lv: Dictionary = levels[0]
+	var done: Array = []
+	tut.finished.connect(func(completed: bool) -> void: done.append(completed))
+	tut.start(lv)
+
+	# Step 2 asks for the cell of the smallest region - on this level the one
+	# region with a single cell, which is the square a player fills first anyway.
+	var demo: Vector2i = tut._demo_cell()
+	var smallest: int = int(lv["size"]) + 1
+	for r in int(lv["size"]):
+		smallest = mini(smallest, board.model.region_cells(int(lv["regions"][r][int(lv["solution"][r])])).size())
+	_check(board.model.region_cells(int(lv["regions"][demo.x][demo.y])).size() == smallest, "the demo cell sits in the smallest region")
+	_check(int(lv["solution"][demo.x]) == demo.y, "the demo cell is a solution cell")
+	var nb: Vector2i = tut._neighbour_of(demo)
+	_check(nb != demo and int(lv["solution"][nb.x]) != nb.y, "the conflict cell is next door and not part of the solution")
+	var stroke_step: Dictionary = tut._steps[6]
+	var on_solution := false
+	for p in stroke_step["glow"]:
+		if int(lv["solution"][p.x]) == p.y:
+			on_solution = true
+	_check(not on_solution, "the drag step never asks for an X on a solution cell")
+
+	# A tap outside the step is refused, reported, and changes nothing.
+	tut.jump_to(1)
+	var blocked: Array = []
+	board.blocked_tap.connect(func(cell: Vector2i) -> void: blocked.append(cell))
+	var elsewhere := Vector2i(demo.x, (demo.y + 2) % int(lv["size"]))
+	board._begin(0, board.cell_rect(elsewhere.x, elsewhere.y).get_center())
+	_check(blocked == [elsewhere], "a tap outside the step is reported")
+	_check(board.model.cells[elsewhere.x][elsewhere.y] == BoardModel.Cell.EMPTY and tut.step_index == 1, "a refused tap leaves the board and the step alone")
+
+	# The button alone walks the whole tutorial, without a single tap.
+	tut.start(lv)
+	var guard := 0
+	while done.is_empty() and guard < 40:
+		var before: int = tut.step_index
+		tut.next_button.pressed.emit()
+		guard += 1
+		_check(tut.step_index > before or not done.is_empty(), "step %d advances from its own button" % before)
+	_check(done == [true], "the button walks the tutorial to the end (%d presses)" % guard)
+	_check(board.allowed_cells.is_empty(), "the input restriction is lifted when the tutorial ends")
+	# Freed here and not queued: left in the tree it would be notified ready a
+	# second time once the loop starts, and connect every signal twice.
+	root.remove_child(tut)
+	tut.free()
 	Motion.instant = false
 
 
@@ -1237,7 +1358,7 @@ func _test_views() -> void:
 	outcome["league"]["promoted_to"] = "gold"
 	_check(Views.win(result, bd, outcome, {}, cfg.league, 2)["league"]["promoted_to_name"] == "Gold", "win league line names the new tier")
 	outcome["league"]["promoted_to"] = ""
-	_check(win["badges"] == ["New best", "Under par"], "win badges: new best and under par, no flawless with a hint (got %s)" % [win["badges"]])
+	_check(win["badges"] == ["New best", "Under target"], "win badges: new best and under the target time, no flawless with a hint (got %s)" % [win["badges"]])
 	_check(win["factors"].size() == 3 and win["factors"][2]["id"] == "hint" and absf(win["factors"][1]["pct"] - 0.6) < 0.001, "win factors include the hint, and x1.00 speed fills half the bar")
 	_check(win["league"]["tier_name"] == "Silver" and win["league"]["rank"] == 3, "win league line")
 	_check(win["next"]["1"]["enabled"] and not win["next"]["0"]["enabled"] and not win["next"].has("-1"), "win next options")
@@ -1285,9 +1406,11 @@ func _files_under(dir_path: String, ext: String, out: Array) -> void:
 	d.list_dir_end()
 
 
+## Drops the carriage returns: the scene and script scans below anchor their
+## patterns to the end of a line, and a CRLF file would match none of them.
 func _read(path: String) -> String:
 	var f := FileAccess.open(path, FileAccess.READ)
-	return f.get_as_text() if f != null else ""
+	return f.get_as_text().replace("", "") if f != null else ""
 
 
 ## Translations: the CSV itself, the lookups, and that scripts and scenes and

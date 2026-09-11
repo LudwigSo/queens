@@ -13,15 +13,30 @@ a size filter and a leaderboard per level. A level you started stays locked
 for seven days (`cooldown_seconds` in `scripts/config.gd`), so a time cannot
 be improved by replaying a solution you remember. Giving up counts as a
 played game. A first run starts with an interactive tutorial (replayable
-from Settings).
+from the *How to play* button on the home screen). Every tutorial step has a
+button that makes the move for you, so it can never dead-end, and a tap the
+current step does not accept says so instead of going quiet.
 
 On the board: tap a cell to mark it X, tap again for a queen, tap a third
 time to clear. Drag across cells to paint or erase X marks in one stroke.
 Long-press an empty cell to place a queen straight away. There is no undo
-button: a tap takes a queen back and *Clear* wipes the board.
-Placing a queen automatically X-marks its row, column, region and the
-cells around it. A queen on a wrong cell flashes red (switchable in
-Settings); two queens that attack each other shake and stay red.
+button. Instead the actions bar has an **Erase** toggle: while it is on, a
+tap wipes whatever is in the cell it hits (and a drag rubs out marks), so a
+misplaced X costs nothing. The bin next to it clears the board — but it
+keeps every queen that sits on a solution cell and is not clashing with
+anything, which is exactly the queen the board never flagged, so it gives
+away nothing the player was not already shown. *Restart* in the pause menu
+still wipes everything. Placing a queen automatically X-marks its row,
+column, region and the cells around it. A queen on a wrong cell flashes red
+(switchable in Settings); two queens that attack each other shake and stay
+red.
+
+The top of the play screen keeps its middle empty — a camera cutout lives
+there on a lot of phones — so it carries only the pause button on the left
+and the mistake and time chips on the right; the level chip sits under the
+actions bar. Every screen also adds the device's safe-area inset on top of
+its margin (`scripts/ui/safe_area.gd`), so nothing is drawn under a status
+bar or a notch.
 
 **Hints** (the bulb in the actions bar) never place a wrong queen. They
 try, in order: point at a wrong queen, point at a wrong X, find a row,
@@ -47,14 +62,17 @@ Every solved game gets a score (`scripts/scoring.gd`):
 
 ```
 base     = 60 + 10 * size + 200 * (difficulty / 20)^1.6
-par      = 30 + 3 * difficulty + 0.5 * size^2   seconds
+target   = 30 + 3 * difficulty + 0.5 * size^2   seconds ("par" in the code)
 accuracy = max(1 / (1 + 0.5 * wrong placements), 0.1)   the dominant factor
-speed    = clamp((par / time)^0.631, 0.5, 2)
+speed    = clamp((target / time)^0.631, 0.5, 2)
 hint     = clamp(1 - 0.2 * hints, 0.1, 1)
 score    = round(base * accuracy * speed * hint)
 ```
 
-The base points are shown on the win panel next to time, par and mistakes.
+The win panel names the two multipliers after what they measure: the accuracy
+factor is labelled *Mistakes* and sits under the mistake count, and the time
+reference is *Target time*, next to the time you took. The base points are
+shown there too.
 They grow faster than the difficulty does (exponent 1.6) but far slower
 than an exponential, so the level list spans 149 points for the easiest
 board to 1351 for the hardest: a hard board is worth about nine easy ones,
@@ -155,6 +173,9 @@ pipeline outside it.
   only). The `Audio` autoload (`scripts/audio_manager.gd`) loads them
   lazily and is a silent no-op for any missing file; scripts call it
   through the static `Sfx` front so headless tests never need it.
+* **Safe area**: `scripts/ui/safe_area.gd` reads
+  `DisplayServer.get_display_safe_area()` once at start (and again on a
+  resize) and adds the top inset to every `ScreenMargin` container.
 * **Motion**: `scripts/ui/motion.gd` holds the durations and tween
   helpers. `Motion.instant` (tests) and `Motion.reduced` (the "Reduce
   motion" setting) collapse every animation.
