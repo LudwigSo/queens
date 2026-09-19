@@ -56,7 +56,7 @@ func refresh(standing: Dictionary, friends: Array, code: String, _nickname: Stri
 	_friends = friends
 	_code = code
 	var tier_id := str(standing.get("tier", "bronze"))
-	tier_label.text = Loc.f("LEAGUE_NAME", [str(standing.get("tier_name", ""))])
+	tier_label.text = Loc.f("LEAGUE_NAME", [LeagueRules.tier_label(tier_id)])
 	medal.modulate = Ui.tier_color(tier_id)
 	var rules: Dictionary = standing.get("rules", {})
 	# A tier that promotes by tier points shows the progress toward the next tier
@@ -76,7 +76,7 @@ func refresh(standing: Dictionary, friends: Array, code: String, _nickname: Stri
 	if need > 0:
 		progress.max_value = need
 		progress.value = mini(points_now, need)
-		progress_label.text = Fmt.progress(points_now, need, str(rules.get("up_to", "")))
+		progress_label.text = Fmt.progress(points_now, need, str(rules.get("up_to_name", "")))
 	code_label.text = code
 	tabs.select(tab, false)
 	show_tab(tab)
@@ -111,7 +111,7 @@ func _fill_standings() -> void:
 	var rules: Dictionary = _standing.get("rules", {})
 	if rules.get("global", false):
 		var size := int(group.get("size", 0))
-		var note := Loc.f("LEAGUE_GLOBAL_NOTE", [str(_standing.get("tier_name", "")), size])
+		var note := Loc.f("LEAGUE_GLOBAL_NOTE", [LeagueRules.tier_label(str(_standing.get("tier", ""))), size])
 		if size > 100:
 			note += " " + Loc.t("LEAGUE_TOP_100")
 		if int(rules.get("up_count", -1)) >= 0:
@@ -240,7 +240,7 @@ func _friend_row(fr: Dictionary) -> Control:
 	var tier_chip := PanelContainer.new()
 	tier_chip.theme_type_variation = &"Chip"
 	var tier := Label.new()
-	tier.text = str(fr.get("tier_name", ""))
+	tier.text = LeagueRules.tier_label(str(fr.get("tier", "")))
 	tier.theme_type_variation = &"LabelCaptionInk"
 	tier_chip.add_child(tier)
 	row.add_child(tier_chip)

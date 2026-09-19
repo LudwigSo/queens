@@ -10,12 +10,36 @@ extends RefCounted
 ## LeagueStanding -> the summary the home card and the win overlay show.
 ## `promo_text` ("1240 / 3000 pts to Silver") is set only in a tier that
 ## promotes by tier points.
+## Fills in everything the league screen used to get from the backend: the tier
+## names and the rule sentence. A server has no locale and must not carry a copy
+## of the translations, so it sends ids and numbers and this turns them into
+## words.
+static func league_screen(standing: Dictionary, friends: Array, league_cfg: Dictionary) -> Dictionary:
+	var out := standing.duplicate(true)
+	var tier_id := str(out.get("tier", "bronze"))
+	out["tier_name"] = LeagueRules.tier_label(tier_id)
+	var rules: Dictionary = out.get("rules", {})
+	var up_to := str(rules.get("up_to", ""))
+	var up_to_name := LeagueRules.tier_label(up_to) if up_to != "" else ""
+	rules["up_to_name"] = up_to_name
+	out["rules"] = rules
+	var tier_cfg: Dictionary = LeagueRules.tier(league_cfg, tier_id)
+	out["rules_text"] = LeagueRules.rules_text(tier_cfg, int(rules.get("up_count", -1)), up_to_name)
+	var friend_views: Array = []
+	for fr in friends:
+		var f: Dictionary = (fr as Dictionary).duplicate(true)
+		f["tier_name"] = LeagueRules.tier_label(str(f.get("tier", "")))
+		friend_views.append(f)
+	return {"standing": out, "friends": friend_views}
+
+
 static func league_summary(standing: Dictionary, now: int) -> Dictionary:
 	var group: Dictionary = standing.get("group", {})
 	var rules: Dictionary = standing.get("rules", {})
 	var need := int(rules.get("promo_score", 0))
 	var points_now := int(standing.get("my_tier_points", 0))
-	var next_tier := str(rules.get("up_to", ""))
+	# up_to is a tier id; the name is ours to build.
+	var next_tier := LeagueRules.tier_label(str(rules.get("up_to", ""))) if str(rules.get("up_to", "")) != "" else ""
 	return {
 		"tier_id": str(standing.get("tier", standing.get("tier_id", "bronze"))),
 		"tier_name": LeagueRules.tier_label(str(standing.get("tier", standing.get("tier_id", "bronze")))),

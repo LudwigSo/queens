@@ -8,6 +8,8 @@ extends Node
 
 signal app_paused
 signal app_resumed
+## Emitted once the backend has been created, registered and bootstrapped.
+signal backend_ready
 
 const Levels := preload("res://scripts/levels.gd")
 
@@ -21,6 +23,8 @@ var purchases: PurchaseProvider
 var backend: Backend
 
 var product_prices: Dictionary = {}   ## product id -> price text from the store
+## level id -> unix time the level is free again, as the server sees it.
+var level_locks: Dictionary = {}
 
 var _save_queued: bool = false
 
@@ -36,9 +40,12 @@ func _ready() -> void:
 	energy = EnergyLedger.new(save, config)
 	apply_settings()
 	save.changed.connect(_queue_save)
-	_start_backend()
-	_forfeit_dangling_game()
-	flush_pending_results()
+	# Awaited from here on: with a networked backend these are coroutines, and
+	# firing them off unawaited raced the save file.
+	await _start_backend()
+	await _forfeit_dangling_game()
+	await flush_pending_results()
+	backend_ready.emit()
 	_select_providers()
 	ads.reward_earned.connect(_on_reward_earned)
 	purchases.products_updated.connect(_on_products_updated)
@@ -107,17 +114,47 @@ func unlimited_price_text() -> String:
 	return str(product_prices.get(config.unlimited_product_id, config.unlimited_price_fallback))
 
 
-## Creates the backend for the current save. Only the local stub exists so
-## far; a networked one would be chosen here.
+## Creates the backend for the current save: the networked one when a server
+## is configured, the offline stub otherwise.
+##
+## The node is added before anything is awaited, so a listener connected right
+## after this call (main.gd wires up standing_changed) never misses the node.
 func _start_backend() -> void:
 	if backend != null:
 		remove_child(backend)
 		backend.queue_free()
-	backend = LocalBackend.new(config, catalog, now)
+	if config.server_url != "":
+		backend = HttpBackend.new(config, save)
+	else:
+		backend = LocalBackend.new(config, catalog, _system_now)
 	backend.name = "Backend"
 	add_child(backend)
-	backend.init()
-	backend.register_player(save.player_id(), save.nickname())
+	await backend.init()
+	var reg: Dictionary = await backend.register_player(save.player_id(), save.nickname())
+	if not reg["ok"] and str(reg.get("code", "")) == "ERR_ID_TAKEN":
+		# Two 122-bit random ids collided, or this id was used on another
+		# device. Take a new one, keeping the progress, and try once more.
+		save.rekey_player(SaveData.new_uuid())
+		save_now()
+		reg = await backend.register_player(save.player_id(), save.nickname())
+	_apply_server_config()
+
+
+## Takes the rules and the cooldown from the server when they differ from the
+## shipped copy, so a rule change does not need a client release.
+func _apply_server_config() -> void:
+	if backend == null or not backend.has_method("server_config"):
+		return
+	var server: Dictionary = backend.server_config()
+	var league: Dictionary = server.get("league", {})
+	if not league.is_empty() and str(server.get("config_hash", "")) != LeagueConfigFile.hash_of_file():
+		push_warning("league config differs from the server's; using the server's")
+		config.league = league
+	var cooldown := int(server.get("cooldown_seconds", 0))
+	if cooldown > 0:
+		config.cooldown_seconds = cooldown
+	if backend.has_method("level_locks"):
+		level_locks = backend.level_locks()
 
 
 ## Sends results the backend has not accepted yet (offline, crash, ...).
@@ -126,10 +163,21 @@ func flush_pending_results() -> void:
 	if pending.is_empty():
 		return
 	var kept: Array = []
-	for r in pending:
+	for i in pending.size():
+		var r: Dictionary = pending[i]
 		var res: Dictionary = await backend.submit_result(r)
-		if not res["ok"]:
-			kept.append(r)
+		if res["ok"]:
+			continue
+		if bool(res.get("permanent", false)):
+			# The server will never accept this one; keeping it would retry it
+			# on every launch for ever.
+			push_warning("dropping a result the server rejected: %s" % str(res.get("code", "")))
+			continue
+		# Anything else (offline, rate limited, a server error) is temporary.
+		# Keep this result and everything after it, in order.
+		for j in range(i, pending.size()):
+			kept.append(pending[j])
+		break
 	save.data["pending_results"] = kept
 	save.mark_changed()
 
@@ -141,7 +189,7 @@ func _forfeit_dangling_game() -> void:
 	var marker: Dictionary = save.data["current_game"]
 	var level := catalog.get_level(str(marker.get("level_id", "")))
 	var result := GameSession.forfeit_from_marker(marker, level, save.player_id(), now(), config.client_version)
-	record_result(result)
+	await record_result(result)
 
 
 ## Stores a finished game, hands it to the backend and writes the save.
@@ -150,6 +198,10 @@ func _forfeit_dangling_game() -> void:
 func record_result(result: GameResult) -> Dictionary:
 	var dict := result.to_dict()
 	var outcome := save.record_result(dict, config.result_history_cap)
+	# Write before the await, not after: the result is already queued, and a
+	# process death during the round trip would otherwise leave the old
+	# current_game on disk and forfeit a game that was actually finished.
+	save_now()
 	outcome["league"] = {}
 	if backend != null:
 		var res: Dictionary = await backend.submit_result(dict)
@@ -175,13 +227,37 @@ func use_save_path(path: String) -> void:
 	save = SaveData.load_or_create(config)
 	save.changed.connect(_queue_save)
 	energy.bind_save(save)
-	_start_backend()
-	_forfeit_dangling_game()
+	# A test or screenshot run must never reach a real server.
+	config.server_url = ""
+	await _start_backend()
+	await _forfeit_dangling_game()
 
 
-## Wall-clock unix time. The single place to swap in server time later.
+## Unix time, from the server when there is one. Backend.now_utc() is
+## synchronous, so a networked backend keeps an offset from the X-Server-Time
+## header rather than asking.
 func now() -> int:
+	if backend != null:
+		return backend.now_utc()
+	return _system_now()
+
+
+## The device clock. The offline stub is given this rather than now(), or
+## now() -> Backend.now_utc() -> clock -> now() would recurse for ever.
+func _system_now() -> int:
 	return int(Time.get_unix_time_from_system())
+
+
+## Seconds until a level can be played again, taking the larger of what the
+## server said and what the local formula says.
+##
+## The larger is deliberate: it is display only, and the server is the one that
+## enforces. Taking the smaller would let a stale local value promise a level
+## that the server then refuses.
+func lock_remaining(level_id: String) -> int:
+	var from_server := maxi(int(level_locks.get(level_id, 0)) - now(), 0)
+	var from_local := Cooldown.remaining(save.level_entry(level_id), now(), config.cooldown_seconds)
+	return maxi(from_server, from_local)
 
 
 func save_now() -> void:
@@ -207,4 +283,7 @@ func _notification(what: int) -> void:
 			save_now()
 			app_paused.emit()
 		NOTIFICATION_APPLICATION_RESUMED:
+			if backend != null and backend.has_method("on_resume"):
+				backend.on_resume()
+			flush_pending_results()
 			app_resumed.emit()

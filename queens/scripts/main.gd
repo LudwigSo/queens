@@ -176,9 +176,8 @@ func _on_back() -> void:
 
 func _locked_ids() -> Dictionary:
 	var ids := {}
-	var now := App.now()
 	for lv in levels:
-		if Cooldown.is_locked(App.save.level_entry(lv["id"]), now, App.config.cooldown_seconds):
+		if App.lock_remaining(lv["id"]) > 0:
 			ids[lv["id"]] = true
 	return ids
 
@@ -194,9 +193,8 @@ func _played_ids() -> Dictionary:
 ## Seconds until the first locked level unlocks again.
 func _shortest_lock() -> int:
 	var best := 0
-	var now := App.now()
 	for lv in levels:
-		var remaining := Cooldown.remaining(App.save.level_entry(lv["id"]), now, App.config.cooldown_seconds)
+		var remaining := App.lock_remaining(lv["id"])
 		if remaining > 0 and (best == 0 or remaining < best):
 			best = remaining
 	return best
@@ -410,7 +408,7 @@ func _on_level_chosen(level_id: String) -> void:
 
 
 func _is_locked(level: Dictionary) -> bool:
-	return Cooldown.is_locked(App.save.level_entry(level["id"]), App.now(), App.config.cooldown_seconds)
+	return App.lock_remaining(level["id"]) > 0
 
 
 # --- league -------------------------------------------------------------------
@@ -425,7 +423,11 @@ func _refresh_league() -> void:
 	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
 	var friends: Array = (await App.backend.get_friends())["data"]
 	var profile: Dictionary = (await App.backend.get_profile())["data"]
-	league.refresh(standing, friends, str(profile.get("friend_code", "")), App.save.nickname(), Views.league_summary(standing, App.now())["ends_in_text"])
+	# The backend sends ids and numbers; the names and the rule sentence are
+	# built here, in the player's language.
+	var view := Views.league_screen(standing, friends, App.config.league)
+	league.refresh(view["standing"], view["friends"], str(profile.get("friend_code", "")), App.save.nickname(),
+		Views.league_summary(standing, App.now())["ends_in_text"])
 
 
 func _on_add_friend(code: String) -> void:
@@ -460,12 +462,53 @@ func _on_rename(nickname: String) -> void:
 
 # --- game -------------------------------------------------------------------
 
+## Asks the server for the session that makes this game count, after the board
+## is already on screen.
+##
+## Three outcomes: it works and the token goes into the marker; the level turns
+## out to be locked, and the game is unwound with the energy refunded; or we are
+## offline, and play continues with an empty token so the result queues exactly
+## as it does today.
+func _request_session(started: GameSession, level: Dictionary) -> void:
+	var res: Dictionary = await App.backend.start_game(level["id"])
+	if session != started or started.finished:
+		return   # the game already ended, or another one replaced it
+	if res["ok"]:
+		var data: Dictionary = res["data"]
+		var sess: Dictionary = data.get("session", {})
+		started.set_session_token(str(sess.get("token", "")))
+		# Re-save the marker so a crash from here on forfeits WITH the token.
+		App.save.update_marker(started.to_marker())
+		App.save_now()
+		App.level_locks[level["id"]] = int(data.get("locked_until", 0))
+		return
+	if str(res.get("code", "")) == "ERR_LEVEL_LOCKED":
+		var params: Array = res.get("params", [])
+		_abort_locked_start(level, int(params[0]) if params.size() > 0 else 0)
+
+
+## Unwinds a start the server refused because the level is still on cooldown.
+func _abort_locked_start(level: Dictionary, remaining: int) -> void:
+	if session != null:
+		session.detach()
+	session = null
+	# Drop the marker, or the next launch would forfeit a game that never
+	# really started, and give the energy back: it was charged optimistically.
+	App.save.abort_game()
+	App.energy.refund_start()
+	App.level_locks[level["id"]] = App.now() + remaining
+	App.save_now()
+	message_dialog.open(Loc.t("DIALOG_LOCKED_TITLE"), Loc.f("DIALOG_LOCKED_BODY", [Cooldown.format_remaining(remaining)]))
+	router.present(message_dialog)
+	_show_home(true)
+
+
 ## Starts a game on `level`: records the start in the save, loads the board
 ## and runs the stopwatch. A game still running is forfeited first.
 func start_game(level: Dictionary, note: String = "") -> void:
-	if _is_locked(level):
-		var remaining := Cooldown.remaining(App.save.level_entry(level["id"]), App.now(), App.config.cooldown_seconds)
-		message_dialog.open(Loc.t("DIALOG_LOCKED_TITLE"), Loc.f("DIALOG_LOCKED_BODY", [Cooldown.format_remaining(remaining)]))
+	var locked_for := App.lock_remaining(level["id"])
+	if locked_for > 0:
+		message_dialog.open(Loc.t("DIALOG_LOCKED_TITLE"), Loc.f("DIALOG_LOCKED_BODY", [Cooldown.format_remaining(locked_for)]))
 		router.present(message_dialog)
 		return
 	if not App.energy.can_start():
@@ -485,7 +528,10 @@ func start_game(level: Dictionary, note: String = "") -> void:
 	session.mistake.connect(_on_mistake)
 	App.save.begin_game(level, session.to_marker(), App.now())
 	App.save_now()
-	App.backend.start_game(level["id"])
+	# Not awaited: the board appears at once, as it always has. Waiting for the
+	# server would freeze the tap-to-board transition for as long as the request
+	# takes, and the answer only matters in the rare case where it says no.
+	_request_session(session, level)
 	board.input_enabled = true
 	board.mistake_alerts = bool(App.save.setting("mistake_alerts"))
 	board.region_patterns = bool(App.save.setting("region_patterns"))
@@ -598,7 +644,12 @@ func _on_solved() -> void:
 		return
 	var result := session.finish(true, App.now())
 	var outcome: Dictionary = await App.record_result(result)
-	var bd := Scoring.breakdown(result.to_dict())
+	# Prefer the server's own breakdown, so the panel can never disagree with the
+	# score that actually counted.
+	var league: Dictionary = outcome.get("league", {})
+	var bd: Dictionary = league["breakdown"] if league.has("breakdown") else Scoring.breakdown(result.to_dict())
+	if league.has("breakdown"):
+		result.score = int(bd["score"])
 	var next := {}
 	for opt in _pick_options():
 		next[int(opt["step"])] = opt

@@ -48,6 +48,14 @@ func charge_start() -> bool:
 	return true
 
 
+## Gives back a start that never happened, because the server refused it. The
+## charge is optimistic: the board appears before the server has answered.
+func refund_start() -> void:
+	if is_unlimited():
+		return
+	grant(1)
+
+
 func grant(units: int) -> void:
 	var total := amount() + maxi(units, 0)
 	if config.energy_cap > 0:

@@ -48,6 +48,9 @@ func _initialize() -> void:
 	_test_scoring()
 	_test_league_rules()
 	_test_local_backend()
+	_test_league_config_file()
+	_test_http_backend_pure()
+	_test_auth_storage()
 	_test_android_providers_degrade()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -710,7 +713,7 @@ func _test_scoring() -> void:
 
 
 func _league_member(id: String, score: int, games: int = 5, last: int = 100) -> Dictionary:
-	return {"player_id": id, "nickname": id, "round_score": score, "games": games, "last_submit_at": last, "is_me": id == "me", "is_friend": false, "is_bot": id != "me"}
+	return {"player_id": id, "nickname": id, "round_score": score, "games": games, "last_submit_at": last, "is_me": id == "me", "is_friend": false}
 
 
 func _test_league_rules() -> void:
@@ -830,8 +833,8 @@ func _test_local_backend() -> void:
 
 	var standing: Dictionary = backend.get_league_standing()["data"]
 	_check(not standing["joined"] and standing["my_rank"] == 0 and standing["round_index"] == bronze_round, "not in a group before the first game")
-	_check(standing["round_ends_at"] == LeagueRules.round_end(cfg.league, "bronze", bronze_round) and standing["round_days"] == 3 and standing["rules_text"] == "Reach 3000 points to promote to Silver · nobody relegates", "standing carries round end and rules")
-	_check(standing["rules"]["up_count"] == -1 and not standing["rules"]["global"] and standing["rules"]["promo_score"] == 3000 and standing["rules"]["up_to"] == "Silver" and standing["my_tier_points"] == 0, "bronze promotes by tier points")
+	_check(standing["round_ends_at"] == LeagueRules.round_end(cfg.league, "bronze", bronze_round) and standing["round_days"] == 3 and standing["rules"]["up_to"] == "silver", "standing carries round end and rules")
+	_check(standing["rules"]["up_count"] == -1 and not standing["rules"]["global"] and standing["rules"]["promo_score"] == 3000 and standing["rules"]["up_to"] == "silver" and standing["my_tier_points"] == 0, "bronze promotes by tier points")
 
 	var lv: Dictionary = levels[0]
 	var start := backend.start_game(lv["id"])
@@ -841,7 +844,7 @@ func _test_local_backend() -> void:
 	_check(standing["my_round_score"] == 0 and standing["my_rank"] > 0, "joined with zero points")
 	var bots_playing := 0
 	for m in standing["group"]["members"]:
-		if m["is_bot"] and int(m["round_score"]) > 0:
+		if not m["is_me"] and int(m["round_score"]) > 0:
 			bots_playing += 1
 	_check(bots_playing > 10, "bots have played by Wednesday")
 
@@ -940,7 +943,7 @@ func _test_local_backend() -> void:
 	var silver_week := LeagueRules.round_index(cfg.league, "silver", clock[0])
 	_check(backend3.data["current_round"] == silver_week and backend3.data["rounds"].size() <= 1, "the running silver week is the open round, the bronze round is forgotten")
 	var silver_standing: Dictionary = backend3.get_league_standing()["data"]
-	_check(not silver_standing["joined"] and silver_standing["tier"] == "silver" and silver_standing["round_index"] == silver_week and silver_standing["round_days"] == 7 and silver_standing["rules"]["promo_score"] == 10000 and silver_standing["rules"]["up_to"] == "Gold" and silver_standing["my_tier_points"] == 0, "silver is open and unjoined, 10000 points to gold")
+	_check(not silver_standing["joined"] and silver_standing["tier"] == "silver" and silver_standing["round_index"] == silver_week and silver_standing["round_days"] == 7 and silver_standing["rules"]["promo_score"] == 10000 and silver_standing["rules"]["up_to"] == "gold" and silver_standing["my_tier_points"] == 0, "silver is open and unjoined, 10000 points to gold")
 	backend3.ack_round_summary(next_bronze)
 	# A restart later in the same week keeps everything and closes nothing.
 	clock[0] += 3600
@@ -956,7 +959,7 @@ func _test_local_backend() -> void:
 	_check(gold_res["promoted_to"] == "gold" and gold_res["promo_score"] == 10000 and backend3b.get_profile()["data"]["tier"] == "gold" and backend3b.get_profile()["data"]["tier_points"] == 0, "silver promotes to gold at 10000 points")
 	var gold_summary: Dictionary = backend3b.get_round_summary()["data"]
 	_check(gold_summary["tier_after"] == "gold" and gold_summary["reason"] == "score" and gold_summary["round_index"] == silver_week and backend3b.data["current_round"] == silver_week, "the gold week is open after the promotion")
-	_check(backend3b.get_league_standing()["data"]["rules"]["promo_score"] == 0 and backend3b.get_league_standing()["data"]["rules_text"] == "Top 20 % promote · relegation impossible", "gold is back to percentage promotion")
+	_check(backend3b.get_league_standing()["data"]["rules"]["promo_score"] == 0 and backend3b.get_league_standing()["data"]["rules"]["up_pct"] == 20, "gold is back to percentage promotion")
 	backend3b.ack_round_summary(silver_week)
 	# Three idle weeks from platinum: relegated to gold, then the gold floor holds.
 	backend3b.data["profile"]["tier"] = "platinum"
@@ -976,11 +979,11 @@ func _test_local_backend() -> void:
 	var dia: Dictionary = backend4.get_league_standing()["data"]
 	var diamond_players := 60 + 3 * (2960 - 2957)
 	_check(dia["joined"] and dia["rules"]["global"] and dia["group"]["size"] == diamond_players, "diamond is one standing of the whole (growing) population")
-	_check(dia["rules"]["up_count"] == 3 and dia["group"]["promote_count"] == 3 and dia["rules_text"] == "Top 3 promote to Challenger · bottom 20 % relegate", "diamond promotes exactly the open challenger slots")
+	_check(dia["rules"]["up_count"] == 3 and dia["group"]["promote_count"] == 3 and dia["rules"]["up_to"] == "challenger", "diamond promotes exactly the open challenger slots")
 	backend4.data["profile"]["tier"] = "challenger"
 	backend4.start_game(lv["id"])
 	var ch: Dictionary = backend4.get_league_standing()["data"]
-	_check(ch["group"]["size"] == 6 and ch["group"]["promote_count"] == 0 and ch["group"]["relegate_count"] == 3 and ch["rules_text"] == "Bottom 50 % relegate", "challenger is full at its slot count and drops the bottom half")
+	_check(ch["group"]["size"] == 6 and ch["group"]["promote_count"] == 0 and ch["group"]["relegate_count"] == 3 and ch["rules"]["up_to"] == "", "challenger is full at its slot count and drops the bottom half")
 	clock[0] = Scoring.week_start(3100) + 10
 	backend4.data["profile"]["tier"] = "diamond"
 	backend4.start_game(lv["id"])
@@ -1319,11 +1322,11 @@ func _test_views() -> void:
 	var energy := EnergyLedger.new(save, cfg)
 	var now := 1000000
 	var standing := {"tier": "bronze", "tier_name": "Bronze", "joined": true, "my_rank": 5, "my_round_score": 300, "zone": "promote", "round_ends_at": now + 3600 * 26, "group": {"size": 30},
-		"my_tier_points": 1240, "rules": {"promo_score": 3000, "up_to": "Silver"}}
+		"my_tier_points": 1240, "rules": {"promo_score": 3000, "up_to": "silver"}}
 	var league := Views.league_summary(standing, now)
 	_check(league["rank"] == 5 and league["size"] == 30 and league["zone"] == "promote" and league["ends_in_text"] == "1d 2h", "league summary carries rank, size, zone and countdown")
 	_check(league["promo_score"] == 3000 and league["tier_points"] == 1240 and league["next_tier_name"] == "Silver" and league["promo_text"] == "1240 / 3000 pts to Silver", "league summary carries the tier points progress")
-	_check(Views.league_summary({"tier": "gold", "joined": true, "rules": {"promo_score": 0, "up_to": "Platinum"}}, now)["promo_text"] == "", "no progress text in a percentage tier")
+	_check(Views.league_summary({"tier": "gold", "joined": true, "rules": {"promo_score": 0, "up_to": "platinum"}}, now)["promo_text"] == "", "no progress text in a percentage tier")
 	_check(Fmt.progress(10, 20, "") == "10 / 20 pts" and Fmt.progress(0, 3000, "Silver") == "0 / 3000 pts to Silver", "progress wording")
 	var lv: Dictionary = levels[3]
 	var opt := Views.option(1, {"level": lv, "reason": "band"}, catalog)
@@ -1535,3 +1538,110 @@ func _test_loc() -> void:
 		if not referenced.has(key):
 			unused = key
 	_check(unused == "", "the translation file has no unused key (%s)" % unused)
+
+## The league rules live in a JSON file the server embeds a copy of. If this
+## drifts from what config.gd used to hold, every score and every promotion
+## silently changes.
+func _test_league_config_file() -> void:
+	var cfg := LeagueConfigFile.load_default()
+	_check(not cfg.is_empty(), "the league config file loads")
+	_check(int(cfg["group_size"]) == 30 and int(cfg["min_group_size"]) == 5, "group sizes")
+	_check(int(cfg["round_best_n"]) == 15 and str(cfg["round_mode"]) == "best_n", "round scoring")
+	var tiers: Array = cfg["tiers"]
+	_check(tiers.size() == 6, "six tiers")
+	var ids: Array = []
+	for t in tiers:
+		ids.append(str(t["id"]))
+	_check(ids == ["bronze", "silver", "gold", "platinum", "diamond", "challenger"], "tier order")
+	# JSON has one number type; these must come back as ints or every == fails.
+	_check(typeof(cfg["round_best_n"]) == TYPE_INT and typeof(tiers[0]["round_days"]) == TYPE_INT, "numbers are ints, not floats")
+	_check(int(tiers[0]["promo_score"]) == 3000 and int(tiers[1]["promo_score"]) == 10000, "on-ramp thresholds")
+	_check(bool(tiers[2].get("floor", false)) and not tiers[3].has("floor"), "gold is the floor")
+	_check(tiers[5].has("max_slots") and int(tiers[5]["max_slots"]) == 50, "challenger is capped")
+	_check(not tiers[4].has("max_slots"), "diamond is uncapped, by the absence of the key")
+	_check(LeagueConfigFile.hash_of_file().length() == 64, "the config hash is a sha256")
+	# GameConfig must see exactly the same thing.
+	_check(GameConfig.new().league == cfg, "GameConfig reads the shared file")
+
+
+## The pure helpers of HttpBackend: everything that turns a server answer into
+## something the player can read, without a server.
+func _test_http_backend_pure() -> void:
+	_check(HttpBackend._placeholder_count("no args") == 0, "no placeholders")
+	_check(HttpBackend._placeholder_count("%d of %s") == 2, "two placeholders")
+	_check(HttpBackend._placeholder_count("100%% sure") == 0, "an escaped percent is not a placeholder")
+
+	# JSON numbers arrive as floats; "%d" % [3.0] would print 3.0.
+	var coerced := HttpBackend._coerce_params([50.0, 1.5, "x"])
+	_check(typeof(coerced[0]) == TYPE_INT and coerced[0] == 50, "integral floats become ints")
+	_check(typeof(coerced[1]) == TYPE_FLOAT, "a real fraction stays a float")
+
+	_check(HttpBackend._localise(409, {"code": "ERR_LEVEL_LOCKED", "params": [3600.0]}) == Loc.f("ERR_LEVEL_LOCKED", [Cooldown.format_remaining(3600)]), "a locked level names the remaining time")
+	_check(HttpBackend._localise(409, {"code": "ERR_FRIEND_ALREADY", "params": []}) == Loc.t("ERR_FRIEND_ALREADY"), "a known code is translated")
+	_check(HttpBackend._localise(400, {"code": "ERR_FROM_THE_FUTURE", "params": []}) == Loc.t("ERR_SERVER"), "an unknown code from a newer server degrades")
+	# A params list of the wrong length would make % throw.
+	_check(HttpBackend._localise(429, {"code": "ERR_RATE_LIMITED", "params": []}) == Loc.t("ERR_SERVER"), "a wrong parameter count degrades instead of crashing")
+	_check(HttpBackend._localise(429, {"code": "ERR_RATE_LIMITED", "params": [30.0]}) == Loc.f("ERR_RATE_LIMITED", [30]), "the retry delay is filled in")
+	_check(HttpBackend._localise(500, {}) == Loc.t("ERR_SERVER"), "a body-less 500 still reads")
+
+	_check(HttpBackend._is_permanent(422, "ERR_RESULT_INVALID"), "a rejected result is permanent")
+	_check(HttpBackend._is_permanent(409, "ERR_SESSION_USED"), "a spent session is permanent")
+	_check(not HttpBackend._is_permanent(0, "ERR_NETWORK"), "being offline is temporary")
+	_check(not HttpBackend._is_permanent(429, "ERR_RATE_LIMITED"), "a rate limit is temporary")
+	_check(not HttpBackend._is_permanent(503, "ERR_SERVER"), "a server error is temporary")
+	# An older server that has not imported a level yet must not make the client
+	# throw the result away.
+	_check(not HttpBackend._is_permanent(404, "ERR_LEVEL_UNKNOWN"), "an unknown level is temporary")
+
+
+## The server credential and the two operations that exist only because of it.
+func _test_auth_storage() -> void:
+	var cfg := GameConfig.new()
+	var fresh := SaveData.defaults(cfg)
+	_check(fresh.has("auth") and str(fresh["auth"]["token"]) == "", "a new save has an empty credential")
+
+	# A version 1 save gains the section without losing anything.
+	var old := {"version": 1, "player": {"id": "p1", "nickname": "Ann", "created_at": 1},
+		"energy": {"amount": 3, "unlimited": false, "purchase_token": "", "ads_watched": 0},
+		"last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": [],
+		"settings": SaveData.settings_defaults()}
+	var migrated := SaveData.migrate(old, cfg)
+	_check(int(migrated["version"]) == 2, "migrated to version 2")
+	_check(migrated.has("auth") and str(migrated["auth"]["token"]) == "", "the credential section was added")
+	_check(int(migrated["energy"]["amount"]) == 3, "migration keeps the energy")
+
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	save.set_auth("p1", "tok", 99)
+	_check(save.auth_token() == "tok" and int(save.auth()["issued_at"]) == 99, "the credential round-trips")
+	save.clear_auth()
+	_check(save.auth_token() == "", "clearing works")
+
+	# Rekeying has to take the queue with it, or those results would be
+	# submitted under a player that no longer exists.
+	save.data["player"]["id"] = "old"
+	save.data["results"] = [{"result_id": "r1", "player_id": "old"}]
+	save.data["pending_results"] = [{"result_id": "r2", "player_id": "old"}]
+	save.set_auth("old", "tok", 1)
+	save.rekey_player("new")
+	_check(save.player_id() == "new", "the player id changed")
+	_check(str(save.data["results"][0]["player_id"]) == "new", "stored results follow")
+	_check(str(save.data["pending_results"][0]["player_id"]) == "new", "queued results follow")
+	_check(save.auth_token() == "", "the old credential is dropped with the id")
+
+	save.data["current_game"] = {"result_id": "r3"}
+	save.abort_game()
+	_check(not save.has_running_game(), "aborting drops the marker")
+
+	# The session token must survive a crash, or the forfeit rebuilt on the next
+	# launch arrives unverified and flags an honest player.
+	var session := GameSession.new()
+	var level := {"id": "L", "size": 6, "difficulty": 8.0, "stars": 1}
+	session.start(level, "p1", 1000, "test", "sess-token")
+	var marker := session.to_marker()
+	_check(str(marker["session_token"]) == "sess-token", "the marker carries the session token")
+	var forfeit := GameSession.forfeit_from_marker(marker, level, "p1", 2000, "test")
+	_check(forfeit.session_token == "sess-token", "a crash forfeit keeps the token")
+	_check(forfeit.to_dict()["schema"] == 2, "results are schema 2")
+	session.set_session_token("later")
+	_check(session.result.session_token == "later", "the token can arrive after the start")

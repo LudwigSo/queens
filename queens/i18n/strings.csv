@@ -263,3 +263,21 @@ ERR_STORE_CONNECT,Store connection failed (%d): %s,Verbindung zum Store fehlgesc
 ERR_STORE,Store error: %s,Store-Fehler: %s
 ERR_STORE_NOT_CONNECTED,Store not connected,Keine Verbindung zum Store
 ERR_PURCHASE,Purchase failed: %s,Kauf fehlgeschlagen: %s
+#,--- server errors ---,
+ERR_NETWORK,No connection to the server,Keine Verbindung zum Server
+ERR_SERVER,"Server error, please try again later","Serverfehler, bitte versuche es später noch einmal"
+ERR_UNAUTHORIZED,Not signed in to the server,Nicht am Server angemeldet
+ERR_BANNED,This account is blocked,Dieses Konto ist gesperrt
+ERR_BAD_REQUEST,App and server do not understand each other. Please update the app.,App und Server verstehen sich nicht. Bitte aktualisiere die App.
+ERR_RATE_LIMITED,Too many requests. Try again in %d s.,Zu viele Anfragen. Versuche es in %d s noch einmal.
+ERR_ID_TAKEN,This player id is already taken,Diese Spieler-ID ist schon vergeben
+ERR_NICKNAME_INVALID,This nickname is not allowed,Dieser Name ist nicht erlaubt
+ERR_LEVEL_UNKNOWN,The server does not know this level yet,Der Server kennt dieses Level noch nicht
+ERR_LEVEL_LOCKED,This level is locked for another %s,Dieses Level ist noch %s gesperrt
+ERR_SESSION_INVALID,This game could not be verified,Dieses Spiel konnte nicht geprüft werden
+ERR_SESSION_EXPIRED,This game is too old to count,Dieses Spiel ist zu alt und zählt nicht mehr
+ERR_SESSION_USED,This game was already submitted,Dieses Spiel wurde schon übermittelt
+ERR_SESSION_MISMATCH,This game does not belong to this account,Dieses Spiel gehört nicht zu diesem Konto
+ERR_RESULT_INVALID,The server rejected this game,Der Server hat dieses Spiel abgelehnt
+ERR_FRIEND_CODE_UNKNOWN,No player has this code,Kein Spieler hat diesen Code
+ERR_FRIEND_LIMIT,You can follow at most %d players,Du kannst höchstens %d Spielern folgen

@@ -8,6 +8,11 @@ extends Node
 ## coroutine while LocalBackend answers synchronously. A Node so that an
 ## HTTP implementation can own request nodes.
 ##
+## A failure from HttpBackend adds `code` (the ERR_* key), `status`,
+## `permanent` and `params`. Read calls also put the last known value, or an
+## empty shape, in `data`, so a screen that indexes ["data"] without checking
+## ["ok"] keeps working offline.
+##
 ## Record shapes (all Dictionaries):
 ##   PlayerProfile   {player_id, nickname, friend_code, tier, tier_points,
 ##                    created_at, stats}
@@ -16,16 +21,21 @@ extends Node
 ##                    wrong_placements, achieved_at, is_me, is_friend}
 ##   LeagueGroup     {group_id, tier, round_index, size, promote_count,
 ##                    relegate_count, members: [member + rank + zone]}
-##   LeagueStanding  {tier, tier_name, round_index, round_days, round_ends_at,
+##   LeagueStanding  {tier, round_index, round_days, round_ends_at,
 ##                    joined, group, my_rank, my_round_score, my_games, zone,
-##                    my_tier_points, rules, rules_text}
+##                    my_tier_points, rules}
 ##                    rules: {up_pct, down_pct, up_count, up_mode, promo_score,
 ##                    up_to, best_n, round_mode, round_days, global, floor}
+##                    `up_to` is a tier *id*. Names and rule sentences are
+##                    presentation: Views builds them, because a server has no
+##                    locale and must not carry a copy of the translations.
 ##   RoundSummary    {round_index, tier_before, tier_after, outcome, reason,
 ##                    rank, group_size, round_score, tier_points, best_game,
 ##                    seen}; reason "round" (a round ended) or "score" (the
 ##                    tier points reached promo_score mid-round)
-##   FriendEntry     {player_id, nickname, tier, round_score, friend_since}
+##   FriendEntry     {player_id, nickname, tier, round_score, friend_since,
+##                    friend_code}; following is directed (I follow you), with
+##                    no accept step, and is capped per player.
 ##
 ## A round is the scoring period of a tier (3 days in Bronze, a week
 ## elsewhere; see LeagueRules). Round indices are only comparable within one
@@ -113,4 +123,10 @@ func add_friend(_code: String) -> Dictionary:
 
 
 func remove_friend(_player_id: String) -> Dictionary:
+	return fail("not implemented")
+
+
+## Erases the account on the server. There is no recovery: the credential
+## lives on this device only.
+func delete_account() -> Dictionary:
 	return fail("not implemented")
