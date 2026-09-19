@@ -11,7 +11,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: write
     steps:
@@ -56,11 +56,30 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
 
+      # A release APK must not ship a build that fails its own tests. The
+      # 4-million-case sweep runs in the server workflow instead, where it is
+      # compared against the Go port.
+      - name: Test suite
+        working-directory: queens
+        env:
+          QUEENS_FAST_TESTS: "1"
+        run: |
+          "$ANDROID_HOME/platform-tools/adb" start-server
+          godot --headless --import
+          godot --headless --script tests/run_tests.gd
+
       - name: Set version from run number
         working-directory: queens
         run: |
           sed -i "s|^version/code=.*|version/code=${{ github.run_number }}|" export_presets.cfg
           sed -i "s|^version/name=.*|version/name=\"1.0.${{ github.run_number }}\"|" export_presets.cfg
+          # The build number reaches the server with every result, so a bug can
+          # be traced to the build that produced it.
+          sed -i "s|^var client_version: String = .*|var client_version: String = \"1.0.${{ github.run_number }}\"|" scripts/config.gd
+          # Optional: point a build at a server without a commit.
+          if [ -n "${{ vars.QUEENS_SERVER_URL }}" ]; then
+            sed -i "s|^const SERVER_URL_RELEASE := .*|const SERVER_URL_RELEASE := \"${{ vars.QUEENS_SERVER_URL }}\"|" scripts/config.gd
+          fi
 
       - name: Export signed APK
         working-directory: queens
