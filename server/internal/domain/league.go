@@ -1,7 +1,10 @@
 package domain
 
 import (
+	"bytes"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -435,4 +438,13 @@ func (c *LeagueConfig) Apply(tierID, outcome string) string {
 		return c.RelegateTier(tierID)
 	}
 	return tierID
+}
+
+// LeagueConfigHash is the digest of the shared config file, with CR stripped so
+// a CRLF checkout on Windows hashes the same as a LF one on Linux. The client
+// sends its own hash so drift between the two copies is visible.
+func LeagueConfigHash() string {
+	clean := bytes.ReplaceAll(leagueJSON, []byte("\r"), nil)
+	sum := sha256.Sum256(clean)
+	return hex.EncodeToString(sum[:])
 }

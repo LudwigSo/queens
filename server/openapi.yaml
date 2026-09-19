@@ -1,0 +1,1376 @@
+components:
+  schemas:
+    AckInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/AckInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        round_index:
+          format: int64
+          minimum: 0
+          type: integer
+      required:
+        - round_index
+      type: object
+    AddFriendInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/AddFriendInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        code:
+          description: QN- plus six of [A-Z2-7]; case and spacing are normalised.
+          maxLength: 16
+          minLength: 1
+          type: string
+      required:
+        - code
+      type: object
+    BestGame:
+      additionalProperties: false
+      properties:
+        level_id:
+          type: string
+        score:
+          format: int64
+          type: integer
+      required:
+        - level_id
+        - score
+      type: object
+    BootstrapOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/BootstrapOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        config_hash:
+          type: string
+        cooldown_seconds:
+          format: int64
+          type: integer
+        friend_limit:
+          format: int64
+          type: integer
+        league_config:
+          description: The shared league.json, verbatim.
+        level_meta:
+          additionalProperties:
+            $ref: "#/components/schemas/LevelMetaEntry"
+          type: object
+        level_set_hash:
+          type: string
+        pending_summary:
+          $ref: "#/components/schemas/SummaryView"
+        profile:
+          $ref: "#/components/schemas/ProfileView"
+        server_time:
+          format: int64
+          type: integer
+        standing:
+          $ref: "#/components/schemas/StandingView"
+      required:
+        - server_time
+        - profile
+        - league_config
+        - config_hash
+        - level_set_hash
+        - cooldown_seconds
+        - level_meta
+        - standing
+        - friend_limit
+      type: object
+    ErrorDetail:
+      additionalProperties: false
+      properties:
+        location:
+          description: Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'
+          type: string
+        message:
+          description: Error message text
+          type: string
+        value:
+          description: The value at the given location
+      type: object
+    FriendRow:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/FriendRow.json
+          format: uri
+          readOnly: true
+          type: string
+        friend_code:
+          type: string
+        friend_since:
+          format: int64
+          type: integer
+        nickname:
+          type: string
+        player_id:
+          type: string
+        round_score:
+          format: int64
+          type: integer
+        tier:
+          type: string
+      required:
+        - player_id
+        - nickname
+        - tier
+        - round_score
+        - friend_since
+        - friend_code
+      type: object
+    FriendsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/FriendsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        friends:
+          items:
+            $ref: "#/components/schemas/FriendRow"
+          type:
+            - array
+            - "null"
+        limit:
+          format: int64
+          type: integer
+      required:
+        - friends
+        - limit
+      type: object
+    GroupView:
+      additionalProperties: false
+      properties:
+        group_id:
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/Member"
+          type:
+            - array
+            - "null"
+        promote_count:
+          format: int64
+          type: integer
+        relegate_count:
+          format: int64
+          type: integer
+        round_index:
+          format: int64
+          type: integer
+        size:
+          format: int64
+          type: integer
+        tier:
+          type: string
+      required:
+        - group_id
+        - tier
+        - round_index
+        - size
+        - promote_count
+        - relegate_count
+        - members
+      type: object
+    LeaderboardEntry:
+      additionalProperties: false
+      properties:
+        achieved_at:
+          format: int64
+          type: integer
+        is_friend:
+          type: boolean
+        is_me:
+          type: boolean
+        nickname:
+          type: string
+        player_id:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        score:
+          format: int64
+          type: integer
+        time_seconds:
+          format: double
+          type: number
+        wrong_placements:
+          format: int64
+          type: integer
+      required:
+        - rank
+        - player_id
+        - nickname
+        - score
+        - time_seconds
+        - wrong_placements
+        - achieved_at
+        - is_me
+        - is_friend
+      type: object
+    LeaderboardView:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/LeaderboardView.json
+          format: uri
+          readOnly: true
+          type: string
+        entries:
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+          type:
+            - array
+            - "null"
+        my_entry:
+          $ref: "#/components/schemas/LeaderboardEntry"
+        my_rank:
+          format: int64
+          type: integer
+        par_seconds:
+          format: double
+          type: number
+        total_players:
+          format: int64
+          type: integer
+      required:
+        - entries
+        - my_rank
+        - total_players
+        - par_seconds
+      type: object
+    LevelBrief:
+      additionalProperties: false
+      properties:
+        difficulty:
+          format: double
+          type: number
+        par_seconds:
+          format: double
+          type: number
+        size:
+          format: int64
+          type: integer
+        stars:
+          format: int64
+          type: integer
+      required:
+        - size
+        - difficulty
+        - stars
+        - par_seconds
+      type: object
+    LevelMetaEntry:
+      additionalProperties: false
+      properties:
+        locked_until:
+          format: int64
+          type: integer
+        par_seconds:
+          format: double
+          type: number
+      required:
+        - par_seconds
+        - locked_until
+      type: object
+    LevelMetaView:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/LevelMetaView.json
+          format: uri
+          readOnly: true
+          type: string
+        cooldown_seconds:
+          format: int64
+          type: integer
+        level_set_hash:
+          type: string
+        levels:
+          additionalProperties:
+            $ref: "#/components/schemas/LevelMetaEntry"
+          type: object
+        server_time:
+          format: int64
+          type: integer
+      required:
+        - levels
+        - level_set_hash
+        - cooldown_seconds
+        - server_time
+      type: object
+    Member:
+      additionalProperties: false
+      properties:
+        games:
+          format: int64
+          type: integer
+        is_friend:
+          type: boolean
+        is_me:
+          type: boolean
+        last_submit_at:
+          format: int64
+          type: integer
+        nickname:
+          type: string
+        player_id:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        round_score:
+          format: int64
+          type: integer
+        zone:
+          type: string
+      required:
+        - player_id
+        - nickname
+        - round_score
+        - games
+        - last_submit_at
+        - is_me
+        - is_friend
+        - rank
+        - zone
+      type: object
+    PatchMeInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/PatchMeInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        nickname:
+          maxLength: 64
+          minLength: 1
+          type: string
+      required:
+        - nickname
+      type: object
+    Problem:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/Problem.json
+          format: uri
+          readOnly: true
+          type: string
+        code:
+          description: ERR_* key the client localises.
+          type: string
+        detail:
+          description: English, for developers. Never shown to a player.
+          type: string
+        errors:
+          description: Field-level validation details.
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+          type:
+            - array
+            - "null"
+        instance:
+          description: Request id.
+          type: string
+        params:
+          description: Positional parameters for the localised string.
+          items: {}
+          type:
+            - array
+            - "null"
+        status:
+          format: int64
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+      required:
+        - title
+        - status
+        - code
+        - params
+      type: object
+    ProfileView:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/ProfileView.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: int64
+          type: integer
+        friend_code:
+          type: string
+        nickname:
+          type: string
+        player_id:
+          type: string
+        stats:
+          $ref: "#/components/schemas/StatsView"
+        tier:
+          type: string
+        tier_points:
+          format: int64
+          type: integer
+      required:
+        - player_id
+        - nickname
+        - friend_code
+        - tier
+        - tier_points
+        - created_at
+        - stats
+      type: object
+    RegisterInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/RegisterInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        client_version:
+          maxLength: 32
+          type: string
+        nickname:
+          description: Trimmed and NFKC-normalised server-side; 2..16 runes after that.
+          maxLength: 64
+          minLength: 1
+          type: string
+        player_id:
+          description: Client-generated v4 UUID. A name, not an authenticator.
+          format: uuid
+          type: string
+      required:
+        - player_id
+        - nickname
+      type: object
+    RegisterOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/RegisterOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        issued_at:
+          format: int64
+          type: integer
+        profile:
+          $ref: "#/components/schemas/ProfileView"
+        server_time:
+          format: int64
+          type: integer
+        token:
+          description: Shown once. Empty when the caller already had a valid token.
+          type: string
+      required:
+        - profile
+        - server_time
+      type: object
+    ResultPayload:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/ResultPayload.json
+          format: uri
+          readOnly: true
+          type: string
+        clear_count:
+          format: int64
+          maximum: 100000
+          minimum: 0
+          type: integer
+        client_version:
+          maxLength: 32
+          type: string
+        completed:
+          type: boolean
+        difficulty:
+          description: Overridden from the level row.
+          format: double
+          type: number
+        elapsed_seconds:
+          description: Clamped into a humanly possible range.
+          format: double
+          maximum: 1000000
+          minimum: 0
+          type: number
+        finished_at:
+          description: Clamped to the server clock.
+          format: int64
+          type: integer
+        hint_count:
+          format: int64
+          maximum: 1000
+          minimum: 0
+          type: integer
+        level_id:
+          description: "Ignored when a session token is present: the session decides."
+          type: string
+        par_seconds:
+          description: IGNORED. Par is the numerator of the speed factor and must be the server's.
+          format: double
+          type: number
+        player_id:
+          description: Ignored; the bearer decides. A mismatch is flagged.
+          type: string
+        queens_placed:
+          format: int64
+          maximum: 100000
+          minimum: 0
+          type: integer
+        queens_removed:
+          format: int64
+          maximum: 100000
+          minimum: 0
+          type: integer
+        result_id:
+          description: Idempotency key, generated by the client.
+          format: uuid
+          type: string
+        schema:
+          format: int64
+          maximum: 9
+          minimum: 1
+          type: integer
+        score:
+          description: Kept only to compare against the recomputed score.
+          format: int64
+          type: integer
+        session_token:
+          description: "Empty means unverified: the result counts but never reaches a leaderboard."
+          maxLength: 128
+          type: string
+        size:
+          description: Overridden from the level row.
+          format: int64
+          type: integer
+        stars:
+          description: Overridden from the level row.
+          format: int64
+          type: integer
+        started_at:
+          format: int64
+          type: integer
+        taps:
+          format: int64
+          maximum: 1000000
+          minimum: 0
+          type: integer
+        week_index:
+          description: IGNORED.
+          format: int64
+          type: integer
+        wrong_placements:
+          format: int64
+          maximum: 100000
+          minimum: 0
+          type: integer
+      required:
+        - result_id
+        - level_id
+        - elapsed_seconds
+        - completed
+      type: object
+    RulesView:
+      additionalProperties: false
+      properties:
+        best_n:
+          format: int64
+          type: integer
+        down_pct:
+          format: int64
+          type: integer
+        floor:
+          type: boolean
+        global:
+          type: boolean
+        promo_score:
+          format: int64
+          type: integer
+        round_days:
+          format: int64
+          type: integer
+        round_mode:
+          type: string
+        up_count:
+          format: int64
+          type: integer
+        up_mode:
+          type: string
+        up_pct:
+          format: int64
+          type: integer
+        up_to:
+          type: string
+      required:
+        - up_pct
+        - down_pct
+        - up_count
+        - up_mode
+        - promo_score
+        - up_to
+        - best_n
+        - round_mode
+        - round_days
+        - global
+        - floor
+      type: object
+    SessionView:
+      additionalProperties: false
+      properties:
+        expires_at:
+          format: int64
+          type: integer
+        issued_at:
+          format: int64
+          type: integer
+        level:
+          $ref: "#/components/schemas/LevelBrief"
+        token:
+          type: string
+      required:
+        - token
+        - issued_at
+        - expires_at
+        - level
+      type: object
+    StandingView:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/StandingView.json
+          format: uri
+          readOnly: true
+          type: string
+        config_hash:
+          type: string
+        group:
+          $ref: "#/components/schemas/GroupView"
+        joined:
+          type: boolean
+        my_games:
+          format: int64
+          type: integer
+        my_rank:
+          format: int64
+          type: integer
+        my_round_score:
+          format: int64
+          type: integer
+        my_tier_points:
+          format: int64
+          type: integer
+        round_days:
+          format: int64
+          type: integer
+        round_ends_at:
+          format: int64
+          type: integer
+        round_index:
+          format: int64
+          type: integer
+        rules:
+          $ref: "#/components/schemas/RulesView"
+        tier:
+          type: string
+        zone:
+          type: string
+      required:
+        - tier
+        - round_index
+        - round_days
+        - round_ends_at
+        - joined
+        - my_rank
+        - my_round_score
+        - my_games
+        - my_tier_points
+        - rules
+        - config_hash
+      type: object
+    StartGameInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/StartGameInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        integrity_token:
+          description: Reserved for Play Integrity; ignored today.
+          type: string
+        level_id:
+          format: uuid
+          type: string
+      required:
+        - level_id
+      type: object
+    StartGameResult:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/StartGameResult.json
+          format: uri
+          readOnly: true
+          type: string
+        group_id:
+          type: string
+        joined:
+          type: boolean
+        locked_until:
+          format: int64
+          type: integer
+        round_index:
+          format: int64
+          type: integer
+        server_time:
+          format: int64
+          type: integer
+        session:
+          $ref: "#/components/schemas/SessionView"
+        tier:
+          type: string
+      required:
+        - round_index
+        - group_id
+        - joined
+        - tier
+        - locked_until
+        - session
+        - server_time
+      type: object
+    StatsView:
+      additionalProperties: false
+      properties:
+        best_score:
+          format: int64
+          type: integer
+        flawless:
+          format: int64
+          type: integer
+        games:
+          format: int64
+          type: integer
+        rounds_played:
+          format: int64
+          type: integer
+      required:
+        - games
+        - flawless
+        - best_score
+        - rounds_played
+      type: object
+    SummaryView:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/SummaryView.json
+          format: uri
+          readOnly: true
+          type: string
+        best_game:
+          $ref: "#/components/schemas/BestGame"
+        group_size:
+          format: int64
+          type: integer
+        outcome:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        reason:
+          type: string
+        round_index:
+          format: int64
+          type: integer
+        round_score:
+          format: int64
+          type: integer
+        seen:
+          type: boolean
+        tier_after:
+          type: string
+        tier_before:
+          type: string
+        tier_points:
+          format: int64
+          type: integer
+      required:
+        - round_index
+        - tier_before
+        - tier_after
+        - outcome
+        - reason
+        - rank
+        - group_size
+        - round_score
+        - tier_points
+        - seen
+      type: object
+    TimeOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/TimeOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        server_time:
+          format: int64
+          type: integer
+      required:
+        - server_time
+      type: object
+info:
+  description: Identity, results, per-level leaderboards, the league and friends for the Queens puzzle game. Errors are application/problem+json and carry a stable ERR_* code plus positional params; the client localises them.
+  title: Queens API
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /v1/bootstrap:
+    get:
+      operationId: bootstrap
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapOutputBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Everything the client needs at launch
+      tags:
+        - meta
+  /v1/friends:
+    get:
+      operationId: list-friends
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendsOutputBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: The players I follow
+      tags:
+        - friends
+    post:
+      description: "Following is directed: adding someone does not make them follow you back."
+      operationId: add-friend
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddFriendInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendRow"
+          description: Created
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Follow a friend code
+      tags:
+        - friends
+  /v1/friends/{player_id}:
+    delete:
+      operationId: remove-friend
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+        - in: path
+          name: player_id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Unfollow
+      tags:
+        - friends
+  /v1/games:
+    post:
+      description: Mints the timed session that POST /v1/results needs.
+      operationId: start-game
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartGameInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartGameResult"
+          description: Created
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Start a game
+      tags:
+        - play
+  /v1/league/standing:
+    get:
+      operationId: league-standing
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandingView"
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: My league standing
+      tags:
+        - league
+  /v1/league/summary:
+    get:
+      description: 204 when nothing is pending.
+      operationId: round-summary
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryView"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: The newest unseen round summary
+      tags:
+        - league
+  /v1/league/summary/ack:
+    post:
+      description: "Always 204: an index that does not match the pending summary is ignored, never an error."
+      operationId: ack-round-summary
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AckInputBody"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Mark the summary seen
+      tags:
+        - league
+  /v1/levels/meta:
+    get:
+      description: Strongly ETagged. The body is per player, so the tag combines the level-set hash with a digest of this player's own starts.
+      operationId: level-meta
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+        - in: header
+          name: If-None-Match
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevelMetaView"
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+            ETag:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Par and cooldown for every level
+      tags:
+        - boards
+  /v1/levels/{id}/leaderboard:
+    get:
+      operationId: level-leaderboard
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - explode: false
+          in: query
+          name: scope
+          schema:
+            default: global
+            enum:
+              - global
+              - friends
+              - flawless
+            type: string
+        - explode: false
+          in: query
+          name: limit
+          schema:
+            default: 10
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardView"
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: One level's leaderboard
+      tags:
+        - boards
+  /v1/me:
+    delete:
+      description: "Removes the player and everything that hangs off them. There is no recovery: the account lives on this device only."
+      operationId: delete-me
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Delete my account
+      tags:
+        - identity
+    get:
+      operationId: get-me
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileView"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: My profile
+      tags:
+        - identity
+    patch:
+      operationId: set-nickname
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMeInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileView"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Rename
+      tags:
+        - identity
+  /v1/players:
+    post:
+      description: Creates an account for a client-chosen UUID. 409 ERR_ID_TAKEN if it exists.
+      operationId: register-player
+      parameters:
+        - description: Optional. A bearer for this same player makes the call idempotent.
+          in: header
+          name: Authorization
+          schema:
+            description: Optional. A bearer for this same player makes the call idempotent.
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterOutputBody"
+          description: Created
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Register
+      tags:
+        - identity
+  /v1/results:
+    post:
+      description: "Idempotent by result_id: a replay returns the stored response with 200. Every score is recomputed from the server's own level row."
+      operationId: submit-result
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResultPayload"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                description: The stored response; a replay returns the same bytes.
+          description: Created
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Submit a result
+      tags:
+        - play
+  /v1/time:
+    get:
+      description: An explicit resync point; every response also carries X-Server-Time.
+      operationId: get-time
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeOutputBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Server time
+      tags:
+        - meta
+servers:
+  - url: /
