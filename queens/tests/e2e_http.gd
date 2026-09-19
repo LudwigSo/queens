@@ -101,7 +101,11 @@ func _run() -> void:
 	_check(replay["ok"] and int(replay["data"]["breakdown"]["score"]) == int(data["breakdown"]["score"]), "a replay returns the stored answer")
 
 	var standing: Dictionary = (await backend.get_league_standing())["data"]
-	_check(bool(standing["joined"]) and int(standing["my_rank"]) == 1, "the standing shows the game")
+	# No assumption that this is the only player: the same server may already
+	# hold games from a manual run.
+	_check(bool(standing["joined"]) and int(standing["my_rank"]) >= 1, "the standing shows the game")
+	_check(int(standing["my_round_score"]) == int(data["breakdown"]["score"]), "the round score is the game just played")
+	_check(int(standing["my_games"]) == 1, "one game this round")
 	_check(str(standing["rules"]["up_to"]) == "silver", "up_to is a tier id")
 	_check(not standing.has("rules_text") and not standing.has("tier_name"), "no prose on the wire")
 	var view := Views.league_screen(standing, [], cfg.league)

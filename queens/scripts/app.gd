@@ -40,12 +40,10 @@ func _ready() -> void:
 	energy = EnergyLedger.new(save, config)
 	apply_settings()
 	save.changed.connect(_queue_save)
-	# Awaited from here on: with a networked backend these are coroutines, and
-	# firing them off unawaited raced the save file.
-	await _start_backend()
-	await _forfeit_dangling_game()
-	await flush_pending_results()
-	backend_ready.emit()
+	# Everything the first screen needs must exist before the first await. This
+	# autoload's _ready became a coroutine when the backend went networked, and a
+	# coroutine suspends: the main scene's _ready runs at the first await, and it
+	# connects to App.ads and App.purchases straight away.
 	_select_providers()
 	ads.reward_earned.connect(_on_reward_earned)
 	purchases.products_updated.connect(_on_products_updated)
@@ -55,6 +53,12 @@ func _ready() -> void:
 	purchases.start()
 	purchases.query_products([config.unlimited_product_id])
 	purchases.restore()
+	# Awaited from here on: with a networked backend these are coroutines, and
+	# firing them off unawaited raced the save file.
+	await _start_backend()
+	await _forfeit_dangling_game()
+	await flush_pending_results()
+	backend_ready.emit()
 
 
 ## Pushes the persisted settings into the language, motion and audio systems.
