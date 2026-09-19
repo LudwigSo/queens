@@ -3,8 +3,12 @@ extends RefCounted
 ## One finished (or forfeited) game: the level, the timing and the counters
 ## that scoring and leaderboards are built on. Stored as a Dictionary in the
 ## save file and sent as-is to the backend.
+##
+## from_dict() casts every field, so it doubles as the wire normaliser:
+## after a save/load round trip every int in the dictionary is a float, and
+## the server rejects 6.0 where it expects 6.
 
-const SCHEMA := 1
+const SCHEMA := 2
 
 var result_id: String = ""
 var player_id: String = ""
@@ -26,6 +30,11 @@ var taps: int = 0
 var week_index: int = 0
 var score: int = 0                     ## Scoring.score(); 0 for a forfeit.
 var client_version: String = ""
+## Proof that this game was started through the server. Empty when it was
+## started offline: the result still counts, but it never reaches a
+## leaderboard. Carried in the crash marker too, or a forfeit rebuilt after
+## a crash would arrive unverified.
+var session_token: String = ""
 
 
 func to_dict() -> Dictionary:
@@ -51,6 +60,7 @@ func to_dict() -> Dictionary:
 		"week_index": week_index,
 		"score": score,
 		"client_version": client_version,
+		"session_token": session_token,
 	}
 
 
@@ -76,4 +86,5 @@ static func from_dict(d: Dictionary) -> GameResult:
 	r.week_index = int(d.get("week_index", 0))
 	r.score = int(d.get("score", 0))
 	r.client_version = str(d.get("client_version", ""))
+	r.session_token = str(d.get("session_token", ""))
 	return r

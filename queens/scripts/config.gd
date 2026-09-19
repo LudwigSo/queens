@@ -50,21 +50,25 @@ var backend_path: String = "user://backend_local.json"
 ## base matures. Challenger is the capped top: one slot per
 ## `players_per_slot` Diamond players (5..50), half of it relegated every
 ## round, and Diamond promotes exactly the number of slots that opens.
-var league: Dictionary = {
-	"group_size": 30,
-	"min_group_size": 5,
-	"round_mode": "best_n",
-	"round_best_n": 15,
-	"tiers": [
-		{"id": "bronze", "name": "Bronze", "round_days": 3, "up_mode": "score", "promo_score": 3000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
-		{"id": "silver", "name": "Silver", "round_days": 7, "up_mode": "score", "promo_score": 10000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
-		{"id": "gold", "name": "Gold", "round_days": 7, "up_pct": 20, "down_pct": 0, "inactive": "stay", "floor": true, "min_promo_score": 1500},
-		{"id": "platinum", "name": "Platinum", "round_days": 7, "up_pct": 15, "down_pct": 25, "inactive": "relegate", "min_promo_score": 2500},
-		{"id": "diamond", "name": "Diamond", "round_days": 7, "up_mode": "openings", "up_pct": 0, "down_pct": 20, "inactive": "relegate", "min_promo_score": 0, "global": true},
-		{"id": "challenger", "name": "Challenger", "round_days": 7, "up_pct": 0, "down_pct": 50, "inactive": "relegate", "min_promo_score": 0, "global": true,
-			"min_slots": 5, "max_slots": 50, "players_per_slot": 10},
-	],
-}
+var league: Dictionary = LeagueConfigFile.load_default()
+
+## Base URL of the backend, or "" for offline play against the local stub.
+##
+## Release builds get SERVER_URL_RELEASE, everything else (the editor, the
+## headless test suite, debug APKs) stays offline, so a test run can never
+## reach a real server. QUEENS_SERVER_URL overrides both on desktop.
+const SERVER_URL_RELEASE := ""
+const SERVER_URL_DEBUG := ""
+var server_url: String = _default_server_url()
+
+
+static func _default_server_url() -> String:
+	var from_env := OS.get_environment("QUEENS_SERVER_URL")
+	if from_env != "":
+		return from_env
+	if OS.has_feature("editor") or OS.has_feature("debug"):
+		return SERVER_URL_DEBUG
+	return SERVER_URL_RELEASE
 
 ## AdMob test unit id for rewarded ads; replace with the real one for release.
 var admob_rewarded_unit_id: String = "ca-app-pub-3940256099942544/5224354917"

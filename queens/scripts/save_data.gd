@@ -2,8 +2,11 @@ class_name SaveData
 extends RefCounted
 ## The player's save file: a versioned JSON document at user://save.json.
 ##
-## Layout (version 1):
+## Layout (version 2):
 ##   player        id (uuid), nickname, created_at
+##   auth          player_id, token, issued_at - the server credential, stored
+##                 in the clear. The token is exactly as strong as the device,
+##                 and anyone who can read this file already owns the device.
 ##   energy        amount, unlimited, purchase_token, ads_watched
 ##   last_game     {level_id, difficulty, started_at} or {} - the last game *started*
 ##   current_game  marker of a running game (so a killed app yields a forfeit) or {}
@@ -19,7 +22,7 @@ extends RefCounted
 
 signal changed
 
-const VERSION := 1
+const VERSION := 2
 
 var data: Dictionary = {}
 var path: String = ""
@@ -34,6 +37,7 @@ static func defaults(cfg: GameConfig) -> Dictionary:
 			"nickname": "Player-" + id.substr(0, 4),
 			"created_at": int(Time.get_unix_time_from_system()),
 		},
+		"auth": auth_defaults(),
 		"energy": {
 			"amount": cfg.start_energy,
 			"unlimited": false,
@@ -47,6 +51,12 @@ static func defaults(cfg: GameConfig) -> Dictionary:
 		"pending_results": [],
 		"settings": settings_defaults(),
 	}
+
+
+## The server credential. Empty until the player registers, and never filled
+## in at all while GameConfig.server_url is "".
+static func auth_defaults() -> Dictionary:
+	return {"player_id": "", "token": "", "issued_at": 0}
 
 
 ## Player settings, all with a default so screens never check for keys.
@@ -146,7 +156,16 @@ static func migrate(dict: Dictionary, cfg: GameConfig) -> Dictionary:
 					if not dict.has(key):
 						dict[key] = base[key]
 				version = 1
+			1:
+				# The server credential arrived with version 2.
+				dict["auth"] = auth_defaults()
+				version = 2
 		dict["version"] = version
+	if not dict.get("auth") is Dictionary:
+		dict["auth"] = auth_defaults()
+	for key in auth_defaults():
+		if not dict["auth"].has(key):
+			dict["auth"][key] = auth_defaults()[key]
 	# Fill missing settings and per-level fields so callers can index without checks.
 	if not dict.get("settings") is Dictionary:
 		dict["settings"] = {}
@@ -205,6 +224,45 @@ func player_id() -> String:
 
 func nickname() -> String:
 	return str(data["player"]["nickname"])
+
+
+func auth() -> Dictionary:
+	return data["auth"]
+
+
+func auth_token() -> String:
+	return str(data["auth"].get("token", ""))
+
+
+func set_auth(player_id_value: String, token: String, issued_at: int) -> void:
+	data["auth"] = {"player_id": player_id_value, "token": token, "issued_at": issued_at}
+	mark_changed()
+
+
+func clear_auth() -> void:
+	data["auth"] = auth_defaults()
+	mark_changed()
+
+
+## Gives the player a new id while keeping their progress. Needed only when the
+## server reports the id as taken, which takes a collision between two 122-bit
+## random values, and the queued results have to follow or they would be
+## submitted under a player that no longer exists.
+func rekey_player(new_id: String) -> void:
+	data["player"]["id"] = new_id
+	for r in data["results"]:
+		r["player_id"] = new_id
+	for r in data["pending_results"]:
+		r["player_id"] = new_id
+	data["auth"] = auth_defaults()
+	mark_changed()
+
+
+## Drops the marker of a game the server refused to start, so the next launch
+## does not forfeit a game that never happened.
+func abort_game() -> void:
+	data["current_game"] = {}
+	mark_changed()
 
 
 ## The per-level record, created with defaults when the level is unknown.

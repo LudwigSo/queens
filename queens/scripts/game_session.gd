@@ -18,7 +18,7 @@ var finished: bool = false
 var _board: BoardModel = null
 
 
-func start(level: Dictionary, player_id: String, now: int, client_version: String = "") -> void:
+func start(level: Dictionary, player_id: String, now: int, client_version: String = "", session_token: String = "") -> void:
 	result = GameResult.new()
 	result.result_id = SaveData.new_uuid()
 	result.player_id = player_id
@@ -29,8 +29,15 @@ func start(level: Dictionary, player_id: String, now: int, client_version: Strin
 	result.par_seconds = Scoring.par_seconds(result.difficulty, result.size)
 	result.started_at = now
 	result.client_version = client_version
+	result.session_token = session_token
 	running = false
 	finished = false
+
+
+## The session token arrives after the game has already started: the client
+## does not wait for the server before showing the board.
+func set_session_token(token: String) -> void:
+	result.session_token = token
 
 
 ## Connects to the board's signals. Only one session may be attached at a time.
@@ -100,6 +107,9 @@ func to_marker() -> Dictionary:
 		"clear_count": result.clear_count,
 		"hint_count": result.hint_count,
 		"taps": result.taps,
+		# Without this a forfeit rebuilt after a crash would arrive with no
+		# session and be treated as unverified, on an honest player.
+		"session_token": result.session_token,
 	}
 
 
@@ -126,6 +136,7 @@ static func forfeit_from_marker(marker: Dictionary, level: Dictionary, player_id
 	r.taps = int(marker.get("taps", 0))
 	r.week_index = Scoring.week_index(r.finished_at)
 	r.client_version = client_version
+	r.session_token = str(marker.get("session_token", ""))
 	return r
 
 

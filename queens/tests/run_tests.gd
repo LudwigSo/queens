@@ -1483,12 +1483,17 @@ func _test_loc() -> void:
 	var prefixes: Array = []
 	var script_files: Array = []
 	_files_under("res://scripts", ".gd", script_files)
+	# Upper-snake string literals that are not translation keys: environment
+	# variable names and the like.
+	var not_keys := ["QUEENS_SERVER_URL"]
 	var lit_re := RegEx.create_from_string("\"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_?)\"")
 	var plural_re := RegEx.create_from_string("plural\\(\\s*\"([A-Z0-9_]+)\"")
 	for path in script_files:
 		var text := _read(path)
 		for m in lit_re.search_all(text):
 			var lit := m.get_string(1)
+			if not_keys.has(lit):
+				continue
 			if lit.ends_with("_"):
 				prefixes.append(lit)
 			elif key_re.search(lit) != null:
