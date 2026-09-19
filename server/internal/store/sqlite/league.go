@@ -216,13 +216,16 @@ func (q *leagueRepo) MarkMemberLeft(ctx context.Context, playerID, tier string, 
 	return mapErr(err)
 }
 
+// The sort keys, spelled twice: unqualified for single-table queries and
+// qualified for the ones that join players, which also has a `games` column.
 const memberSort = `round_score DESC, games ASC, last_submit_at ASC, player_id ASC`
+const memberSortQ = `lm.round_score DESC, lm.games ASC, lm.last_submit_at ASC, lm.player_id ASC`
 
 func (q *leagueRepo) GroupMembersSorted(ctx context.Context, groupID string) ([]domain.Member, error) {
 	rows, err := q.r.QueryContext(ctx,
 		`SELECT lm.player_id, p.nickname, lm.round_score, lm.games, lm.last_submit_at, lm.left_at
 		   FROM league_members lm JOIN players p ON p.id = lm.player_id
-		  WHERE lm.group_id = ? ORDER BY lm.`+memberSort, groupID)
+		  WHERE lm.group_id = ? ORDER BY `+memberSortQ, groupID)
 	if err != nil {
 		return nil, mapErr(err)
 	}
@@ -283,7 +286,7 @@ func (q *leagueRepo) StandingWindow(ctx context.Context, groupID, me string, top
 	rows, err := q.r.QueryContext(ctx, `
 		WITH ranked AS (
 		  SELECT lm.player_id, lm.round_score, lm.games, lm.last_submit_at,
-		         ROW_NUMBER() OVER (ORDER BY lm.`+memberSort+`) AS rn
+		         ROW_NUMBER() OVER (ORDER BY `+memberSortQ+`) AS rn
 		    FROM league_members lm WHERE lm.group_id = ?)
 		SELECT r.player_id, p.nickname, r.round_score, r.games, r.last_submit_at, r.rn,
 		       CASE WHEN f.friend_id IS NULL THEN 0 ELSE 1 END AS is_friend
