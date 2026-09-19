@@ -128,13 +128,24 @@ and the maths in `scripts/league_rules.gd`. Each level also has its own
 leaderboard (best score per player, plus a "fastest flawless" view),
 reachable from the level overview.
 
-There is no server yet. `scripts/backend/backend.gd` is the contract and
-`scripts/backend/local_backend.gd` an offline stand-in that fills the group
-with deterministic bots anchored to your own scores, simulates the round
-rollover on start (with a slowly growing Diamond population and a full
-Challenger), and fabricates friends from friend codes. A real backend
-(for example Supabase) implements the same contract; the client does not
-change.
+`scripts/backend/backend.gd` is the contract. Two implementations exist.
+`local_backend.gd` is the offline stand-in that fills the group with
+deterministic bots anchored to your own scores, simulates the round rollover
+on start, and fabricates friends from friend codes. `http_backend.gd` talks
+to the Go service in `server/`, where scores are recomputed from the
+server's own level table, the league is shared between real players, and
+identity survives a reinstall.
+
+Which one runs is decided by `GameConfig.server_url`, and it is empty
+everywhere except a release build, so the editor, the test suite and the
+screenshot runner always play offline. When the server is unreachable the
+game keeps working: results queue in `pending_results` and drain on the next
+launch, exactly as they do today.
+
+The rules both sides obey live in `shared/league.json`, which the server
+embeds a copy of, and the scoring maths is pinned across the two runtimes by
+`shared/fixtures/` -- four million scores hashed in each and compared. See
+`docs/backend-plan.md`.
 
 ## Design system and assets
 
