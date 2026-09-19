@@ -5,6 +5,7 @@ extends SceneTree
 ## board logic (auto-marking, conflict detection, win detection) behaves.
 
 const Levels := preload("res://scripts/levels.gd")
+const GenFixtures := preload("res://tools/gen_fixtures.gd")
 const BoardScript := preload("res://scripts/board_model.gd")
 const BoardViewScript := preload("res://scripts/board.gd")
 
@@ -51,6 +52,7 @@ func _initialize() -> void:
 	_test_league_config_file()
 	_test_http_backend_pure()
 	_test_auth_storage()
+	_test_fixture_parity()
 	_test_android_providers_degrade()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -1645,3 +1647,84 @@ func _test_auth_storage() -> void:
 	_check(forfeit.to_dict()["schema"] == 2, "results are schema 2")
 	session.set_session_token("later")
 	_check(session.result.session_token == "later", "the token can arrive after the start")
+
+
+## The checked-in fixtures must still describe what this engine produces. The Go
+## port reads the same files, so a drift here is a drift between the two
+## runtimes -- which would mean a player's score differs depending on who added
+## it up.
+##
+## The 4-million-case sweep is skipped when QUEENS_FAST_TESTS is set; CI runs it.
+func _test_fixture_parity() -> void:
+	var dir := ProjectSettings.globalize_path("res://").path_join("../shared/fixtures").simplify_path()
+	var scoring_path := dir.path_join("scoring_cases.json")
+	if not FileAccess.file_exists(scoring_path):
+		_check(false, "the fixtures are missing; run tools/gen_fixtures.gd")
+		return
+	var scoring: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(scoring_path))
+	var bad := ""
+	var checked := 0
+	for c in scoring["cases"]:
+		var result := {
+			"size": int(c["size"]),
+			"difficulty": _from_hex(str(c["difficulty_hex"])),
+			"wrong_placements": int(c["wrong"]),
+			"hint_count": int(c["hints"]),
+			"elapsed_seconds": _from_hex(str(c["elapsed_hex"])),
+			"completed": bool(c["completed"]),
+		}
+		if float(c["par_override"]) > 0.0:
+			result["par_seconds"] = float(c["par_override"])
+		var bd := Scoring.breakdown(result)
+		var expect: Dictionary = c["expect"]
+		if int(bd["score"]) != int(expect["score"]) or int(bd["base"]) != int(expect["base"]):
+			bad = "score %d/%d base %d/%d" % [int(bd["score"]), int(expect["score"]), int(bd["base"]), int(expect["base"])]
+			break
+		if GenFixtures.hex_of(float(bd["speed_factor"])) != str(expect["speed_hex"]):
+			bad = "speed factor moved"
+			break
+		checked += 1
+	_check(bad == "", "the scoring fixtures still match this engine (%s)" % bad)
+	_check(checked > 1000, "the scoring fixtures are substantial (%d cases)" % checked)
+
+	var league: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("league_cases.json")))
+	_check(str(league["config_hash"]) == LeagueConfigFile.hash_of_file(), "the league fixtures were generated from the current config")
+	var cfg := LeagueConfigFile.load_default()
+	var league_bad := ""
+	for c in league["counts"]:
+		var got := LeagueRules.counts(int(c["n"]), LeagueRules.tier(cfg, str(c["tier"])), cfg, int(c["leader"]), int(c["up_count"]))
+		if int(got["up"]) != int(c["expect"]["up"]) or int(got["down"]) != int(c["expect"]["down"]):
+			league_bad = "counts(%s, %d)" % [str(c["tier"]), int(c["n"])]
+			break
+	_check(league_bad == "", "the league fixtures still match (%s)" % league_bad)
+
+	# The sort order is part of the contract: identical members must come out in
+	# the same order on both sides, every time.
+	var order_bad := ""
+	for c in league["evaluate"]:
+		var ev := LeagueRules.evaluate((c["members"] as Array).duplicate(true), str(c["tier"]), cfg, int(c["up_count"]))
+		var expect_members: Array = c["expect"]["members"]
+		for i in expect_members.size():
+			if str(ev["members"][i]["player_id"]) != str(expect_members[i]["player_id"]) or str(ev["members"][i]["zone"]) != str(expect_members[i]["zone"]):
+				order_bad = "%s at %d" % [str(c["tier"]), i]
+				break
+		if order_bad != "":
+			break
+	_check(order_bad == "", "evaluate is deterministic and matches the fixtures (%s)" % order_bad)
+
+	if OS.get_environment("QUEENS_FAST_TESTS") == "1":
+		return
+	var sweep := FileAccess.get_file_as_string(dir.path_join("sweep.sha256"))
+	# The first line is "sha256:<64 hex>"; read it without splitting on an
+	# escape, which is fragile to write through a patch.
+	var want := sweep.strip_edges().substr(7, 64)
+	var digest: Dictionary = GenFixtures.new()._sweep_digest()
+	_check(str(digest["hash"]) == want, "the sweep digest is unchanged (%d cases)" % int(digest["cases"]))
+
+
+static func _from_hex(h: String) -> float:
+	var b := StreamPeerBuffer.new()
+	b.big_endian = true
+	b.data_array = h.hex_decode()
+	b.seek(0)
+	return b.get_double()

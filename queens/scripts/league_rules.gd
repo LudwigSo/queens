@@ -177,7 +177,14 @@ static func round_score(scores: Array, cfg: Dictionary) -> int:
 	return total
 
 
-## Higher score first, then fewer games (more efficient), then earlier submit.
+## Higher score first, then fewer games (more efficient), then earlier submit,
+## then player id.
+##
+## The last key looks redundant and is not: sort_custom is an introsort and is
+## not stable, so two members with an identical (score, games, submit time) come
+## out in an arbitrary order, and rank can flip between two calls -- across a
+## promotion boundary, for a real player. It only orders pairs the first three
+## keys call equal, so nothing else changes.
 static func sort_members(members: Array) -> Array:
 	var sorted := members.duplicate()
 	sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -185,7 +192,9 @@ static func sort_members(members: Array) -> Array:
 			return int(a["round_score"]) > int(b["round_score"])
 		if int(a.get("games", 0)) != int(b.get("games", 0)):
 			return int(a.get("games", 0)) < int(b.get("games", 0))
-		return int(a.get("last_submit_at", 0)) < int(b.get("last_submit_at", 0)))
+		if int(a.get("last_submit_at", 0)) != int(b.get("last_submit_at", 0)):
+			return int(a.get("last_submit_at", 0)) < int(b.get("last_submit_at", 0))
+		return str(a.get("player_id", "")) < str(b.get("player_id", "")))
 	return sorted
 
 
