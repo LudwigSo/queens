@@ -1,0 +1,44 @@
+# Substring denylist for nicknames, matched after NFKC + casefold + removal of
+# every non-alphanumeric rune, so "f.u.c.k" and "F U C K" both match "fuck".
+#
+# Keep this short and obvious. It is a speed bump against the names that would
+# be rendered to other players in a league group, not a moderation system: a
+# determined person will always find a spelling, and the admin CLI rename
+# (queensd admin rename) is the real remedy.
+#
+# --- slurs and sexual terms (en) ---
+nigger
+nigga
+faggot
+retard
+rape
+rapist
+cunt
+whore
+slut
+paedo
+pedo
+molest
+# --- slurs (de) ---
+schwuchtel
+spast
+fotze
+hurensohn
+nutte
+vergewaltig
+# --- hate symbols and figures ---
+hitler
+nazi
+heilhitler
+sieghei
+kkk
+holocaust
+# --- impersonation of the service ---
+queensadmin
+queensteam
+queensstaff
+queenssupport
+adminqueens
+officialqueens
+systemaccount
+moderator
