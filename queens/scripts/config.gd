@@ -9,6 +9,8 @@ var cooldown_seconds: int = 7 * 86400
 var start_energy: int = 10
 ## Energy granted per rewarded ad.
 var ad_reward_energy: int = 10
+## Games every ad leaves playable while it pays back an offline debt.
+var ad_min_playable: int = 2
 ## Upper bound for stored energy; 0 means no cap.
 var energy_cap: int = 0
 ## Google Play product id of the lifetime unlimited-energy purchase.
@@ -34,17 +36,17 @@ var save_path: String = "user://save.json"
 var legacy_cfg_path: String = "user://progress.cfg"
 var backend_path: String = "user://backend_local.json"
 
-## League (see scripts/league_rules.gd). Each tier plays in rounds of
+## League (see scripts/league_rules.gd). A ranked tier plays in rounds of
 ## `round_days` days; the round score is the sum of the best `round_best_n`
 ## games ("best_n") or of all games ("sum"). Per tier: share promoted /
 ## relegated at the end of the round, what happens in a round without a
 ## game, and the score a leader of a tiny group needs.
 ##
-## Bronze and Silver are the on-ramp: `up_mode` "score" promotes the moment
-## the player's tier points (every solved game's score, added up while the
-## player stays in the tier) reach `promo_score`; their rounds only rank the
-## group and nobody moves at the end of one, nobody relegates. Gold is a
-## floor: once reached it is never lost. Platinum
+## Bronze and Silver are the on-ramp: no timer, no group, `up_mode` "score"
+## promotes the moment the player's tier points (every solved game's score,
+## added up while the player stays in the tier) reach `promo_score`, and
+## nobody relegates. Gold and Platinum groups are topped up with bots. Gold is
+## a floor: once reached it is never lost. Platinum
 ## and Diamond are skill-based with movement in both directions; Diamond is
 ## uncapped and, since nobody drops below Gold, grows slowly as the player
 ## base matures. Challenger is the capped top: one slot per

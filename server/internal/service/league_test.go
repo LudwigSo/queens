@@ -79,19 +79,56 @@ func TestStandingRulesCarryIDsNotProse(t *testing.T) {
 	if st.Rules.UpCount != -1 {
 		t.Errorf("a percentage tier reports up_count -1, got %d", st.Rules.UpCount)
 	}
-	if st.Rules.BestN != 15 || st.Rules.RoundDays != 3 {
-		t.Errorf("rules wrong: %+v", st.Rules)
+	// Bronze has no timer: no round length and no end.
+	if st.Rules.BestN != 15 || st.Rules.RoundDays != 0 || st.RoundEndsAt != 0 {
+		t.Errorf("rules wrong: %+v, ends %d", st.Rules, st.RoundEndsAt)
 	}
-	if st.RoundEndsAt <= h.clock.Now() {
-		t.Error("the round must end in the future")
+	h.setTier(t, p, "gold")
+	gold := h.standing(t, p)
+	if gold.Rules.RoundDays != 7 || gold.RoundEndsAt <= h.clock.Now() || gold.Rules.UpTo != "platinum" {
+		t.Errorf("gold rules wrong: %+v, ends %d", gold.Rules, gold.RoundEndsAt)
 	}
 }
 
-// The closer settles a Bronze round: ranks, one summary each, no promotions
-// (Bronze promotes by points only), and re-running it changes nothing.
-func TestCloserBronzeBoundaryIsIdempotent(t *testing.T) {
+// Bronze has no rounds to close: weeks pass, nothing is settled, and the tier
+// points stay where they are.
+func TestBronzeHasNoRoundToClose(t *testing.T) {
 	h := newHarness(t)
-	players := []string{h.register(t, "Ann"), h.register(t, "Bob"), h.register(t, "Cid")}
+	p := h.register(t, "Ann")
+	lv := h.freshLevelAnySize(t)
+	st := h.start(t, p, lv.ID)
+	if st.Joined || st.GroupID != "" {
+		t.Errorf("a bronze start joins nothing, got %+v", st)
+	}
+	h.clock.Add(30)
+	res := h.submit(t, h.payload(p, lv, st, 30, 0, 0))
+	if res.Decoded.GroupSize != 0 || res.Decoded.GroupRank != 0 || res.Decoded.TierPoints == 0 {
+		t.Errorf("a bronze game only adds tier points, got %+v", res.Decoded)
+	}
+	h.clock.Add(60 * 86400)
+	if err := h.svc.CloseDueRounds(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.svc.CatchUp(context.Background(), p); err != nil {
+		t.Fatal(err)
+	}
+	if n := h.summaryCount(t, p); n != 0 {
+		t.Errorf("bronze writes no round summaries, got %d", n)
+	}
+	prof := h.profile(t, p)
+	if prof.Tier != "bronze" || prof.TierPoints != res.Decoded.TierPoints {
+		t.Errorf("after two months: %s with %d points, want bronze with %d", prof.Tier, prof.TierPoints, res.Decoded.TierPoints)
+	}
+	if st := h.standing(t, p); st.Joined || st.Group != nil {
+		t.Error("a bronze standing has no group")
+	}
+}
+
+// The closer settles a Gold round: ranks among people and bots, one summary for
+// each person, none for a bot, and re-running it changes nothing.
+func TestCloserIsIdempotentAndSkipsBots(t *testing.T) {
+	h := newHarness(t)
+	players := []string{h.registerIn(t, "Ann", "gold"), h.registerIn(t, "Bob", "gold"), h.registerIn(t, "Cid", "gold")}
 	// One shared level, so the only thing separating the scores is the time
 	// taken. Different levels have different base points and would decide the
 	// ranking instead.
@@ -102,31 +139,32 @@ func TestCloserBronzeBoundaryIsIdempotent(t *testing.T) {
 		h.clock.Add(int64(elapsed) + 1)
 		h.submit(t, h.payload(p, lv, st, elapsed, 0, 0))
 	}
-	bronze := h.tier(t, "bronze")
-	idx := domain.RoundIndex(bronze, h.clock.Now())
+	gold := h.tier(t, "gold")
+	idx := domain.RoundIndex(gold, h.clock.Now())
 
-	h.clock.Set(domain.RoundEnd(bronze, idx) + 1)
+	h.clock.Set(domain.RoundEnd(gold, idx) + 1)
 	if err := h.svc.CloseDueRounds(context.Background()); err != nil {
 		t.Fatalf("close: %v", err)
 	}
 
+	prev := 0
 	for i, p := range players {
 		sum := h.summary(t, p)
 		if sum == nil {
 			t.Fatalf("player %d has no summary", i)
 		}
-		if sum.Reason != domain.ReasonRound || sum.Outcome != domain.OutcomeStayed {
-			t.Errorf("player %d: got %s/%s, want round/stayed", i, sum.Reason, sum.Outcome)
+		if sum.Reason != domain.ReasonRound || sum.TierBefore != "gold" {
+			t.Errorf("player %d: got %s from %s, want a gold round summary", i, sum.Reason, sum.TierBefore)
 		}
-		if sum.TierBefore != "bronze" || sum.TierAfter != "bronze" {
-			t.Errorf("player %d: bronze never relegates and only promotes by points, got %s->%s", i, sum.TierBefore, sum.TierAfter)
+		if sum.Outcome == domain.OutcomeRelegated {
+			t.Errorf("player %d: gold is a floor", i)
 		}
-		if sum.Rank != i+1 {
-			t.Errorf("player %d: rank %d, want %d", i, sum.Rank, i+1)
+		// Three people and 27 bots: the group is full, and the people keep
+		// their order among themselves.
+		if sum.GroupSize != 30 || sum.Rank <= prev {
+			t.Errorf("player %d: rank %d of %d, want a rank below %d of 30", i, sum.Rank, sum.GroupSize, prev)
 		}
-		if sum.GroupSize != 3 {
-			t.Errorf("player %d: group size %d, want 3", i, sum.GroupSize)
-		}
+		prev = sum.Rank
 	}
 
 	before := h.summaryCount(t, players[0])
@@ -194,15 +232,15 @@ func TestGoldFloorNeverRelegates(t *testing.T) {
 // rounds they missed.
 func TestAbsentPlayerCollapsesToOneSummary(t *testing.T) {
 	h := newHarness(t)
-	p := h.register(t, "Ann")
+	p := h.registerIn(t, "Ann", "gold")
 	lv := h.freshLevelAnySize(t)
 	st := h.start(t, p, lv.ID)
 	h.clock.Add(30)
 	h.submit(t, h.payload(p, lv, st, 30, 0, 0))
 
-	// Five bronze rounds later, without playing.
-	bronze := h.tier(t, "bronze")
-	h.clock.Add(5 * bronze.RoundSeconds())
+	// Five gold weeks later, without playing.
+	gold := h.tier(t, "gold")
+	h.clock.Add(5 * gold.RoundSeconds())
 	if err := h.svc.CatchUp(context.Background(), p); err != nil {
 		t.Fatalf("catch up: %v", err)
 	}
@@ -212,8 +250,8 @@ func TestAbsentPlayerCollapsesToOneSummary(t *testing.T) {
 	if n > 2 {
 		t.Errorf("expected the absence to collapse, got %d summaries", n)
 	}
-	if got := h.profile(t, p).Tier; got != "bronze" {
-		t.Errorf("bronze is inactive=stay, so an absent player stays, got %q", got)
+	if got := h.profile(t, p).Tier; got != "gold" {
+		t.Errorf("gold is a floor, so an absent player stays, got %q", got)
 	}
 	// A second catch-up must be a no-op.
 	if err := h.svc.CatchUp(context.Background(), p); err != nil {
@@ -299,17 +337,21 @@ func TestSummaryAckOnlyOnMatchingIndex(t *testing.T) {
 }
 
 // Groups pack fill-first: 47 players give 30 + 17, both above the min_group_size
-// cliff, and the 30 behaves exactly like the tested case.
+// cliff, and the 30 behaves exactly like the tested case. The 17 are topped up
+// to 30 with bots, so both standings show 30 rows.
 func TestGroupsPackFillFirst(t *testing.T) {
 	h := newHarness(t)
-	players := h.seedTierGroup(t, "bronze", 47)
+	players := h.seedTierGroup(t, "platinum", 47)
 	counts := map[string]int{}
 	for _, p := range players {
 		st := h.standing(t, p)
 		if st.Group == nil {
 			t.Fatalf("player %s did not join", p)
 		}
-		counts[st.Group.GroupID] = st.Group.Size
+		if st.Group.Size != 30 || len(st.Group.Members) != 30 {
+			t.Errorf("every platinum standing is a full 30, got %d (%d rows)", st.Group.Size, len(st.Group.Members))
+		}
+		counts[st.Group.GroupID]++
 	}
 	if len(counts) != 2 {
 		t.Fatalf("expected two groups, got %d: %v", len(counts), counts)

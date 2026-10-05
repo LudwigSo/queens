@@ -1,15 +1,26 @@
 {
-  "format": 1,
+  "format": 2,
   "group_size": 30,
+  "group_max": 50,
   "min_group_size": 5,
   "round_mode": "best_n",
   "round_best_n": 15,
+  "online_grace_s": 600,
   "tiers": [
-    {"id": "bronze", "name": "Bronze", "round_days": 3, "up_mode": "score", "promo_score": 3000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
-    {"id": "silver", "name": "Silver", "round_days": 7, "up_mode": "score", "promo_score": 10000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
-    {"id": "gold", "name": "Gold", "round_days": 7, "up_pct": 20, "down_pct": 0, "inactive": "stay", "floor": true, "min_promo_score": 1500},
-    {"id": "platinum", "name": "Platinum", "round_days": 7, "up_pct": 15, "down_pct": 25, "inactive": "relegate", "min_promo_score": 2500},
-    {"id": "diamond", "name": "Diamond", "round_days": 7, "up_mode": "openings", "up_pct": 0, "down_pct": 20, "inactive": "relegate", "min_promo_score": 0, "global": true},
-    {"id": "challenger", "name": "Challenger", "round_days": 7, "up_pct": 0, "down_pct": 50, "inactive": "relegate", "min_promo_score": 0, "global": true, "min_slots": 5, "max_slots": 50, "players_per_slot": 10}
+    {"id": "bronze", "name": "Bronze", "round_days": 0, "up_mode": "score", "promo_score": 3000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
+    {"id": "silver", "name": "Silver", "round_days": 0, "up_mode": "score", "promo_score": 10000, "up_pct": 0, "down_pct": 0, "inactive": "stay"},
+    {"id": "gold", "name": "Gold", "round_days": 7, "up_pct": 20, "down_pct": 0, "inactive": "stay", "floor": true, "min_promo_score": 1500, "bots": {"fill_to": 30, "game_score": 380, "games_max": 15}},
+    {"id": "platinum", "name": "Platinum", "round_days": 7, "up_pct": 15, "down_pct": 25, "inactive": "relegate", "min_promo_score": 2500, "bots": {"fill_to": 30, "game_score": 480, "games_max": 15}},
+    {"id": "diamond", "name": "Diamond", "round_days": 7, "up_mode": "openings", "up_pct": 0, "down_pct": 20, "inactive": "relegate", "min_promo_score": 0, "global": true, "online_required": true},
+    {"id": "challenger", "name": "Challenger", "round_days": 7, "up_pct": 0, "down_pct": 50, "inactive": "relegate", "min_promo_score": 0, "global": true, "online_required": true, "min_slots": 5, "max_slots": 50, "players_per_slot": 10}
+  ],
+  "bot_names": [
+    "Mira", "Jonas", "Lena", "Tobi", "Emma", "Felix", "Hanna", "Paul", "Sophie", "Ben",
+    "Clara", "Noah", "Lotte", "Elias", "Ida", "Finn", "Marie", "Luca", "Greta", "Theo",
+    "Nora", "Anton", "Frieda", "Oskar", "Lina", "Emil", "Romy", "Jakob", "Ella", "Moritz",
+    "QueenBee", "Kronjuwel", "Puzzlefox", "Rasterkind", "Damenwahl", "NightOwl", "Kaffee42", "Zugzwang", "Sudokat", "Blitzi",
+    "Marla", "Vincent", "Juna", "Leo", "Smilla", "Henri", "Ava", "Carl", "Pia", "Milan",
+    "Tessa", "Jan", "Merle", "Ole", "Rosa", "Kian", "Alma", "Levi", "Yara", "Bruno",
+    "Edda"
   ]
 }

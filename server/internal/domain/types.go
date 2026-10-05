@@ -163,6 +163,7 @@ type Result struct {
 	RoundIndex           int64
 	Completed            bool
 	Verified             bool
+	Counted              bool // false: stored, but kept out of the round score (the online rule)
 	Schema               int
 	Size                 int
 	Difficulty           int
@@ -307,11 +308,25 @@ type Summary struct {
 	CreatedAt  int64
 }
 
+// FriendGroup is an open group of the current round that holds people I follow
+// or who follow me, and still has room for me.
+type FriendGroup struct {
+	GroupID     string
+	MemberCount int
+	Friends     []FriendBrief
+}
+
+type FriendBrief struct {
+	PlayerID string `json:"player_id"`
+	Nickname string `json:"nickname"`
+}
+
 type FriendRow struct {
 	PlayerID    string `json:"player_id"`
 	Nickname    string `json:"nickname"`
 	Tier        string `json:"tier"`
-	RoundScore  int    `json:"round_score"`
+	RoundScore  int    `json:"round_score"` // tier points in a tier without rounds
+	TierPoints  int    `json:"tier_points"`
 	FriendSince int64  `json:"friend_since"`
 	FriendCode  string `json:"friend_code"`
 }

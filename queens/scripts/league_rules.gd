@@ -5,20 +5,28 @@ extends RefCounted
 ## functions over the `league` dictionary in GameConfig, shared by the local
 ## stub and a future server.
 ##
-## Every tier plays in rounds of `round_days` days (Bronze 3, the rest 7);
-## all rounds start at Monday 00:00 UTC of 1970-01-05 and repeat from there,
-## so 7-day rounds are calendar weeks. A tier with `floor` never relegates
-## (Gold). A tier with `max_slots` (Challenger) has a capped population:
-## `players_per_slot` players of the tier below open one slot, between
-## `min_slots` and `max_slots`. The tier below it (`up_mode` "openings")
-## promotes exactly as many players as slots are open after the top tier's
-## own relegation. A tier with `up_mode` "score" (Bronze, Silver) promotes
-## by tier points instead: the player moves up the moment the sum of all
-## game scores since entering the tier reaches `promo_score`; its rounds
-## only rank the group and promote nobody at their end.
+## A tier with `round_days` > 0 plays in rounds of that many days (7 for every
+## ranked tier); all rounds start at Monday 00:00 UTC of 1970-01-05 and repeat
+## from there, so 7-day rounds are calendar weeks. `round_days` 0 means no
+## rounds at all: Bronze and Silver have no timer, no group and no ranking,
+## only tier points. A tier with `floor` never relegates (Gold). A tier with
+## `max_slots` (Challenger) has a capped population: `players_per_slot`
+## players of the tier below open one slot, between `min_slots` and
+## `max_slots`. The tier below it (`up_mode` "openings") promotes exactly as
+## many players as slots are open after the top tier's own relegation. A tier
+## with `up_mode` "score" (Bronze, Silver) promotes by tier points instead: the
+## player moves up the moment the sum of all game scores since entering the
+## tier reaches `promo_score`.
+##
+## Groups fill to `group_size` at random; friends of a member may join up to
+## `group_max`. A tier with `bots` tops its groups up to `bots.fill_to` with
+## deterministic bots that compete like anyone else (bot_progress()), one bot
+## leaving for every human who joins. A tier with `online_required` counts a
+## game only when it was started with a server session and reached the server
+## within `online_grace_s` of finishing (counts_for_league()).
 ##
 ## A member is {player_id, nickname, round_score, games, last_submit_at,
-## is_me, is_friend, is_bot}; evaluate() adds rank and zone.
+## is_me, is_friend}; evaluate() adds rank and zone.
 
 const DAY_SECONDS := 86400
 const ROUND_EPOCH_OFFSET := Scoring.WEEK_EPOCH_OFFSET   ## Monday 1970-01-05 00:00 UTC, like calendar weeks.
@@ -114,25 +122,139 @@ static func reaches_promo(tier_cfg: Dictionary, tier_points: int) -> bool:
 
 # --- rounds -----------------------------------------------------------------
 
+## Days per round; 0 for a tier without rounds. A missing key means 7.
 static func round_days(cfg: Dictionary, tier_id: String) -> int:
-	return maxi(1, int(tier(cfg, tier_id).get("round_days", 7)))
+	return maxi(0, int(tier(cfg, tier_id).get("round_days", 7)))
+
+
+## Whether the tier plays in timed rounds at all (not Bronze, not Silver).
+static func has_rounds(cfg: Dictionary, tier_id: String) -> bool:
+	return round_days(cfg, tier_id) > 0
 
 
 static func round_seconds(cfg: Dictionary, tier_id: String) -> int:
 	return round_days(cfg, tier_id) * DAY_SECONDS
 
 
-## Index of the round of `tier_id` that contains `unix_time`.
+## Index of the round of `tier_id` that contains `unix_time`. A tier without
+## rounds lives in round 0 forever.
 static func round_index(cfg: Dictionary, tier_id: String, unix_time: int) -> int:
+	if not has_rounds(cfg, tier_id):
+		return 0
 	return int(floor(float(unix_time - ROUND_EPOCH_OFFSET) / round_seconds(cfg, tier_id)))
 
 
+## 0 for a tier without rounds: it has neither a start nor an end.
 static func round_start(cfg: Dictionary, tier_id: String, index: int) -> int:
+	if not has_rounds(cfg, tier_id):
+		return 0
 	return index * round_seconds(cfg, tier_id) + ROUND_EPOCH_OFFSET
 
 
 static func round_end(cfg: Dictionary, tier_id: String, index: int) -> int:
+	if not has_rounds(cfg, tier_id):
+		return 0
 	return round_start(cfg, tier_id, index + 1)
+
+
+# --- groups, bots and the online rule ---------------------------------------
+
+## Random placement fills a group to this many humans.
+static func group_size(cfg: Dictionary) -> int:
+	return maxi(1, int(cfg.get("group_size", 30)))
+
+
+## Friends of a member may join a group up to this many humans.
+static func group_max(cfg: Dictionary) -> int:
+	return maxi(group_size(cfg), int(cfg.get("group_max", group_size(cfg))))
+
+
+static func online_required(cfg: Dictionary, tier_id: String) -> bool:
+	return bool(tier(cfg, tier_id).get("online_required", false))
+
+
+## Whether a completed game counts toward the league. Every game counts in a
+## tier without `online_required`, however late it is synced; in one with it,
+## the game must have been started with a server session and must reach the
+## server within `online_grace_s` of finishing. `finished_at` is already
+## clamped to the server clock.
+static func counts_for_league(cfg: Dictionary, tier_id: String, has_session: bool, finished_at: int, received_at: int) -> bool:
+	if not online_required(cfg, tier_id):
+		return true
+	if not has_session:
+		return false
+	return received_at - finished_at <= int(cfg.get("online_grace_s", 600))
+
+
+## Bots topping a group of `humans` up to the tier's `bots.fill_to`; 0 in a
+## tier without bots and in a group that is already full of people.
+static func bot_count(tier_cfg: Dictionary, humans: int) -> int:
+	var bots: Dictionary = tier_cfg.get("bots", {})
+	if bots.is_empty():
+		return 0
+	return maxi(0, int(bots.get("fill_to", 0)) - humans)
+
+
+const _PM_MOD := 2147483647
+const _PM_MUL := 48271
+
+
+## One step of the Park-Miller generator. x stays below 2^31, so the product
+## stays below 2^47 and the arithmetic is exact in both runtimes.
+static func _pm(x: int) -> int:
+	return (x * _PM_MUL) % _PM_MOD
+
+
+## The seed of the bot in `slot` of a group whose seed is `group_seed`.
+static func bot_seed(group_seed: int, slot: int) -> int:
+	return posmod(group_seed, _PM_MOD) * 131 + slot * 7919
+
+
+## A bot's display name, distinct for every slot of one group as long as the
+## group holds fewer bots than there are names.
+static func bot_nickname(cfg: Dictionary, group_seed: int, slot: int) -> String:
+	var names: Array = cfg.get("bot_names", [])
+	if names.is_empty():
+		return "Player %d" % (slot + 1)
+	return str(names[posmod(group_seed + slot, names.size())])
+
+
+## What a bot has played by `t` in a round running from `round_start` to
+## `round_end`: {round_score, games, last_submit_at}. Deterministic in `bot`
+## (a bot_seed()) and integer-only, so the server and the client agree to the
+## point; monotone in `t` and final at the end of the round. A bot plays 1 to
+## `games_max` games, skewed towards few, spread evenly from a random point in
+## the first 40 % of the round (the first game is played right there) to just
+## before its end, each worth `game_score` scaled by a per-bot skill of
+## 60..140 % and a per-game 85..115 %.
+static func bot_progress(tier_cfg: Dictionary, cfg: Dictionary, bot: int, round_start: int, round_end: int, t: int) -> Dictionary:
+	var bots: Dictionary = tier_cfg.get("bots", {})
+	var games_max := maxi(1, int(bots.get("games_max", 15)))
+	var game_score := maxi(0, int(bots.get("game_score", 400)))
+	# Two warm-up steps: neighbouring seeds give neighbouring first outputs, and
+	# only after the product has wrapped the modulus twice are they unrelated.
+	var x := _pm(_pm(posmod(bot, _PM_MOD - 1) + 1))
+	x = _pm(x)
+	var activity := x % 100
+	x = _pm(x)
+	var skill := 60 + x % 81
+	x = _pm(x)
+	var start_pct := x % 40
+	@warning_ignore("integer_division")
+	var total := 1 + activity * activity * (games_max - 1) / 9801
+	var length := maxi(0, round_end - round_start)
+	var scores: Array = []
+	var last := 0
+	for k in total:
+		x = _pm(x)
+		@warning_ignore("integer_division")
+		var at := round_start + length * (start_pct * total + (100 - start_pct) * k) / (100 * total)
+		if at > t:
+			break
+		@warning_ignore("integer_division")
+		scores.append(game_score * skill * (85 + x % 31) / 10000)
+		last = at
+	return {"round_score": round_score(scores, cfg), "games": scores.size(), "last_submit_at": last}
 
 
 # --- capped top tier --------------------------------------------------------
@@ -175,6 +297,21 @@ static func round_score(scores: Array, cfg: Dictionary) -> int:
 	for i in n:
 		total += int(sorted[i])
 	return total
+
+
+## The score a new game must beat to raise the round score: the lowest of the
+## counted best N once N games are in, 0 before that (every game counts) and
+## always 0 in "sum" mode.
+static func cut_score(scores: Array, cfg: Dictionary) -> int:
+	if str(cfg.get("round_mode", "best_n")) == "sum":
+		return 0
+	var n := int(cfg.get("round_best_n", 15))
+	if n <= 0 or scores.size() < n:
+		return 0
+	var sorted := scores.duplicate()
+	sorted.sort()
+	sorted.reverse()
+	return int(sorted[n - 1])
 
 
 ## Higher score first, then fewer games (more efficient), then earlier submit,

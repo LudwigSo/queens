@@ -4,16 +4,22 @@ extends Backend
 ## user://, the other players are deterministic bots and the round rollover
 ## runs on init() whenever the player's current round has ended.
 ##
-## Bots are anchored to the player: their per-game score is the player's
-## median game score times a fixed skill (0.5..1.4), so the group always
-## straddles the player. They "play" through the round, so the standings
-## move even when the player does not, and everything is derived from hashes
-## so it is stable across restarts.
+## Bronze and Silver have no rounds, so no group and no bots: a game there
+## only adds tier points. Gold and Platinum groups hold the player, their
+## fabricated friends of the same tier, and the server's own bots
+## (LeagueRules.bot_progress) topping the group up to 30, so a standing here
+## looks like one from the server.
 ##
 ## The global tiers are simulated as populations: Diamond starts at
 ## DIAMOND_BASE players and grows by DIAMOND_GROWTH_PER_WEEK every calendar
 ## week since LAUNCH_WEEK, Challenger is always full at its slot count, so
 ## the Challenger slots (and with them the Diamond promotions) grow slowly.
+## Their players are anchored to the player: their per-game score is the
+## player's median game score times a fixed skill (0.5..1.4).
+##
+## `simulate_offline` makes every league call fail the way HttpBackend does
+## without a connection, for the tests and the screenshots of the offline
+## states.
 
 const FORMAT := 3
 const BOT_NAMES := [
@@ -38,6 +44,10 @@ var catalog: LevelCatalog
 var clock: Callable
 var path: String
 var data: Dictionary = {}
+var simulate_offline := false:
+	set(value):
+		simulate_offline = value
+		_set_online(not value)
 
 
 func _init(game_config: GameConfig, level_catalog: LevelCatalog, clock_fn: Callable, file_path: String = "") -> void:
@@ -57,6 +67,17 @@ func now_utc() -> int:
 
 func league_cfg() -> Dictionary:
 	return config.league
+
+
+## What HttpBackend answers without a connection: a temporary failure with the
+## last known value in `data`.
+func _offline(last_known: Variant) -> Dictionary:
+	return {"ok": false, "data": last_known, "error": Loc.t("ERR_NETWORK"), "code": "ERR_NETWORK",
+		"status": 0, "permanent": false, "params": []}
+
+
+func has_rounds() -> bool:
+	return LeagueRules.has_rounds(league_cfg(), tier_id())
 
 
 # --- persistence -------------------------------------------------------------
@@ -142,6 +163,8 @@ func register_player(player_id: String, nickname: String) -> Dictionary:
 
 
 func set_nickname(nickname: String) -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
 	nickname = nickname.strip_edges()
 	if nickname.length() < 2 or nickname.length() > 16:
 		return fail(Loc.t("ERR_NICKNAME_LENGTH"))
@@ -205,7 +228,7 @@ func _round(index: int, tier: String = "") -> Dictionary:
 
 func _join(index: int) -> Dictionary:
 	var rd := _round(index)
-	if not rd["joined"]:
+	if not rd["joined"] and has_rounds():
 		rd["joined"] = true
 		rd["group_id"] = "lg_%s_%d_001" % [tier_id(), index]
 		var stats: Dictionary = data["profile"]["stats"]
@@ -214,14 +237,18 @@ func _join(index: int) -> Dictionary:
 
 
 func start_game(_level_id: String) -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
 	var index := current_round()
 	var rd := _join(index)
 	_save()
 	standing_changed.emit()
-	return ok({"round_index": index, "group_id": rd["group_id"], "joined": true})
+	return ok({"round_index": index, "group_id": rd["group_id"], "joined": bool(rd["joined"])})
 
 
 func submit_result(result: Dictionary) -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
 	var id := str(result.get("result_id", ""))
 	if id == "":
 		return fail(Loc.t("ERR_RESULT_INVALID"))
@@ -233,13 +260,15 @@ func submit_result(result: Dictionary) -> Dictionary:
 	var finished := int(result.get("finished_at", now_utc()))
 	var index := maxi(current_round(), LeagueRules.round_index(league_cfg(), tier_id(), finished))
 	var completed := bool(result.get("completed", false))
+	# The stub has no sessions and is never late: every game counts.
 	var response := {"breakdown": bd, "round_score": 0, "group_rank": 0, "group_size": 0, "zone": "", "tier": tier_id(), "round_index": index,
-		"tier_points": 0, "promo_score": 0, "promoted_to": ""}
+		"tier_points": 0, "promo_score": 0, "promoted_to": "", "counted": true}
 	var rd := _join(index)
 	if completed:
-		(rd["scores"] as Array).append(int(bd["score"]))
-		rd["games"] = int(rd["games"]) + 1
-		rd["last_submit_at"] = finished
+		if rd["joined"]:
+			(rd["scores"] as Array).append(int(bd["score"]))
+			rd["games"] = int(rd["games"]) + 1
+			rd["last_submit_at"] = finished
 		var stats: Dictionary = data["profile"]["stats"]
 		stats["games"] = int(stats.get("games", 0)) + 1
 		if bd["flawless"]:
@@ -249,7 +278,7 @@ func submit_result(result: Dictionary) -> Dictionary:
 	var standing := _standing_for(index)
 	response["round_score"] = standing["my_round_score"]
 	response["group_rank"] = standing["my_rank"]
-	response["group_size"] = standing["group"]["size"]
+	response["group_size"] = int((standing["group"] as Dictionary).get("size", 0))
 	response["zone"] = standing["zone"]
 	response["tier_points"] = tier_points()
 	response["promo_score"] = int(standing["rules"]["promo_score"])
@@ -264,9 +293,9 @@ func submit_result(result: Dictionary) -> Dictionary:
 
 
 ## The tier points reached the tier's promo_score: the player moves up right
-## now and joins the round of the new tier that is already running. The
-## abandoned round is forgotten; the summary shows the final standing in it.
-## Returns the new tier id, or "" when there is no tier above.
+## now, into the tier's running round (unjoined until the next game, or until
+## they pick a friend's group). Returns the new tier id, or "" when there is no
+## tier above.
 func _promote_by_score(index: int, standing: Dictionary) -> String:
 	var cfg := league_cfg()
 	var tier := tier_id()
@@ -278,7 +307,7 @@ func _promote_by_score(index: int, standing: Dictionary) -> String:
 		"outcome": LeagueRules.OUTCOME_PROMOTED, "reason": "score",
 		"rank": int(standing["my_rank"]), "group_size": int(standing["group"].get("size", 0)),
 		"round_score": int(standing["my_round_score"]), "tier_points": tier_points(),
-		"best_game": _best_game_between(LeagueRules.round_start(cfg, tier, index), LeagueRules.round_end(cfg, tier, index)),
+		"best_game": _best_game_in(tier, index),
 		"seen": false,
 	}
 	_record_summary(summary)
@@ -378,12 +407,14 @@ func _members(index: int, at_time: int, final: bool) -> Array:
 	var starts := LeagueRules.round_start(cfg, tier, index)
 	var length := LeagueRules.round_seconds(cfg, tier)
 	var frac := 1.0 if final else clampf(float(at_time - starts) / length, 0.0, 1.0)
-	var pool := _population(tier, at_time) - 1
 	var members: Array = []
 	var same_tier_friends: Array = []
 	for fr in data["friends"]:
 		if str(fr.get("tier", "")) == tier:
 			same_tier_friends.append(fr)
+	if not LeagueRules.is_global(cfg, tier):
+		return _group_members(index, tier, group_id, same_tier_friends, frac, anchor, days, starts, length, at_time, final)
+	var pool := _population(tier, at_time) - 1
 	for i in pool:
 		var who: Dictionary
 		var is_friend := false
@@ -415,6 +446,43 @@ func _members(index: int, at_time: int, final: bool) -> Array:
 	return members
 
 
+## A grouped tier: me, my friends of this tier (the server puts friends
+## together), and the shared bots topping the group up to the tier's fill_to.
+func _group_members(index: int, tier: String, group_id: String, friends: Array, frac: float, anchor: int,
+		days: int, starts: int, length: int, at_time: int, final: bool) -> Array:
+	var cfg := league_cfg()
+	var tier_cfg := LeagueRules.tier(cfg, tier)
+	var rd := _round(index)
+	var members: Array = [{
+		"player_id": player_id(),
+		"nickname": str(data["profile"].get("nickname", "")),
+		"round_score": LeagueRules.round_score(rd["scores"], cfg),
+		"games": int(rd["games"]),
+		"last_submit_at": int(rd["last_submit_at"]),
+		"is_me": true,
+		"is_friend": false,
+	}]
+	for fr in friends.slice(0, LeagueRules.group_max(cfg) - 1):
+		var played := _synthetic_round("%s:%s" % [group_id, fr["player_id"]], float(fr["skill"]), int(fr["games_per_week"]), frac, anchor, days)
+		members.append({
+			"player_id": fr["player_id"], "nickname": fr["nickname"],
+			"round_score": played["round_score"], "games": played["games"],
+			"last_submit_at": starts + int(frac * length) - absi(hash(str(fr["player_id"]))) % 3600,
+			"is_me": false, "is_friend": true,
+		})
+	var seed_value := posmod(hash(group_id), 2147483647)
+	var ends := starts + length
+	for slot in LeagueRules.bot_count(tier_cfg, members.size()):
+		var p := LeagueRules.bot_progress(tier_cfg, cfg, LeagueRules.bot_seed(seed_value, slot), starts, ends, ends if final else at_time)
+		members.append({
+			"player_id": "bot:%s:%d" % [group_id, slot],
+			"nickname": LeagueRules.bot_nickname(cfg, seed_value, slot),
+			"round_score": int(p["round_score"]), "games": int(p["games"]),
+			"last_submit_at": int(p["last_submit_at"]), "is_me": false, "is_friend": false,
+		})
+	return members
+
+
 func _standing_for(index: int) -> Dictionary:
 	var cfg := league_cfg()
 	var rd := _round(index)
@@ -439,9 +507,10 @@ func _standing_for(index: int) -> Dictionary:
 			"up_to": above if above != tier else "",
 			"best_n": cfg.get("round_best_n", 15), "round_mode": cfg.get("round_mode", "best_n"),
 			"round_days": LeagueRules.round_days(cfg, tier),
-			"global": LeagueRules.is_global(cfg, tier), "floor": LeagueRules.is_floor(cfg, tier)},
+			"global": LeagueRules.is_global(cfg, tier), "floor": LeagueRules.is_floor(cfg, tier),
+			"online_required": LeagueRules.online_required(cfg, tier), "online_grace_s": int(cfg.get("online_grace_s", 600))},
 	}
-	if not rd["joined"]:
+	if not rd["joined"] or not LeagueRules.has_rounds(cfg, tier):
 		return standing
 	var ev := LeagueRules.evaluate(_members(index, now_utc(), false), tier, cfg, up_count)
 	var members: Array = ev["members"]
@@ -464,13 +533,14 @@ func _standing_for(index: int) -> Dictionary:
 
 
 func get_league_standing() -> Dictionary:
+	if simulate_offline:
+		return _offline(_standing_for(current_round()))
 	return ok(_standing_for(current_round()))
 
 
 ## Closes every round that has ended since the last processed one. A tier
 ## change moves the player into the round of the new tier that contains the
-## boundary, so a promotion out of a 3-day Bronze round joins the running
-## Silver week.
+## boundary. A tier without rounds has nothing to close.
 func _rollover() -> void:
 	var cfg := league_cfg()
 	if int(data.get("current_round", -1)) < 0 or data["profile"].is_empty():
@@ -478,6 +548,9 @@ func _rollover() -> void:
 		return
 	while true:
 		var tier := tier_id()
+		if not LeagueRules.has_rounds(cfg, tier):
+			data["current_round"] = 0
+			break
 		var index := int(data["current_round"])
 		var ends := LeagueRules.round_end(cfg, tier, index)
 		if ends > now_utc():
@@ -512,27 +585,115 @@ func _close_round(tier: String, index: int) -> Dictionary:
 				summary["rank"] = m["rank"]
 				summary["round_score"] = m["round_score"]
 		summary["group_size"] = (ev["members"] as Array).size()
-		summary["best_game"] = _best_game_between(LeagueRules.round_start(cfg, tier, index), ends)
+		summary["best_game"] = _best_game_in(tier, index)
 	summary["tier_after"] = LeagueRules.apply(cfg, tier, summary["outcome"])
 	_set_tier(summary["tier_after"])
 	return summary
 
 
-func _best_game_between(from_time: int, to_time: int) -> Dictionary:
-	var best := {}
+## The completed results credited to (tier, index), as {result, response}.
+func _round_entries(tier: String, index: int) -> Array:
+	var out: Array = []
 	for entry in data["results"].values():
 		var r: Dictionary = entry["result"]
-		var finished := int(r.get("finished_at", -1))
-		if finished < from_time or finished >= to_time or not bool(r.get("completed", false)):
+		var resp: Dictionary = entry["response"]
+		if not bool(r.get("completed", false)):
 			continue
+		if str(resp.get("tier", "")) != tier or int(resp.get("round_index", -1)) != index:
+			continue
+		out.append(entry)
+	return out
+
+
+func _best_game_in(tier: String, index: int) -> Dictionary:
+	var best := {}
+	for entry in _round_entries(tier, index):
 		var score := int(entry["response"]["breakdown"]["score"])
 		if best.is_empty() or score > int(best["score"]):
-			best = {"level_id": r.get("level_id", ""), "score": score}
+			best = {"level_id": entry["result"].get("level_id", ""), "score": score}
 	return best
 
 
 func get_round_summary() -> Dictionary:
-	return ok((data["pending_summary"] as Dictionary).duplicate(true))
+	if simulate_offline:
+		return _offline({})
+	var summary := (data["pending_summary"] as Dictionary).duplicate(true)
+	var moved := str(summary.get("tier_after", "")) != str(summary.get("tier_before", ""))
+	if not summary.is_empty() and moved and str(summary.get("tier_after", "")) == tier_id():
+		summary["join_options"] = (get_join_options()["data"]["options"] as Array).size()
+	return ok(summary)
+
+
+func get_round_runs() -> Dictionary:
+	var cfg := league_cfg()
+	var tier := tier_id()
+	var index := current_round()
+	var rounds := has_rounds()
+	var best_n := int(cfg.get("round_best_n", 15)) if rounds else 0
+	var entries := _round_entries(tier, index)
+	if str(cfg.get("round_mode", "best_n")) == "sum" and rounds:
+		best_n = entries.size()
+	var runs: Array = []
+	for entry in entries:
+		var r: Dictionary = entry["result"]
+		var bd: Dictionary = entry["response"]["breakdown"]
+		runs.append({
+			"result_id": str(r.get("result_id", "")), "level_id": str(r.get("level_id", "")),
+			"size": int(r.get("size", 0)), "difficulty": float(r.get("difficulty", 0.0)), "stars": int(r.get("stars", 0)),
+			"score": int(bd["score"]), "counted": bool(entry["response"].get("counted", true)), "in_best": false,
+			"verified": true, "finished_at": int(r.get("finished_at", 0)),
+			"elapsed_seconds": float(r.get("elapsed_seconds", 0.0)), "par_seconds": float(bd["par_seconds"]),
+			"wrong_placements": int(r.get("wrong_placements", 0)), "hint_count": int(r.get("hint_count", 0)),
+			"breakdown": bd, "pending": false,
+		})
+	runs.sort_custom(OfflineLeague._run_before)
+	var scores: Array = []
+	var in_best := 0
+	for run in runs:
+		if run["counted"]:
+			scores.append(int(run["score"]))
+			if not rounds or in_best < best_n:
+				run["in_best"] = true
+				in_best += 1
+	var out := {
+		"tier": tier, "round_index": index, "has_rounds": rounds,
+		"round_ends_at": LeagueRules.round_end(cfg, tier, index), "best_n": best_n,
+		"round_score": LeagueRules.round_score(scores, cfg) if rounds else 0, "tier_points": tier_points(),
+		"cut_score": LeagueRules.cut_score(scores, cfg) if rounds else 0, "runs": runs,
+	}
+	if simulate_offline:
+		return _offline(out)
+	return ok(out)
+
+
+## The stub's friends of the player's tier always sit in the player's group,
+## so there is one option while the round is not joined yet.
+func get_join_options() -> Dictionary:
+	var cfg := league_cfg()
+	var tier := tier_id()
+	var index := current_round()
+	var out := {"tier": tier, "round_index": index, "joined": bool(_round(index)["joined"]), "options": []}
+	if simulate_offline:
+		return _offline(out)
+	if not has_rounds() or LeagueRules.is_global(cfg, tier) or out["joined"]:
+		return ok(out)
+	var friends: Array = []
+	for fr in data["friends"]:
+		if str(fr.get("tier", "")) == tier:
+			friends.append({"player_id": fr["player_id"], "nickname": fr["nickname"]})
+	if not friends.is_empty():
+		out["options"] = [{"group_id": "lg_%s_%d_001" % [tier, index], "members": friends.size(), "friends": friends}]
+	return ok(out)
+
+
+func join_group(_group_id: String) -> Dictionary:
+	if simulate_offline:
+		return _offline(_standing_for(current_round()))
+	if has_rounds():
+		_join(current_round())
+		_save()
+		standing_changed.emit()
+	return ok(_standing_for(current_round()))
 
 
 func ack_round_summary(round_index: int) -> Dictionary:
@@ -605,6 +766,8 @@ func _synthetic_level_entry(level: Dictionary, key: String, who_id: String, nick
 
 
 func get_level_leaderboard(level_id: String, scope: String = "global", limit: int = 10) -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
 	var level := catalog.get_level(level_id)
 	if level.is_empty():
 		return fail("unknown level")
@@ -644,19 +807,31 @@ func get_level_leaderboard(level_id: String, scope: String = "global", limit: in
 
 # --- friends ----------------------------------------------------------------
 
+## A tier without rounds shows tier points, simulated as one week of games.
 func _friend_view(fr: Dictionary) -> Dictionary:
 	var cfg := league_cfg()
 	var tier := str(fr["tier"])
+	var rounds := LeagueRules.has_rounds(cfg, tier)
 	var index := LeagueRules.round_index(cfg, tier, now_utc())
-	var frac := clampf(float(now_utc() - LeagueRules.round_start(cfg, tier, index)) / LeagueRules.round_seconds(cfg, tier), 0.0, 1.0)
-	var played := _synthetic_round("friend:%s:%d:%s" % [tier, index, fr["player_id"]], float(fr["skill"]), int(fr["games_per_week"]), frac, _anchor(), LeagueRules.round_days(cfg, tier))
+	var played: Dictionary
+	if rounds:
+		var frac := clampf(float(now_utc() - LeagueRules.round_start(cfg, tier, index)) / LeagueRules.round_seconds(cfg, tier), 0.0, 1.0)
+		played = _synthetic_round("friend:%s:%d:%s" % [tier, index, fr["player_id"]], float(fr["skill"]), int(fr["games_per_week"]), frac, _anchor(), LeagueRules.round_days(cfg, tier))
+	else:
+		played = _synthetic_round("friend:%s:%s" % [tier, fr["player_id"]], float(fr["skill"]), int(fr["games_per_week"]), 1.0, _anchor(), 7)
 	return {
 		"player_id": fr["player_id"], "nickname": fr["nickname"], "tier": tier,
-		"round_score": played["round_score"], "friend_since": fr["friend_since"], "friend_code": fr["friend_code"],
+		"round_score": played["round_score"], "tier_points": 0 if rounds else played["round_score"],
+		"friend_since": fr["friend_since"], "friend_code": fr["friend_code"],
 	}
 
 
 func get_friends() -> Dictionary:
+	if simulate_offline:
+		var cached: Array = []
+		for fr in data["friends"]:
+			cached.append(_friend_view(fr))
+		return _offline(cached)
 	var views: Array = []
 	for fr in data["friends"]:
 		views.append(_friend_view(fr))
@@ -664,6 +839,8 @@ func get_friends() -> Dictionary:
 
 
 func add_friend(code: String) -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
 	code = code.strip_edges().to_upper()
 	if not is_valid_code(code):
 		return fail(Loc.t("ERR_FRIEND_CODE_FORMAT"))
@@ -689,6 +866,8 @@ func add_friend(code: String) -> Dictionary:
 
 
 func remove_friend(friend_id: String) -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
 	var friends: Array = data["friends"]
 	for i in friends.size():
 		if friends[i]["player_id"] == friend_id:

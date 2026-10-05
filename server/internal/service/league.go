@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -290,12 +291,17 @@ func (s *Service) closeGroup(ctx context.Context, r store.Repos, round domain.Ro
 	if err != nil {
 		return err
 	}
-	members, err := r.League.GroupMembersSorted(ctx, g.ID)
+	// The bots are evaluated as they stand at the end of the round, and compete
+	// for the same places as everyone else; they are simply never settled.
+	members, err := s.groupMembers(ctx, r, tierCfg, &g, round.EndsAt)
 	if err != nil {
 		return err
 	}
 	ev := domain.Evaluate(members, tierCfg, s.League, fresh.UpCountOr())
 	for _, m := range ev.Members {
+		if m.Bot {
+			continue
+		}
 		if err := r.League.SetMemberOutcome(ctx, m.PlayerID, round.Tier, round.RoundIndex,
 			m.Rank, m.Zone, domain.OutcomeForZone(m.Zone)); err != nil {
 			return err
@@ -346,7 +352,13 @@ func (s *Service) closeGroup(ctx context.Context, r store.Repos, round domain.Ro
 // ensureMembership joins the player to the open round of their tier, creating
 // the group when needed. It is idempotent: an existing membership is returned
 // unchanged, so every later start is one read.
-func (s *Service) ensureMembership(ctx context.Context, r store.Repos, p *domain.Player, tierCfg domain.Tier, idx int64) (*domain.Member, bool, error) {
+//
+// The group is, in order: `prefer` (a friend's group the player picked after a
+// promotion, validated by the caller), the fullest open group holding a friend
+// that has room below group_max, the fullest open group below group_size, and
+// finally a new one. So friends end up together every round without being
+// asked, and only friends can push a group past the random-fill size.
+func (s *Service) ensureMembership(ctx context.Context, r store.Repos, p *domain.Player, tierCfg domain.Tier, idx int64, prefer string) (*domain.Member, bool, error) {
 	m, err := r.League.GetMember(ctx, p.ID, tierCfg.ID, idx)
 	if err == nil {
 		return m, false, nil
@@ -355,34 +367,46 @@ func (s *Service) ensureMembership(ctx context.Context, r store.Repos, p *domain
 		return nil, false, err
 	}
 
-	// Clear a stale shadow exclusion before choosing the group, so a player whose
-	// score has decayed rejoins the ordinary population at the next start.
-	quarantine := p.ShadowExcluded
-	if p.ShadowExcluded {
-		score, updatedAt, _, err := r.Flags.ReadAnomaly(ctx, p.ID)
-		if err != nil {
-			return nil, false, err
-		}
-		if domain.DecayAnomaly(score, updatedAt, s.now()) < domain.AnomalyClearAt {
-			if err := r.Flags.WriteAnomaly(ctx, p.ID, score, updatedAt, false); err != nil {
-				return nil, false, err
-			}
-			quarantine = false
-		}
-	}
-
-	g, err := r.League.FindOpenGroup(ctx, tierCfg.ID, idx, quarantine)
-	if err != nil && err != domain.ErrNotFound {
+	quarantine, err := s.refreshExclusion(ctx, r, p)
+	if err != nil {
 		return nil, false, err
 	}
+
 	var groupID string
-	if g != nil {
-		ok, err := r.League.IncGroupCount(ctx, g.ID)
-		if err != nil {
+	if !tierCfg.Global {
+		candidate := prefer
+		if candidate == "" {
+			fg, err := r.League.FriendGroups(ctx, p.ID, tierCfg.ID, idx, quarantine, s.League.GroupMax)
+			if err != nil {
+				return nil, false, err
+			}
+			if len(fg) > 0 {
+				candidate = fg[0].GroupID
+			}
+		}
+		if candidate != "" {
+			ok, err := r.League.IncGroupCount(ctx, candidate, s.League.GroupMax)
+			if err != nil {
+				return nil, false, err
+			}
+			if ok {
+				groupID = candidate
+			}
+		}
+	}
+	if groupID == "" {
+		g, err := r.League.FindOpenGroup(ctx, tierCfg.ID, idx, quarantine)
+		if err != nil && err != domain.ErrNotFound {
 			return nil, false, err
 		}
-		if ok {
-			groupID = g.ID
+		if g != nil {
+			ok, err := r.League.IncGroupCount(ctx, g.ID, s.League.GroupSize)
+			if err != nil {
+				return nil, false, err
+			}
+			if ok {
+				groupID = g.ID
+			}
 		}
 	}
 	if groupID == "" {
@@ -415,8 +439,153 @@ func (s *Service) ensureMembership(ctx context.Context, r store.Repos, p *domain
 	return m, true, err
 }
 
+// refreshExclusion clears a stale shadow exclusion and reports whether the
+// player is still excluded. It runs before a group is chosen, so a player whose
+// score has decayed rejoins the ordinary population at the next start, and on
+// every start in a tier without groups, so the same holds there.
+func (s *Service) refreshExclusion(ctx context.Context, r store.Repos, p *domain.Player) (bool, error) {
+	if !p.ShadowExcluded {
+		return false, nil
+	}
+	score, updatedAt, _, err := r.Flags.ReadAnomaly(ctx, p.ID)
+	if err != nil {
+		return false, err
+	}
+	if domain.DecayAnomaly(score, updatedAt, s.now()) >= domain.AnomalyClearAt {
+		return true, nil
+	}
+	if err := r.Flags.WriteAnomaly(ctx, p.ID, score, updatedAt, false); err != nil {
+		return false, err
+	}
+	p.ShadowExcluded = false
+	return false, nil
+}
+
 // ensureRound makes sure the round row exists before anything references it.
 func (s *Service) ensureRound(ctx context.Context, r store.Repos, t domain.Tier, idx int64) error {
 	return r.League.EnsureRound(ctx, t.ID, idx,
 		domain.RoundStart(t, idx), domain.RoundEnd(t, idx), s.now())
+}
+
+// --- bots -------------------------------------------------------------------
+
+// groupSeed derives the bot seed of a group from its id, so a group's bots are
+// the same on every read, after a restart and on every replica.
+func groupSeed(groupID string) int64 {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(groupID))
+	return int64(h.Sum32())
+}
+
+// botID is a stable, UUID-shaped id for the bot in `slot` of a group. It never
+// collides with a player (players are v4, this is v5) and it reveals nothing in
+// a standing.
+func botID(groupID string, slot int) string {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(fmt.Sprintf("queens-bot/%s/%d", groupID, slot))).String()
+}
+
+// groupMembers returns the people of a group plus the bots that top it up to
+// the tier's fill_to, as they stand at `at`. One bot leaves for every person
+// who joins: the active bots are always the first BotCount slots, so the
+// highest slot is the one that goes. Nothing about a bot is stored.
+func (s *Service) groupMembers(ctx context.Context, r store.Repos, tierCfg domain.Tier, g *domain.Group, at int64) ([]domain.Member, error) {
+	members, err := r.League.GroupMembersSorted(ctx, g.ID)
+	if err != nil {
+		return nil, err
+	}
+	n := domain.BotCount(tierCfg, g.MemberCount)
+	if n == 0 {
+		return members, nil
+	}
+	seed := groupSeed(g.ID)
+	start, end := domain.RoundStart(tierCfg, g.RoundIndex), domain.RoundEnd(tierCfg, g.RoundIndex)
+	for slot := 0; slot < n; slot++ {
+		st := domain.BotProgress(tierCfg, s.League, domain.BotSeed(seed, slot), start, end, at)
+		members = append(members, domain.Member{
+			PlayerID: botID(g.ID, slot), Nickname: s.League.BotNickname(seed, slot),
+			RoundScore: st.RoundScore, Games: st.Games, LastSubmitAt: st.LastSubmitAt,
+			GroupID: g.ID, Bot: true,
+		})
+	}
+	return members, nil
+}
+
+// placement is where one member stands in their group right now.
+type placement struct {
+	Rank          int
+	Size          int
+	Zone          string
+	PromoteCount  int
+	RelegateCount int
+	Members       []domain.Member // only when asked for
+}
+
+// placeMember ranks `me` inside `g`. A global group can hold thousands and is
+// ranked in SQL; any other group holds at most group_max people plus its bots,
+// so it is evaluated in Go with exactly the code the closer uses -- which is
+// what makes the zone a player sees the zone they get.
+func (s *Service) placeMember(ctx context.Context, r store.Repos, tierCfg domain.Tier, g *domain.Group, me *domain.Member, upCount int, withMembers bool) (*placement, error) {
+	if tierCfg.Global {
+		leader, err := r.League.GroupLeaderScore(ctx, g.ID)
+		if err != nil {
+			return nil, err
+		}
+		c := domain.Counts(g.MemberCount, tierCfg, s.League, leader, upCount)
+		promote, err := r.League.GroupPromoteCount(ctx, g.ID, c.Up)
+		if err != nil {
+			return nil, err
+		}
+		rank, err := r.League.MemberRank(ctx, g.ID, me)
+		if err != nil {
+			return nil, err
+		}
+		out := &placement{
+			Rank: rank, Size: g.MemberCount, Zone: zoneFor(rank, me.RoundScore, g.MemberCount, c),
+			PromoteCount: promote, RelegateCount: c.Down,
+		}
+		if withMembers {
+			lo, hi := 0, 0
+			if g.MemberCount > standingMembersTop {
+				lo, hi = rank-5, rank+5
+			}
+			members, err := r.League.StandingWindow(ctx, g.ID, me.PlayerID, standingMembersTop, lo, hi)
+			if err != nil {
+				return nil, err
+			}
+			for i := range members {
+				members[i].Zone = zoneFor(members[i].Rank, members[i].RoundScore, g.MemberCount, c)
+			}
+			out.Members = members
+		}
+		return out, nil
+	}
+
+	all, err := s.groupMembers(ctx, r, tierCfg, g, s.now())
+	if err != nil {
+		return nil, err
+	}
+	ev := domain.Evaluate(all, tierCfg, s.League, upCount)
+	out := &placement{Size: len(ev.Members), PromoteCount: ev.PromoteCount, RelegateCount: ev.RelegateCount}
+	friends := map[string]bool{}
+	if withMembers {
+		ids, err := r.Friends.IDs(ctx, me.PlayerID)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range ids {
+			friends[id] = true
+		}
+	}
+	for i := range ev.Members {
+		m := &ev.Members[i]
+		if !m.Bot && m.PlayerID == me.PlayerID {
+			m.IsMe = true
+			out.Rank, out.Zone = m.Rank, m.Zone
+		}
+		m.IsFriend = !m.Bot && friends[m.PlayerID]
+	}
+	if withMembers {
+		out.Members = ev.Members
+	}
+	return out, nil
 }

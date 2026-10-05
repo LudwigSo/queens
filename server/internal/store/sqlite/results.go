@@ -11,21 +11,22 @@ type resultRepo struct{ r, w dbtx }
 const resultCols = `result_id, player_id, level_id, session_id, tier, round_index, completed, verified,
 	schema, size, difficulty, stars, par_seconds, base, started_at, finished_at, received_at,
 	elapsed_seconds, client_elapsed_seconds, queens_placed, wrong_placements, queens_removed,
-	clear_count, hint_count, taps, score, client_score, flawless, client_version, payload_hash, response_json`
+	clear_count, hint_count, taps, score, client_score, flawless, client_version, payload_hash, response_json, counted`
 
 func scanResult(s interface{ Scan(...any) error }) (*domain.Result, error) {
 	var x domain.Result
-	var completed, verified, flawless int
+	var completed, verified, flawless, counted int
 	if err := s.Scan(&x.ResultID, &x.PlayerID, &x.LevelID, &x.SessionID, &x.Tier, &x.RoundIndex,
 		&completed, &verified, &x.Schema, &x.Size, &x.Difficulty, &x.Stars, &x.ParSeconds, &x.Base,
 		&x.StartedAt, &x.FinishedAt, &x.ReceivedAt, &x.ElapsedSeconds, &x.ClientElapsedSeconds,
 		&x.QueensPlaced, &x.WrongPlacements, &x.QueensRemoved, &x.ClearCount, &x.HintCount, &x.Taps,
-		&x.Score, &x.ClientScore, &flawless, &x.ClientVersion, &x.PayloadHash, &x.ResponseJSON); err != nil {
+		&x.Score, &x.ClientScore, &flawless, &x.ClientVersion, &x.PayloadHash, &x.ResponseJSON, &counted); err != nil {
 		return nil, mapErr(err)
 	}
 	x.Completed = completed != 0
 	x.Verified = verified != 0
 	x.Flawless = flawless != 0
+	x.Counted = counted != 0
 	return &x, nil
 }
 
@@ -35,12 +36,12 @@ func (q *resultRepo) Get(ctx context.Context, id string) (*domain.Result, error)
 
 func (q *resultRepo) Insert(ctx context.Context, x *domain.Result) error {
 	_, err := q.w.ExecContext(ctx, `INSERT INTO results (`+resultCols+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		x.ResultID, x.PlayerID, x.LevelID, x.SessionID, x.Tier, x.RoundIndex,
 		boolToInt(x.Completed), boolToInt(x.Verified), x.Schema, x.Size, x.Difficulty, x.Stars, x.ParSeconds, x.Base,
 		x.StartedAt, x.FinishedAt, x.ReceivedAt, x.ElapsedSeconds, x.ClientElapsedSeconds,
 		x.QueensPlaced, x.WrongPlacements, x.QueensRemoved, x.ClearCount, x.HintCount, x.Taps,
-		x.Score, x.ClientScore, boolToInt(x.Flawless), x.ClientVersion, x.PayloadHash, x.ResponseJSON)
+		x.Score, x.ClientScore, boolToInt(x.Flawless), x.ClientVersion, x.PayloadHash, x.ResponseJSON, boolToInt(x.Counted))
 	return mapErr(err)
 }
 
@@ -55,13 +56,13 @@ func (q *resultRepo) ReplaceForfeit(ctx context.Context, x *domain.Result) (bool
 		size = ?, difficulty = ?, stars = ?, par_seconds = ?, base = ?, started_at = ?, finished_at = ?,
 		received_at = ?, elapsed_seconds = ?, client_elapsed_seconds = ?, queens_placed = ?, wrong_placements = ?,
 		queens_removed = ?, clear_count = ?, hint_count = ?, taps = ?, score = ?, client_score = ?, flawless = ?,
-		client_version = ?, payload_hash = ?, response_json = ?
+		client_version = ?, payload_hash = ?, response_json = ?, counted = ?
 		WHERE result_id = ? AND completed = 0`,
 		x.LevelID, x.SessionID, x.Tier, x.RoundIndex, boolToInt(x.Completed), boolToInt(x.Verified), x.Schema,
 		x.Size, x.Difficulty, x.Stars, x.ParSeconds, x.Base, x.StartedAt, x.FinishedAt,
 		x.ReceivedAt, x.ElapsedSeconds, x.ClientElapsedSeconds, x.QueensPlaced, x.WrongPlacements,
 		x.QueensRemoved, x.ClearCount, x.HintCount, x.Taps, x.Score, x.ClientScore, boolToInt(x.Flawless),
-		x.ClientVersion, x.PayloadHash, x.ResponseJSON, x.ResultID))
+		x.ClientVersion, x.PayloadHash, x.ResponseJSON, boolToInt(x.Counted), x.ResultID))
 }
 
 func (q *resultRepo) SetResponse(ctx context.Context, id, responseJSON string) error {
@@ -69,12 +70,12 @@ func (q *resultRepo) SetResponse(ctx context.Context, id, responseJSON string) e
 	return mapErr(err)
 }
 
-// RoundScores returns the best `bestN` completed scores of the round, the input
-// to LeagueRules.round_score.
+// RoundScores returns the best `bestN` counted scores of the round, the input to
+// LeagueRules.round_score. A game that missed the online rule is not one of them.
 func (q *resultRepo) RoundScores(ctx context.Context, playerID, tier string, roundIndex int64, bestN int) ([]int, error) {
 	rows, err := q.r.QueryContext(ctx,
 		`SELECT score FROM results
-		  WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1
+		  WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1 AND counted = 1
 		  ORDER BY score DESC LIMIT ?`, playerID, tier, roundIndex, bestN)
 	if err != nil {
 		return nil, mapErr(err)
@@ -94,7 +95,7 @@ func (q *resultRepo) RoundScores(ctx context.Context, playerID, tier string, rou
 func (q *resultRepo) CountRoundGames(ctx context.Context, playerID, tier string, roundIndex int64) (int, error) {
 	var n int
 	err := q.r.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM results WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1`,
+		`SELECT COUNT(*) FROM results WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1 AND counted = 1`,
 		playerID, tier, roundIndex).Scan(&n)
 	return n, mapErr(err)
 }
@@ -105,7 +106,7 @@ func (q *resultRepo) BestGame(ctx context.Context, playerID, tier string, roundI
 	var b domain.BestGame
 	err := q.r.QueryRowContext(ctx,
 		`SELECT level_id, score FROM results
-		  WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1
+		  WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1 AND counted = 1
 		  ORDER BY score DESC, finished_at ASC, result_id ASC LIMIT 1`,
 		playerID, tier, roundIndex).Scan(&b.LevelID, &b.Score)
 	if err != nil {
@@ -115,4 +116,26 @@ func (q *resultRepo) BestGame(ctx context.Context, playerID, tier string, roundI
 		return nil, mapErr(err)
 	}
 	return &b, nil
+}
+
+// RoundRuns lists the completed results credited to one round, counted or not,
+// best first: the run overview behind GET /v1/league/runs.
+func (q *resultRepo) RoundRuns(ctx context.Context, playerID, tier string, roundIndex int64, limit int) ([]domain.Result, error) {
+	rows, err := q.r.QueryContext(ctx,
+		`SELECT `+resultCols+` FROM results
+		  WHERE player_id = ? AND tier = ? AND round_index = ? AND completed = 1
+		  ORDER BY score DESC, finished_at ASC, result_id ASC LIMIT ?`, playerID, tier, roundIndex, limit)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	defer rows.Close()
+	var out []domain.Result
+	for rows.Next() {
+		x, err := scanResult(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *x)
+	}
+	return out, rows.Err()
 }

@@ -15,7 +15,7 @@ type friendRepo struct{ r, w dbtx }
 // cannot be one join).
 func (q *friendRepo) List(ctx context.Context, playerID string) ([]domain.FriendRow, error) {
 	rows, err := q.r.QueryContext(ctx,
-		`SELECT f.friend_id, p.nickname, p.tier, p.friend_code, f.created_at
+		`SELECT f.friend_id, p.nickname, p.tier, p.tier_points, p.friend_code, f.created_at
 		   FROM friends f JOIN players p ON p.id = f.friend_id
 		  WHERE f.player_id = ? ORDER BY f.created_at ASC, f.friend_id ASC`, playerID)
 	if err != nil {
@@ -25,7 +25,7 @@ func (q *friendRepo) List(ctx context.Context, playerID string) ([]domain.Friend
 	var out []domain.FriendRow
 	for rows.Next() {
 		var f domain.FriendRow
-		if err := rows.Scan(&f.PlayerID, &f.Nickname, &f.Tier, &f.FriendCode, &f.FriendSince); err != nil {
+		if err := rows.Scan(&f.PlayerID, &f.Nickname, &f.Tier, &f.TierPoints, &f.FriendCode, &f.FriendSince); err != nil {
 			return nil, err
 		}
 		out = append(out, f)

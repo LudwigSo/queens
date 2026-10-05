@@ -41,6 +41,9 @@ static func league_summary(standing: Dictionary, now: int) -> Dictionary:
 	# up_to is a tier id; the name is ours to build.
 	var next_tier := LeagueRules.tier_label(str(rules.get("up_to", ""))) if str(rules.get("up_to", "")) != "" else ""
 	return {
+		"has_rounds": int(rules.get("round_days", standing.get("round_days", 7))) > 0,
+		"offline": bool(standing.get("offline", false)),
+		"online_required": bool(rules.get("online_required", false)),
 		"tier_id": str(standing.get("tier", standing.get("tier_id", "bronze"))),
 		"tier_name": LeagueRules.tier_label(str(standing.get("tier", standing.get("tier_id", "bronze")))),
 		"joined": bool(standing.get("joined", false)),
@@ -97,7 +100,7 @@ static func home(save: SaveData, catalog: LevelCatalog, energy: EnergyLedger, st
 	var last := save.last_game()
 	var view := {
 		"nickname": save.nickname(),
-		"energy": {"amount": energy.amount(), "unlimited": energy.is_unlimited()},
+		"energy": {"amount": energy.amount(), "unlimited": energy.is_unlimited(), "debt": energy.debt()},
 		"league": league_summary(standing, now),
 		"streak": {"days": save.streak_days(now)},
 		"last": {},
@@ -171,8 +174,10 @@ static func level_detail(lv: Dictionary, board_data: Dictionary, scope: String, 
 
 
 ## Win overlay. `outcome` is App.record_result's answer, `next` the step ->
-## option dictionaries for the next game.
-static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: Dictionary, league_cfg: Dictionary, completions: int) -> Dictionary:
+## option dictionaries for the next game. `offline_tier` is the player's tier
+## when the game could not be sent: the league card then says what happens to
+## it instead of showing a rank.
+static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: Dictionary, league_cfg: Dictionary, completions: int, offline_tier: String = "") -> Dictionary:
 	var badges: Array = []
 	var new_best := Loc.t("WIN_BADGE_NEW_BEST")
 	if bd["flawless"]:
@@ -199,7 +204,16 @@ static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: D
 		factors.append({"id": "hint", "value": float(bd.get("hint_factor", 1.0)), "pct": float(bd.get("hint_factor", 1.0))})
 	var league := {}
 	var lg: Dictionary = outcome.get("league", {})
-	if not lg.is_empty():
+	if lg.is_empty() and offline_tier != "":
+		var strict := LeagueRules.online_required(league_cfg, offline_tier)
+		league = {
+			"tier_id": offline_tier,
+			"note": Loc.f("WIN_OFFLINE_STRICT", [LeagueRules.tier_name(league_cfg, offline_tier)]) if strict else Loc.t("WIN_OFFLINE"),
+		}
+	elif not lg.is_empty() and not bool(lg.get("counted", true)):
+		var tier_id := str(lg.get("tier", "bronze"))
+		league = {"tier_id": tier_id, "note": Loc.f("WIN_NOT_COUNTED", [LeagueRules.tier_name(league_cfg, tier_id)])}
+	elif not lg.is_empty():
 		var tier := str(lg.get("tier", "bronze"))
 		var need := int(lg.get("promo_score", 0))
 		var points_now := int(lg.get("tier_points", 0))
@@ -233,12 +247,100 @@ static func win(result: GameResult, bd: Dictionary, outcome: Dictionary, next: D
 	}
 
 
-static func energy_state(energy: EnergyLedger, ads: AdsProvider, purchases: PurchaseProvider, ad_reward: int, price_text: String) -> Dictionary:
+## The run overview tab of the league screen. `runs` is a RoundRuns (offline,
+## with the queued games merged in). Every row says whether it counts, and the
+## lowest counted one is marked as the score to beat, so a glance tells how
+## much the next game needs.
+static func runs(runs_data: Dictionary, catalog: LevelCatalog) -> Dictionary:
+	var has_rounds := bool(runs_data.get("has_rounds", true))
+	var best_n := int(runs_data.get("best_n", 0))
+	var cut := int(runs_data.get("cut_score", 0))
+	var list: Array = runs_data.get("runs", [])
+	var counted := 0
+	var counted_points := 0
+	for r in list:
+		if bool(r.get("in_best", false)):
+			counted += 1
+			counted_points += int(r.get("score", 0))
+	var header := ""
+	if not has_rounds:
+		header = Loc.t("RUNS_ALL_COUNT")
+	elif cut > 0:
+		header = Loc.f("RUNS_BEAT", [cut])
+	else:
+		header = Loc.f("RUNS_FILLING", [best_n, counted])
+	var rows: Array = []
+	var cut_marked := false
+	# The last counted row in the list is the one to beat: the list is best first.
+	var last_best := -1
+	for i in list.size():
+		if bool(list[i].get("in_best", false)):
+			last_best = i
+	for i in list.size():
+		var r: Dictionary = list[i]
+		var level_id := str(r.get("level_id", ""))
+		var level_no := catalog.display_index(level_id) + 1 if catalog != null and level_id != "" else 0
+		var state := "best" if bool(r.get("in_best", false)) else "extra"
+		if not bool(r.get("counted", true)):
+			state = "offline"
+		var tags: Array = []
+		if has_rounds and cut > 0 and i == last_best and not cut_marked:
+			state = "cut"
+			cut_marked = true
+			tags.append(Loc.t("RUNS_CUT"))
+		if bool(r.get("pending", false)):
+			tags.append(Loc.t("RUNS_PENDING"))
+		if state == "offline":
+			tags.append(Loc.t("RUNS_OFFLINE_GAME"))
+		rows.append({
+			"result_id": str(r.get("result_id", "")),
+			"title": Loc.f("RUNS_ROW", [level_no, Fmt.size_text(int(r.get("size", 0)))]),
+			"diff_text": Loc.f("RUNS_ROW_DIFF", [int(r.get("difficulty", 0))]),
+			"stars": int(r.get("stars", 0)),
+			"score": int(r.get("score", 0)),
+			"state": state,
+			"tags": tags,
+		})
+	var empty_text := ""
+	if list.is_empty():
+		empty_text = Loc.t("RUNS_EMPTY") if has_rounds else Loc.t("RUNS_EMPTY_TIER")
 	return {
-		"energy_text": energy.display_text(),
+		"header": header,
+		"counted_title": Loc.f("RUNS_COUNTED", [counted_points if not has_rounds else int(runs_data.get("round_score", counted_points))]),
+		"rows": rows,
+		"empty_text": empty_text,
+		"has_rounds": has_rounds,
+	}
+
+
+## The win overlay again, for one run of the overview: the same score panel,
+## the level it was, no next-game choice.
+static func run_detail(run: Dictionary, catalog: LevelCatalog, league_cfg: Dictionary) -> Dictionary:
+	var result := GameResult.from_dict(run)
+	result.score = int(run.get("score", 0))
+	var bd: Dictionary = run.get("breakdown", {})
+	if bd.is_empty():
+		bd = Scoring.breakdown(run)
+	var view := win(result, bd, {}, {}, league_cfg, 0)
+	var level_id := str(run.get("level_id", ""))
+	var level_no := catalog.display_index(level_id) + 1 if level_id != "" else 0
+	var size := int(run.get("size", 0))
+	view["level_text"] = Loc.f("COMMON_LEVEL_TITLE", [level_no, size, size, int(run.get("difficulty", 0))])
+	view["stars"] = int(run.get("stars", 0))
+	return view
+
+
+static func energy_state(energy: EnergyLedger, ads: AdsProvider, purchases: PurchaseProvider, ad_reward: int, price_text: String,
+		offline: bool = false, min_playable: int = 2) -> Dictionary:
+	return {
+		"energy_text": energy.display_text() + ("  " + energy.debt_text() if energy.debt() > 0 else ""),
 		"amount": energy.amount(),
+		"debt": energy.debt(),
+		"offline": offline,
+		"repay_per_ad": maxi(0, ad_reward - min_playable),
+		"min_playable": min_playable,
 		"unlimited": energy.is_unlimited(),
-		"can_start": energy.can_start(),
+		"can_start": energy.can_start(offline),
 		"ad_ready": ads.is_ready(),
 		"ad_reward": ad_reward,
 		"price_text": price_text,

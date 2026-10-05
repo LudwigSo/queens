@@ -10,6 +10,8 @@ signal app_paused
 signal app_resumed
 ## Emitted once the backend has been created, registered and bootstrapped.
 signal backend_ready
+## The backend went offline or came back; screens show or hide the offline mark.
+signal connectivity_changed(online: bool)
 
 const Levels := preload("res://scripts/levels.gd")
 
@@ -27,6 +29,7 @@ var product_prices: Dictionary = {}   ## product id -> price text from the store
 var level_locks: Dictionary = {}
 
 var _save_queued: bool = false
+var _flushing: bool = false
 
 
 func _ready() -> void:
@@ -95,7 +98,7 @@ func _select_providers() -> void:
 
 
 func _on_reward_earned(_units: int) -> void:
-	energy.grant(config.ad_reward_energy)
+	energy.reward_ad(config.ad_reward_energy)
 	energy.record_ad_watched()
 
 
@@ -133,6 +136,7 @@ func _start_backend() -> void:
 		backend = LocalBackend.new(config, catalog, _system_now)
 	backend.name = "Backend"
 	add_child(backend)
+	backend.connectivity_changed.connect(_on_connectivity_changed)
 	await backend.init()
 	var reg: Dictionary = await backend.register_player(save.player_id(), save.nickname())
 	if not reg["ok"] and str(reg.get("code", "")) == "ERR_ID_TAKEN":
@@ -161,29 +165,59 @@ func _apply_server_config() -> void:
 		level_locks = backend.level_locks()
 
 
+## True while the backend cannot be reached. Offline the game goes on: results
+## queue, energy may run into debt, and the league shows the player's own
+## progress without the ranking.
+func is_offline() -> bool:
+	return backend != null and not backend.is_online()
+
+
+## Back online: register if the game was installed offline, send the queue,
+## and let the screens refresh.
+func _on_connectivity_changed(online: bool) -> void:
+	connectivity_changed.emit(online)
+	if not online:
+		return
+	if not backend.is_registered():
+		await backend.register_player(save.player_id(), save.nickname())
+		_apply_server_config()
+	await flush_pending_results()
+	backend.standing_changed.emit()
+
+
 ## Sends results the backend has not accepted yet (offline, crash, ...).
 func flush_pending_results() -> void:
-	var pending: Array = save.data["pending_results"]
-	if pending.is_empty():
+	if _flushing:
 		return
-	var kept: Array = []
-	for i in pending.size():
-		var r: Dictionary = pending[i]
+	if (save.data["pending_results"] as Array).is_empty():
+		return
+	_flushing = true
+	# Send a snapshot: a game finished meanwhile is appended to the live queue
+	# (and record_result removes what it sends itself), so the live array must
+	# not be walked by index across the awaits.
+	var batch: Array = (save.data["pending_results"] as Array).duplicate()
+	var done := {}
+	for r in batch:
 		var res: Dictionary = await backend.submit_result(r)
 		if res["ok"]:
+			done[str(r.get("result_id", ""))] = true
 			continue
 		if bool(res.get("permanent", false)):
 			# The server will never accept this one; keeping it would retry it
 			# on every launch for ever.
 			push_warning("dropping a result the server rejected: %s" % str(res.get("code", "")))
+			done[str(r.get("result_id", ""))] = true
 			continue
 		# Anything else (offline, rate limited, a server error) is temporary.
 		# Keep this result and everything after it, in order.
-		for j in range(i, pending.size()):
-			kept.append(pending[j])
 		break
+	var kept: Array = []
+	for r in save.data["pending_results"]:
+		if not done.has(str(r.get("result_id", ""))):
+			kept.append(r)
 	save.data["pending_results"] = kept
 	save.mark_changed()
+	_flushing = false
 
 
 ## A game that was running when the app was killed counts as forfeited.

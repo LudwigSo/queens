@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/home_screen.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/star_row.gd" id="2_stars"]
@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" path="res://assets/icons/line/grid.svg" id="7_grid"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/flame.svg" id="8_flame"]
 [ext_resource type="Texture2D" path="res://assets/brand/wordmark.png" id="9_wordmark"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/cloud_off.svg" id="11_offline"]
 
 [node name="Home" type="Control"]
 layout_mode = 3
@@ -57,6 +58,16 @@ expand_icon = true
 [node name="TopSpacer" type="Control" parent="Margin/VBox/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="OfflineButton" type="Button" parent="Margin/VBox/TopBar"]
+visible = false
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+tooltip_text = "LEAGUE_OFFLINE_BUTTON"
+theme_type_variation = &"ButtonIconGhost"
+icon = ExtResource("11_offline")
+icon_alignment = 1
+expand_icon = true
 
 [node name="EnergyButton" type="Button" parent="Margin/VBox/TopBar"]
 custom_minimum_size = Vector2(0, 56)

@@ -53,7 +53,9 @@ type PlayerRepo interface {
 	Create(ctx context.Context, p *domain.Player) error
 	UpdateNickname(ctx context.Context, id, nickname string, now int64) error
 	// AddGameStats bumps counters in SQL (never read-modify-write in Go).
-	AddGameStats(ctx context.Context, id string, flawless, score int, now int64) error
+	// tierPoints is what the game adds to tier_points: its score, or 0 when the
+	// league does not count it.
+	AddGameStats(ctx context.Context, id string, flawless, score, tierPoints int, now int64) error
 	SetPerfectStreak(ctx context.Context, id string, n int) error
 	IncRoundsPlayed(ctx context.Context, id string) error
 	// SetTier is conditional on the current tier and resets tier_points when
@@ -113,6 +115,8 @@ type ResultRepo interface {
 	RoundScores(ctx context.Context, playerID, tier string, roundIndex int64, bestN int) ([]int, error)
 	CountRoundGames(ctx context.Context, playerID, tier string, roundIndex int64) (int, error)
 	BestGame(ctx context.Context, playerID, tier string, roundIndex int64) (*domain.BestGame, error)
+	// RoundRuns lists the round's completed results, counted or not, best first.
+	RoundRuns(ctx context.Context, playerID, tier string, roundIndex int64, limit int) ([]domain.Result, error)
 }
 
 type LevelBestRepo interface {
@@ -136,7 +140,11 @@ type LeagueRepo interface {
 
 	FindOpenGroup(ctx context.Context, tier string, idx int64, quarantine bool) (*domain.Group, error)
 	CreateGroup(ctx context.Context, g *domain.Group) error
-	IncGroupCount(ctx context.Context, groupID string) (bool, error)
+	// IncGroupCount adds one person unless the group already holds `limit`.
+	IncGroupCount(ctx context.Context, groupID string, limit int) (bool, error)
+	// FriendGroups lists the open groups of the round holding a friend (either
+	// direction) with fewer than `limit` people, fullest first.
+	FriendGroups(ctx context.Context, playerID, tier string, idx int64, quarantine bool, limit int) ([]domain.FriendGroup, error)
 	DecGroupCountsForPlayer(ctx context.Context, playerID string) error
 	OpenGroups(ctx context.Context, tier string, idx int64) ([]domain.Group, error)
 	ClaimGroupClose(ctx context.Context, groupID string, now int64) (bool, error)

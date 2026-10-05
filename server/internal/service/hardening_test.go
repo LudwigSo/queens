@@ -14,8 +14,10 @@ import (
 // summaries and progression are unchanged, and nothing in the response says so.
 func TestShadowExcludedJoinsAQuarantineGroup(t *testing.T) {
 	h := newHarness(t)
-	honest := h.register(t, "Honest")
-	cheat := h.register(t, "Cheat")
+	// Diamond is one global group, without bots, so the group sizes below are
+	// the people in it.
+	honest := h.registerIn(t, "Honest", "diamond")
+	cheat := h.registerIn(t, "Cheat", "diamond")
 	h.shadowExclude(t, cheat)
 
 	lv1 := h.freshLevelAnySize(t)
@@ -35,7 +37,7 @@ func TestShadowExcludedJoinsAQuarantineGroup(t *testing.T) {
 		t.Errorf("each group holds one player, got %d and %d", a.Group.Size, b.Group.Size)
 	}
 	// The excluded player sees an ordinary standing: no UI difference.
-	if !b.Joined || b.MyRank != 1 || b.Tier != "bronze" {
+	if !b.Joined || b.MyRank != 1 || b.Tier != "diamond" {
 		t.Errorf("the excluded player's own view must look normal: %+v", b)
 	}
 }

@@ -11,16 +11,17 @@ import (
 func TestStartGameMintsSessionAndJoinsRound(t *testing.T) {
 	h := newHarness(t)
 	p := h.register(t, "Ann")
+	h.setTier(t, p, "gold")
 	lv := h.levelOfSize(t, 6)
 
 	res := h.start(t, p, lv.ID)
 	if !res.Joined || res.Session.Token == "" {
 		t.Fatalf("expected a joined round with a session, got %+v", res)
 	}
-	if res.Tier != "bronze" {
-		t.Errorf("a new player starts in bronze, got %q", res.Tier)
+	if res.Tier != "gold" {
+		t.Errorf("tier = %q, want gold", res.Tier)
 	}
-	wantGroup := "lg_bronze_" + itoa(res.RoundIndex) + "_001"
+	wantGroup := "lg_gold_" + itoa(res.RoundIndex) + "_001"
 	if res.GroupID != wantGroup {
 		t.Errorf("group id = %q, want %q", res.GroupID, wantGroup)
 	}
@@ -41,6 +42,7 @@ func TestStartGameMintsSessionAndJoinsRound(t *testing.T) {
 func TestStartGameSecondLevelDoesNotRejoin(t *testing.T) {
 	h := newHarness(t)
 	p := h.register(t, "Ann")
+	h.setTier(t, p, "gold")
 	levels := h.levelsOfSize(t, 6, 2)
 	h.start(t, p, levels[0].ID)
 	h.start(t, p, levels[1].ID)
@@ -305,10 +307,12 @@ func TestSubmitStaleSessionIsAcceptedWithAFlag(t *testing.T) {
 }
 
 // A result with no session counts for stats and the league but never reaches a
-// leaderboard.
+// leaderboard. Below Diamond it is an ordinary offline game, so it raises no
+// flag either.
 func TestSubmitWithoutSessionIsUnverifiedAndOffTheBoard(t *testing.T) {
 	h := newHarness(t)
 	p := h.register(t, "Ann")
+	h.setTier(t, p, "gold")
 	lv := h.levelOfSize(t, 6)
 	pay := h.payloadNoSession(p, lv, 60, 0, 0)
 	res := h.submit(t, pay)
@@ -326,8 +330,11 @@ func TestSubmitWithoutSessionIsUnverifiedAndOffTheBoard(t *testing.T) {
 	if len(board.Entries) != 0 || board.MyRank != 0 {
 		t.Errorf("an unverified result must stay off the leaderboard, got %+v", board)
 	}
-	if n := h.flagCount(t, p, domain.SigNoSession); n != 1 {
-		t.Errorf("expected one no_session flag, got %d", n)
+	if !res.Decoded.Counted {
+		t.Error("gold counts an offline game")
+	}
+	if n := h.flagCount(t, p, domain.SigNoSession); n != 0 {
+		t.Errorf("an offline game below diamond must not flag, got %d", n)
 	}
 }
 
@@ -407,6 +414,7 @@ func TestSubmitHardRejections(t *testing.T) {
 func TestSubmitUpdatesStatsAndRoundScore(t *testing.T) {
 	h := newHarness(t)
 	p := h.register(t, "Ann")
+	h.setTier(t, p, "gold")
 	total := 0
 	for i := 0; i < 3; i++ {
 		lv := h.freshLevel(t, 6)
@@ -436,13 +444,13 @@ func TestSubmitUpdatesStatsAndRoundScore(t *testing.T) {
 func TestRoundScoreKeepsOnlyTheBestFifteen(t *testing.T) {
 	h := newHarness(t)
 	p := h.register(t, "Ann")
+	h.setTier(t, p, "platinum")
 	var scores []int
 	for i := 0; i < 16; i++ {
 		lv := h.freshLevel(t, 6)
 		st := h.start(t, p, lv.ID)
 		h.clock.Add(60 + int64(i)*30) // later games are slower, so worth less
-		// Four mistakes each (never more than the queens placed) keeps the total
-		// under bronze's 3000 promo score, so every game lands in one round.
+		// Four mistakes each, never more than the queens placed.
 		res := h.submit(t, h.payload(p, lv, st, float64(60+i*30), 4, 0))
 		scores = append(scores, res.Decoded.Breakdown.Score)
 	}
@@ -455,6 +463,7 @@ func TestRoundScoreKeepsOnlyTheBestFifteen(t *testing.T) {
 func TestSubmitForfeitJoinsRoundButChangesNothing(t *testing.T) {
 	h := newHarness(t)
 	p := h.register(t, "Ann")
+	h.setTier(t, p, "gold")
 	lv := h.levelOfSize(t, 6)
 	st := h.start(t, p, lv.ID)
 	h.clock.Add(30)

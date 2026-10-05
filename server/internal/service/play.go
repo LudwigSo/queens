@@ -59,8 +59,20 @@ func (s *Service) StartGame(ctx context.Context, playerID, levelID string) (*Sta
 			return err
 		}
 		idx := domain.RoundIndex(tierCfg, s.now())
-		if err := s.ensureRound(ctx, r, tierCfg, idx); err != nil {
-			return err
+		// A tier without rounds (Bronze, Silver) has no round row and no group:
+		// a game there only ever adds tier points.
+		join := func() (*domain.Member, error) {
+			if !tierCfg.HasRounds() {
+				_, err := s.refreshExclusion(ctx, r, p)
+				return nil, err
+			}
+			m, _, err := s.ensureMembership(ctx, r, p, tierCfg, idx, "")
+			return m, err
+		}
+		if tierCfg.HasRounds() {
+			if err := s.ensureRound(ctx, r, tierCfg, idx); err != nil {
+				return err
+			}
 		}
 
 		// A still-open session for this level is handed back instead of minting
@@ -68,7 +80,7 @@ func (s *Service) StartGame(ctx context.Context, playerID, levelID string) (*Sta
 		// was processed but whose response was lost must not cost the player a
 		// seven-day lock on the level.
 		if existing, err := r.Sessions.FindReusable(ctx, p.ID, levelID, s.now()-s.Cfg.SessionTTL); err == nil {
-			m, _, err := s.ensureMembership(ctx, r, p, tierCfg, idx)
+			m, err := join()
 			if err != nil {
 				return err
 			}
@@ -103,9 +115,13 @@ func (s *Service) StartGame(ctx context.Context, playerID, levelID string) (*Sta
 			return err
 		}
 
-		m, _, err := s.ensureMembership(ctx, r, p, tierCfg, idx)
+		m, err := join()
 		if err != nil {
 			return err
+		}
+		groupID := ""
+		if m != nil {
+			groupID = m.GroupID
 		}
 
 		id, err := auth.NewSessionID()
@@ -115,7 +131,7 @@ func (s *Service) StartGame(ctx context.Context, playerID, levelID string) (*Sta
 		sess := &domain.Session{
 			ID: id, PlayerID: p.ID, LevelID: levelID,
 			IssuedAt: s.now(), ExpiresAt: s.now() + s.Cfg.SessionTTL,
-			TierAtIssue: tierCfg.ID, RoundIndexAtIssue: idx, GroupID: m.GroupID,
+			TierAtIssue: tierCfg.ID, RoundIndexAtIssue: idx, GroupID: groupID,
 			ClientVersion: p.ClientVersion,
 		}
 		if err := r.Sessions.Insert(ctx, sess); err != nil {
@@ -130,9 +146,15 @@ func (s *Service) StartGame(ctx context.Context, playerID, levelID string) (*Sta
 	return out, nil
 }
 
+// startResult reports the round the game was started in; m is nil in a tier
+// without rounds, which has no group to join.
 func (s *Service) startResult(p *domain.Player, lv domain.Level, sess *domain.Session, m *domain.Member, idx int64) *StartGameResult {
+	groupID := ""
+	if m != nil {
+		groupID = m.GroupID
+	}
 	return &StartGameResult{
-		RoundIndex: idx, GroupID: m.GroupID, Joined: true, Tier: p.Tier,
+		RoundIndex: idx, GroupID: groupID, Joined: m != nil, Tier: p.Tier,
 		LockedUntil: s.now() + s.Cfg.CooldownSeconds,
 		Session: SessionView{
 			Token: auth.SessionToken(s.Cfg.TokenPepper, sess.ID), IssuedAt: sess.IssuedAt, ExpiresAt: sess.ExpiresAt,
@@ -188,7 +210,10 @@ type SubmitResponse struct {
 	PromoScore int                   `json:"promo_score"`
 	PromotedTo string                `json:"promoted_to"`
 	Verified   bool                  `json:"verified"`
-	ServerTime int64                 `json:"server_time"`
+	// Counted is false when the game missed the online rule of its tier: it is
+	// stored, and can still set a level best, but adds nothing to the league.
+	Counted    bool  `json:"counted"`
+	ServerTime int64 `json:"server_time"`
 }
 
 type SubmitResult struct {
@@ -284,6 +309,10 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 		return nil, err
 	}
 	now := s.now()
+	tierCfg, err := s.tier(player.Tier)
+	if err != nil {
+		return nil, err
+	}
 
 	// --- session -----------------------------------------------------------
 	var sess *domain.Session
@@ -338,8 +367,11 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 			}
 		}
 	} else {
-		// No session: accepted, but never trusted onto a leaderboard.
-		if p.FinishedAt >= s.Cfg.NoSessionGraceUntil {
+		// No session: accepted, but never trusted onto a leaderboard. Below
+		// Diamond an offline game is an ordinary thing -- the client queues it
+		// and syncs it later, and those tiers count it -- so only a tier with
+		// the online rule treats a missing session as a signal.
+		if tierCfg.OnlineRequired && p.FinishedAt >= s.Cfg.NoSessionGraceUntil {
 			if err := s.flag(ctx, r, playerID, domain.SigNoSession, domain.WNoSession, nil, &p.ResultID, nil); err != nil {
 				return nil, err
 			}
@@ -455,34 +487,37 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 	}
 
 	// --- round bookkeeping --------------------------------------------------
-	tierCfg, err := s.tier(player.Tier)
-	if err != nil {
-		return nil, err
-	}
-	// The second term can never win once finished_at is clamped to now; it is
-	// kept because the stub computed it and the intent is explicit.
+	// A result is credited to the round that is running when it ARRIVES: a
+	// game played offline last week and synced today counts for today's
+	// round, because last week's has been settled. The second term can never
+	// win once finished_at is clamped to now; it is kept because the stub
+	// computed it and the intent is explicit.
 	idx := domain.RoundIndex(tierCfg, now)
 	if fi := domain.RoundIndex(tierCfg, finished); fi > idx {
 		idx = fi
 	}
-	if err := s.ensureRound(ctx, r, tierCfg, idx); err != nil {
-		return nil, err
-	}
-	// A forfeit joins the round too, exactly like the stub's submit path.
-	member, _, err := s.ensureMembership(ctx, r, player, tierCfg, idx)
-	if err != nil {
-		return nil, err
-	}
-
-	if p.Completed {
-		if err := s.checkCeiling(ctx, r, player, tierCfg, idx, bd.Score, p.ResultID); err != nil {
+	// The online rule (Diamond, Challenger): only a session-backed game that
+	// arrives within online_grace_s of finishing counts for the league.
+	counted := s.League.CountsForLeague(tierCfg, sess != nil, finished, now)
+	var member *domain.Member
+	if tierCfg.HasRounds() {
+		if err := s.ensureRound(ctx, r, tierCfg, idx); err != nil {
 			return nil, err
+		}
+		// A forfeit joins the round too, exactly like the stub's submit path.
+		if member, _, err = s.ensureMembership(ctx, r, player, tierCfg, idx, ""); err != nil {
+			return nil, err
+		}
+		if p.Completed && counted {
+			if err := s.checkCeiling(ctx, r, player, tierCfg, idx, bd.Score, p.ResultID); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	rec := &domain.Result{
 		ResultID: p.ResultID, PlayerID: playerID, LevelID: levelID, SessionID: sessPtr,
-		Tier: tierCfg.ID, RoundIndex: idx, Completed: p.Completed, Verified: verified, Schema: p.Schema,
+		Tier: tierCfg.ID, RoundIndex: idx, Completed: p.Completed, Verified: verified, Counted: counted, Schema: p.Schema,
 		Size: lv.Size, Difficulty: lv.Difficulty, Stars: lv.Stars, ParSeconds: par, Base: bd.Base,
 		StartedAt: p.StartedAt, FinishedAt: finished, ReceivedAt: now,
 		ElapsedSeconds: elapsed, ClientElapsedSeconds: p.ElapsedSeconds,
@@ -511,7 +546,7 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 
 	promotedTo := ""
 	if p.Completed {
-		if err := s.applyCompleted(ctx, r, player, tierCfg, idx, lv, p, bd, elapsed, par, finished, verified); err != nil {
+		if err := s.applyCompleted(ctx, r, player, tierCfg, idx, lv, p, bd, elapsed, par, finished, verified, counted); err != nil {
 			return nil, err
 		}
 	}
@@ -521,44 +556,39 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 	if err != nil {
 		return nil, err
 	}
-	member, err = r.League.GetMember(ctx, playerID, tierCfg.ID, idx)
-	if err != nil {
-		return nil, err
-	}
-	g, err := r.League.GetGroup(ctx, member.GroupID)
-	if err != nil {
-		return nil, err
-	}
-	rank, err := r.League.MemberRank(ctx, g.ID, member)
-	if err != nil {
-		return nil, err
-	}
-	upCount, err := s.upCountFor(ctx, r, tierCfg)
-	if err != nil {
-		return nil, err
-	}
-	leader, err := r.League.GroupLeaderScore(ctx, g.ID)
-	if err != nil {
-		return nil, err
-	}
-	counts := domain.Counts(g.MemberCount, tierCfg, s.League, leader, upCount)
-	pointsBefore := player.TierPoints
-
-	if p.Completed && domain.ReachesPromo(tierCfg, player.TierPoints) {
-		promotedTo, err = s.promoteByScore(ctx, r, player, tierCfg, idx, member, g.MemberCount, rank)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	resp := SubmitResponse{
-		Breakdown: bd, RoundScore: member.RoundScore, GroupRank: rank, GroupSize: g.MemberCount,
-		Zone: zoneFor(rank, member.RoundScore, g.MemberCount, counts),
+		Breakdown: bd,
 		// tier and round_index still describe the OLD tier's round; only
 		// promoted_to names the new one. That is the stub's behaviour.
 		Tier: tierCfg.ID, RoundIndex: idx,
-		TierPoints: pointsBefore, PromoScore: tierCfg.PromoScoreOf(), PromotedTo: promotedTo,
-		Verified: verified, ServerTime: now,
+		TierPoints: player.TierPoints, PromoScore: tierCfg.PromoScoreOf(),
+		Verified: verified, Counted: counted, ServerTime: now,
+	}
+	if member != nil {
+		if member, err = r.League.GetMember(ctx, playerID, tierCfg.ID, idx); err != nil {
+			return nil, err
+		}
+		g, err := r.League.GetGroup(ctx, member.GroupID)
+		if err != nil {
+			return nil, err
+		}
+		upCount, err := s.upCountFor(ctx, r, tierCfg)
+		if err != nil {
+			return nil, err
+		}
+		pl, err := s.placeMember(ctx, r, tierCfg, g, member, upCount, false)
+		if err != nil {
+			return nil, err
+		}
+		resp.RoundScore, resp.GroupRank, resp.GroupSize, resp.Zone = member.RoundScore, pl.Rank, pl.Size, pl.Zone
+	}
+
+	if p.Completed && counted && domain.ReachesPromo(tierCfg, player.TierPoints) {
+		promotedTo, err = s.promoteByScore(ctx, r, player, tierCfg, idx, member, resp.GroupSize, resp.GroupRank)
+		if err != nil {
+			return nil, err
+		}
+		resp.PromotedTo = promotedTo
 	}
 	body, err := json.Marshal(resp)
 	if err != nil {
@@ -573,7 +603,7 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 // applyCompleted updates the stats, the round score and the soft signals of a
 // completed game.
 func (s *Service) applyCompleted(ctx context.Context, r store.Repos, player *domain.Player, tierCfg domain.Tier,
-	idx int64, lv domain.Level, p ResultPayload, bd domain.ScoreBreakdown, elapsed, par float64, finished int64, verified bool) error {
+	idx int64, lv domain.Level, p ResultPayload, bd domain.ScoreBreakdown, elapsed, par float64, finished int64, verified, counted bool) error {
 
 	// Only a session-backed result reaches a leaderboard.
 	if verified {
@@ -600,21 +630,27 @@ func (s *Service) applyCompleted(ctx context.Context, r store.Repos, player *dom
 	if bd.Flawless {
 		flawless = 1
 	}
-	if err := r.Players.AddGameStats(ctx, player.ID, flawless, bd.Score, s.now()); err != nil {
+	tierPoints := 0
+	if counted {
+		tierPoints = bd.Score
+	}
+	if err := r.Players.AddGameStats(ctx, player.ID, flawless, bd.Score, tierPoints, s.now()); err != nil {
 		return err
 	}
 
-	scores, err := r.Results.RoundScores(ctx, player.ID, tierCfg.ID, idx, s.League.RoundBestN)
-	if err != nil {
-		return err
-	}
-	games, err := r.Results.CountRoundGames(ctx, player.ID, tierCfg.ID, idx)
-	if err != nil {
-		return err
-	}
-	if err := r.League.UpdateMemberScore(ctx, player.ID, tierCfg.ID, idx,
-		domain.RoundScore(scores, s.League), games, finished); err != nil {
-		return err
+	if counted && tierCfg.HasRounds() {
+		scores, err := r.Results.RoundScores(ctx, player.ID, tierCfg.ID, idx, s.League.RoundBestN)
+		if err != nil {
+			return err
+		}
+		games, err := r.Results.CountRoundGames(ctx, player.ID, tierCfg.ID, idx)
+		if err != nil {
+			return err
+		}
+		if err := r.League.UpdateMemberScore(ctx, player.ID, tierCfg.ID, idx,
+			domain.RoundScore(scores, s.League), games, finished); err != nil {
+			return err
+		}
 	}
 
 	// Soft signals. no_exploration is the signature of reading the solution out
@@ -699,7 +735,9 @@ func (s *Service) checkCeiling(ctx context.Context, r store.Repos, player *domai
 //
 // It deliberately does NOT join the new tier's running round: that is the stub's
 // behaviour and it is pinned by a test. Auto-joining would create phantom
-// zero-score members who then get relegated for inactivity.
+// zero-score members who then get relegated for inactivity -- and it would take
+// away the choice of joining a friend's group. member is nil in a tier without
+// rounds, which is every score tier today.
 func (s *Service) promoteByScore(ctx context.Context, r store.Repos, player *domain.Player, tierCfg domain.Tier,
 	idx int64, member *domain.Member, groupSize, rank int) (string, error) {
 
@@ -711,10 +749,14 @@ func (s *Service) promoteByScore(ctx context.Context, r store.Repos, player *dom
 	if err != nil {
 		return "", err
 	}
+	roundScore := 0
+	if member != nil {
+		roundScore = member.RoundScore
+	}
 	if _, err := r.League.InsertSummary(ctx, &domain.Summary{
 		ID: uuidNew(), PlayerID: player.ID, TierBefore: tierCfg.ID, RoundIndex: idx, TierAfter: above,
 		Outcome: domain.OutcomePromoted, Reason: domain.ReasonScore,
-		Rank: rank, GroupSize: groupSize, RoundScore: member.RoundScore,
+		Rank: rank, GroupSize: groupSize, RoundScore: roundScore,
 		TierPoints: player.TierPoints, BestGame: best, CreatedAt: s.now(),
 	}); err != nil {
 		return "", err
@@ -733,8 +775,10 @@ func (s *Service) promoteByScore(ctx context.Context, r store.Repos, player *dom
 	}
 	// The old membership stays and keeps its score: other members' ranks depend
 	// on it. left_at tells the closer not to settle this player again.
-	if err := r.League.MarkMemberLeft(ctx, player.ID, tierCfg.ID, idx, s.now()); err != nil {
-		return "", err
+	if member != nil {
+		if err := r.League.MarkMemberLeft(ctx, player.ID, tierCfg.ID, idx, s.now()); err != nil {
+			return "", err
+		}
 	}
 	return above, nil
 }

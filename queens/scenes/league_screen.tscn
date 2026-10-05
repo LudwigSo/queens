@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/league_screen.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="2_segmented"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" path="res://assets/icons/line/medal.svg" id="5_medal"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/copy.svg" id="6_copy"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/share.svg" id="7_share"]
+[ext_resource type="Texture2D" path="res://assets/icons/line/cloud_off.svg" id="8_offline"]
 
 [node name="League" type="Control"]
 visible = false
@@ -53,6 +54,20 @@ horizontal_alignment = 1
 [node name="Spacer" type="Control" parent="Margin/VBox/TopBar"]
 custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
+
+[node name="OfflineButton" type="Button" parent="Margin/VBox/TopBar/Spacer"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+tooltip_text = "LEAGUE_OFFLINE_BUTTON"
+theme_type_variation = &"ButtonIconGhost"
+icon = ExtResource("8_offline")
+icon_alignment = 1
+expand_icon = true
 
 [node name="TierCard" type="PanelContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -111,6 +126,11 @@ script = ExtResource("2_segmented")
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 text = "LEAGUE_TAB_STANDINGS"
+
+[node name="runs" type="Button" parent="Margin/VBox/Tabs"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "LEAGUE_TAB_RUNS"
 
 [node name="friends" type="Button" parent="Margin/VBox/Tabs"]
 custom_minimum_size = Vector2(0, 56)

@@ -19,9 +19,13 @@ type RulesView struct {
 	UpTo       string `json:"up_to"`
 	BestN      int    `json:"best_n"`
 	RoundMode  string `json:"round_mode"`
-	RoundDays  int    `json:"round_days"`
+	RoundDays  int    `json:"round_days"` // 0: a tier without rounds (Bronze, Silver)
 	Global     bool   `json:"global"`
 	Floor      bool   `json:"floor"`
+	// OnlineRequired: a game counts only when started online and synced within
+	// OnlineGraceS of finishing.
+	OnlineRequired bool  `json:"online_required"`
+	OnlineGraceS   int64 `json:"online_grace_s"`
 }
 
 type GroupView struct {
@@ -93,7 +97,13 @@ func (s *Service) standingFor(ctx context.Context, r store.Repos, p *domain.Play
 			PromoScore: tierCfg.PromoScoreOf(), UpTo: upTo, BestN: s.League.RoundBestN,
 			RoundMode: s.League.RoundMode, RoundDays: tierCfg.RoundDays,
 			Global: tierCfg.Global, Floor: tierCfg.Floor,
+			OnlineRequired: tierCfg.OnlineRequired, OnlineGraceS: s.League.OnlineGraceS,
 		},
+	}
+	if !tierCfg.HasRounds() {
+		// Bronze and Silver: no timer, no group, no ranking. The client renders
+		// the tier points against promo_score and nothing else.
+		return view, nil
 	}
 
 	me, err := r.League.GetMember(ctx, p.ID, tierCfg.ID, idx)
@@ -110,39 +120,19 @@ func (s *Service) standingFor(ctx context.Context, r store.Repos, p *domain.Play
 	if err != nil {
 		return nil, err
 	}
-	leader, err := r.League.GroupLeaderScore(ctx, g.ID)
+	pl, err := s.placeMember(ctx, r, tierCfg, g, me, upCount, true)
 	if err != nil {
 		return nil, err
-	}
-	c := domain.Counts(g.MemberCount, tierCfg, s.League, leader, upCount)
-	promote, err := r.League.GroupPromoteCount(ctx, g.ID, c.Up)
-	if err != nil {
-		return nil, err
-	}
-	myRank, err := r.League.MemberRank(ctx, g.ID, me)
-	if err != nil {
-		return nil, err
-	}
-	lo, hi := 0, 0
-	if g.MemberCount > standingMembersTop {
-		lo, hi = myRank-5, myRank+5
-	}
-	members, err := r.League.StandingWindow(ctx, g.ID, p.ID, standingMembersTop, lo, hi)
-	if err != nil {
-		return nil, err
-	}
-	for i := range members {
-		members[i].Zone = zoneFor(members[i].Rank, members[i].RoundScore, g.MemberCount, c)
 	}
 
 	view.Joined = true
-	view.MyRank = myRank
+	view.MyRank = pl.Rank
 	view.MyRoundScore = me.RoundScore
 	view.MyGames = me.Games
-	view.Zone = zoneFor(myRank, me.RoundScore, g.MemberCount, c)
+	view.Zone = pl.Zone
 	view.Group = &GroupView{
-		GroupID: g.ID, Tier: g.Tier, RoundIndex: g.RoundIndex, Size: g.MemberCount,
-		PromoteCount: promote, RelegateCount: c.Down, Members: members,
+		GroupID: g.ID, Tier: g.Tier, RoundIndex: g.RoundIndex, Size: pl.Size,
+		PromoteCount: pl.PromoteCount, RelegateCount: pl.RelegateCount, Members: pl.Members,
 	}
 	return view, nil
 }
@@ -173,6 +163,9 @@ type SummaryView struct {
 	TierPoints int              `json:"tier_points"`
 	BestGame   *domain.BestGame `json:"best_game,omitempty"`
 	Seen       bool             `json:"seen"`
+	// JoinOptions counts the friends' groups the player could join in their new
+	// tier's running round; above 0 the client offers GET /v1/league/join-options.
+	JoinOptions int `json:"join_options"`
 }
 
 func summaryView(s *domain.Summary) *SummaryView {
@@ -195,7 +188,17 @@ func (s *Service) RoundSummary(ctx context.Context, playerID string) (*SummaryVi
 	if err != nil {
 		return nil, err
 	}
-	return summaryView(sum), nil
+	view := summaryView(sum)
+	if view != nil && view.TierAfter != view.TierBefore {
+		opts, err := s.JoinOptions(ctx, playerID)
+		if err != nil {
+			return nil, err
+		}
+		if opts.Tier == view.TierAfter {
+			view.JoinOptions = len(opts.Options)
+		}
+	}
+	return view, nil
 }
 
 // AckRoundSummary marks the newest unseen summary seen only when its index

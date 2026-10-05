@@ -69,14 +69,15 @@ func (q *playerRepo) UpdateNickname(ctx context.Context, id, nickname string, no
 
 // AddGameStats bumps every counter in SQL. best_score uses CASE rather than a
 // read-modify-write in Go, so two concurrent submits cannot lose one.
-func (q *playerRepo) AddGameStats(ctx context.Context, id string, flawless, score int, now int64) error {
+// tierPoints is the score again, or 0 for a game the league does not count.
+func (q *playerRepo) AddGameStats(ctx context.Context, id string, flawless, score, tierPoints int, now int64) error {
 	_, err := q.w.ExecContext(ctx, `UPDATE players SET
 		games = games + 1,
 		flawless = flawless + ?,
 		best_score = CASE WHEN best_score < ? THEN ? ELSE best_score END,
 		tier_points = tier_points + ?,
 		updated_at = ?
-		WHERE id = ?`, flawless, score, score, score, now, id)
+		WHERE id = ?`, flawless, score, score, tierPoints, now, id)
 	return mapErr(err)
 }
 

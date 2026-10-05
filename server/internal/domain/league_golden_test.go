@@ -90,22 +90,71 @@ func TestRoundTiming(t *testing.T) {
 	bronze, _ := cfg.TierByID("bronze")
 	silver, _ := cfg.TierByID("silver")
 	gold, _ := cfg.TierByID("gold")
+	platinum, _ := cfg.TierByID("platinum")
 	at := WeekStart(2957) + 2*86400
-	if bronze.RoundDays != 3 || silver.RoundDays != 7 {
+	if bronze.RoundDays != 0 || silver.RoundDays != 0 || gold.RoundDays != 7 {
 		t.Error("round length per tier")
 	}
-	if RoundIndex(silver, at) != 2957 || RoundStart(gold, 2957) != WeekStart(2957) || RoundEnd(gold, 2957) != WeekEnd(2957) {
+	if bronze.HasRounds() || silver.HasRounds() || !gold.HasRounds() {
+		t.Error("bronze and silver run without a timer")
+	}
+	if RoundIndex(platinum, at) != 2957 || RoundStart(gold, 2957) != WeekStart(2957) || RoundEnd(gold, 2957) != WeekEnd(2957) {
 		t.Error("7-day rounds are calendar weeks")
 	}
-	br := RoundIndex(bronze, at)
-	if RoundStart(bronze, br) > at || at >= RoundEnd(bronze, br) {
-		t.Error("bronze round contains the time")
+	if RoundIndex(bronze, at) != 0 || RoundIndex(silver, 0) != 0 || RoundStart(bronze, 0) != 0 || RoundEnd(silver, 0) != 0 {
+		t.Error("a tier without rounds lives in round 0 and never ends")
 	}
-	if RoundEnd(bronze, br)-RoundStart(bronze, br) != 3*86400 {
-		t.Error("bronze rounds last three days")
+	c, err := LoadLeagueConfig([]byte(`{"tiers":[{"id":"x"}]}`))
+	if err != nil || c.Tiers[0].RoundDays != 7 {
+		t.Error("a tier without round_days plays weeks")
 	}
-	if (RoundStart(bronze, br)-RoundEpochOffset)%86400 != 0 {
-		t.Error("rounds start at midnight UTC")
+}
+
+func TestGroupsBotsAndOnlineRule(t *testing.T) {
+	cfg := DefaultLeagueConfig()
+	gold, _ := cfg.TierByID("gold")
+	platinum, _ := cfg.TierByID("platinum")
+	silver, _ := cfg.TierByID("silver")
+	diamond, _ := cfg.TierByID("diamond")
+	challenger, _ := cfg.TierByID("challenger")
+	if cfg.GroupSize != 30 || cfg.GroupMax != 50 {
+		t.Error("group size and the friends' cap")
+	}
+	if BotCount(gold, 1) != 29 || BotCount(platinum, 30) != 0 || BotCount(gold, 41) != 0 {
+		t.Error("bots top gold and platinum up to 30")
+	}
+	if BotCount(silver, 1) != 0 || BotCount(diamond, 1) != 0 {
+		t.Error("no bots elsewhere")
+	}
+	start, end := RoundStart(gold, 2957), RoundEnd(gold, 2957)
+	names := map[string]bool{}
+	for slot := 0; slot < 29; slot++ {
+		seed := BotSeed(123456, slot)
+		names[cfg.BotNickname(123456, slot)] = true
+		prev := -1
+		for step := int64(0); step < 8; step++ {
+			p := BotProgress(gold, cfg, seed, start, end, start+step*86400)
+			if p.RoundScore < prev {
+				t.Fatalf("bot %d: score went down", slot)
+			}
+			prev = p.RoundScore
+		}
+		fin := BotProgress(gold, cfg, seed, start, end, end)
+		if fin.Games < 1 || fin.Games > 15 || fin.LastSubmitAt < start || fin.LastSubmitAt >= end {
+			t.Errorf("bot %d plays outside 1..15 games or outside its round: %+v", slot, fin)
+		}
+	}
+	if len(names) != 29 {
+		t.Error("the bots of a group have distinct names")
+	}
+	if !cfg.CountsForLeague(gold, false, 100, 100+30*86400) {
+		t.Error("a lower tier counts a game synced weeks later")
+	}
+	if cfg.CountsForLeague(diamond, false, 100, 100) {
+		t.Error("diamond needs a session")
+	}
+	if !cfg.CountsForLeague(challenger, true, 100, 700) || cfg.CountsForLeague(challenger, true, 100, 701) {
+		t.Error("challenger accepts ten minutes of grace")
 	}
 }
 

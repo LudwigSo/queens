@@ -15,6 +15,7 @@ import (
 	"github.com/ludwigsonnenberg/queens-server/internal/config"
 	"github.com/ludwigsonnenberg/queens-server/internal/domain"
 	"github.com/ludwigsonnenberg/queens-server/internal/service"
+	"github.com/ludwigsonnenberg/queens-server/internal/store"
 	"github.com/ludwigsonnenberg/queens-server/internal/testutil"
 )
 
@@ -213,7 +214,9 @@ func TestIDTakenIs409(t *testing.T) {
 // client indexes by string.
 func TestPlayLoopOverHTTP(t *testing.T) {
 	c := newClient(t)
-	c.register("Ann")
+	reg := c.register("Ann")
+	// Gold: Bronze and Silver have no group to check the member keys on.
+	c.setTier(reg["profile"].(map[string]any)["player_id"].(string), "gold")
 
 	levels, err := c.svc.St.Repos().Levels.All(context.Background())
 	if err != nil {
@@ -256,7 +259,7 @@ func TestPlayLoopOverHTTP(t *testing.T) {
 	}
 	sub := decode(t, body)
 	for _, k := range []string{"breakdown", "round_score", "group_rank", "group_size", "zone",
-		"tier", "round_index", "tier_points", "promo_score", "promoted_to"} {
+		"tier", "round_index", "tier_points", "promo_score", "promoted_to", "counted"} {
 		if _, ok := sub[k]; !ok {
 			t.Errorf("submit response is missing %q", k)
 		}
@@ -294,7 +297,7 @@ func TestPlayLoopOverHTTP(t *testing.T) {
 	}
 	rules := st["rules"].(map[string]any)
 	for _, k := range []string{"up_pct", "down_pct", "up_count", "up_mode", "promo_score",
-		"up_to", "best_n", "round_mode", "round_days", "global", "floor"} {
+		"up_to", "best_n", "round_mode", "round_days", "global", "floor", "online_required", "online_grace_s"} {
 		if _, ok := rules[k]; !ok {
 			t.Errorf("rules is missing %q", k)
 		}
@@ -306,14 +309,17 @@ func TestPlayLoopOverHTTP(t *testing.T) {
 	if _, ok := st["rules_text"]; ok {
 		t.Error("the server must not send rules_text")
 	}
-	if rules["up_to"] != "silver" {
+	if rules["up_to"] != "platinum" {
 		t.Errorf("up_to must be a tier id, got %v", rules["up_to"])
 	}
 	group := st["group"].(map[string]any)
 	members := group["members"].([]any)
 	m0 := members[0].(map[string]any)
 	if _, ok := m0["is_bot"]; ok {
-		t.Error("is_bot is gone: the server has no bots")
+		t.Error("a bot must look like anyone else: no is_bot on the wire")
+	}
+	if len(members) != 30 {
+		t.Errorf("a gold standing is topped up to 30, got %d", len(members))
 	}
 	for _, k := range []string{"player_id", "nickname", "round_score", "games", "last_submit_at",
 		"is_me", "is_friend", "rank", "zone"} {
@@ -342,6 +348,57 @@ func TestPlayLoopOverHTTP(t *testing.T) {
 		if _, ok := e0[k]; !ok {
 			t.Errorf("leaderboard entry is missing %q", k)
 		}
+	}
+
+	// The run overview.
+	resp, body = c.do(http.MethodGet, "/v1/league/runs", nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("runs = %d %s", resp.StatusCode, body)
+	}
+	runs := decode(t, body)
+	for _, k := range []string{"tier", "round_index", "has_rounds", "round_ends_at", "best_n", "round_score",
+		"tier_points", "cut_score", "runs"} {
+		if _, ok := runs[k]; !ok {
+			t.Errorf("runs is missing %q", k)
+		}
+	}
+	r0 := runs["runs"].([]any)[0].(map[string]any)
+	for _, k := range []string{"result_id", "level_id", "size", "difficulty", "stars", "score", "counted", "in_best",
+		"verified", "finished_at", "elapsed_seconds", "par_seconds", "wrong_placements", "hint_count", "breakdown"} {
+		if _, ok := r0[k]; !ok {
+			t.Errorf("run is missing %q", k)
+		}
+	}
+
+	// Join options: already in a group, nothing to choose; joining is a no-op.
+	resp, body = c.do(http.MethodGet, "/v1/league/join-options", nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("join-options = %d %s", resp.StatusCode, body)
+	}
+	opts := decode(t, body)
+	if opts["joined"] != true || len(opts["options"].([]any)) != 0 {
+		t.Errorf("join options for a joined player: %v", opts)
+	}
+	resp, body = c.do(http.MethodPost, "/v1/league/join", map[string]any{})
+	if resp.StatusCode != 200 || decode(t, body)["joined"] != true {
+		t.Errorf("join = %d %s", resp.StatusCode, body)
+	}
+}
+
+func (c *client) setTier(playerID, tier string) {
+	c.t.Helper()
+	ctx := context.Background()
+	p, err := c.svc.St.Repos().Players.Get(ctx, playerID)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	tc, _ := c.svc.League.TierByID(tier)
+	settled := domain.RoundStart(tc, domain.RoundIndex(tc, c.clock.Now()))
+	if err := c.svc.St.InTx(ctx, func(ctx context.Context, r store.Repos) error {
+		_, e := r.Players.SetTier(ctx, playerID, p.Tier, tier, c.clock.Now(), settled)
+		return e
+	}); err != nil {
+		c.t.Fatal(err)
 	}
 }
 

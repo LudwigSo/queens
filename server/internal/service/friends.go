@@ -44,7 +44,8 @@ func (c *probeCounter) bump(playerID string, now int64) int {
 }
 
 // Friends returns the people I follow, each with their score in their OWN tier's
-// current round (round lengths differ per tier, so this cannot be one join).
+// current round (round lengths differ per tier, so this cannot be one join), or
+// their tier points in a tier without rounds.
 func (s *Service) Friends(ctx context.Context, playerID string) ([]domain.FriendRow, error) {
 	r := s.St.Repos()
 	rows, err := r.Friends.List(ctx, playerID)
@@ -54,6 +55,10 @@ func (s *Service) Friends(ctx context.Context, playerID string) ([]domain.Friend
 	for i := range rows {
 		t, ok := s.League.TierByID(rows[i].Tier)
 		if !ok {
+			continue
+		}
+		if !t.HasRounds() {
+			rows[i].RoundScore = rows[i].TierPoints
 			continue
 		}
 		idx := domain.RoundIndex(t, s.now())
@@ -112,7 +117,7 @@ func (s *Service) AddFriend(ctx context.Context, playerID, code string) (*domain
 			return domain.Err(409, domain.CodeFriendAlready)
 		}
 		out = &domain.FriendRow{
-			PlayerID: other.ID, Nickname: other.Nickname, Tier: other.Tier,
+			PlayerID: other.ID, Nickname: other.Nickname, Tier: other.Tier, TierPoints: other.TierPoints,
 			FriendSince: s.now(), FriendCode: other.FriendCode,
 		}
 		return nil
@@ -120,7 +125,9 @@ func (s *Service) AddFriend(ctx context.Context, playerID, code string) (*domain
 	if err != nil {
 		return nil, err
 	}
-	if t, ok := s.League.TierByID(out.Tier); ok {
+	if t, ok := s.League.TierByID(out.Tier); ok && !t.HasRounds() {
+		out.RoundScore = out.TierPoints
+	} else if ok {
 		idx := domain.RoundIndex(t, s.now())
 		if m, err := s.St.Repos().League.GetMember(ctx, out.PlayerID, t.ID, idx); err == nil {
 			out.RoundScore = m.RoundScore

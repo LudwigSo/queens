@@ -70,7 +70,7 @@ func _run() -> void:
 	_check(start["ok"], "start game: %s" % str(start.get("error", "")))
 	var token := str((start["data"].get("session", {}) as Dictionary).get("token", ""))
 	_check(token != "", "a session token came back")
-	_check(bool(start["data"]["joined"]), "the round was joined")
+	_check(not bool(start["data"]["joined"]), "bronze has no round to join")
 
 	# Starting the same level again while the session is still open hands back
 	# the same session rather than refusing: a lost response must not cost the
@@ -95,7 +95,7 @@ func _run() -> void:
 	var data: Dictionary = submitted["data"]
 	_check(int(data["breakdown"]["score"]) > 0, "the server scored the game")
 	_check(bool(data["verified"]), "a session-backed result is verified")
-	_check(str(data["tier"]) == "bronze" and int(data["round_score"]) == int(data["breakdown"]["score"]), "the round score is the one game")
+	_check(str(data["tier"]) == "bronze" and int(data["tier_points"]) == int(data["breakdown"]["score"]) and bool(data["counted"]), "the game adds to the tier points")
 
 	var replay: Dictionary = await backend.submit_result(result.to_dict())
 	_check(replay["ok"] and int(replay["data"]["breakdown"]["score"]) == int(data["breakdown"]["score"]), "a replay returns the stored answer")
@@ -103,10 +103,16 @@ func _run() -> void:
 	var standing: Dictionary = (await backend.get_league_standing())["data"]
 	# No assumption that this is the only player: the same server may already
 	# hold games from a manual run.
-	_check(bool(standing["joined"]) and int(standing["my_rank"]) >= 1, "the standing shows the game")
-	_check(int(standing["my_round_score"]) == int(data["breakdown"]["score"]), "the round score is the game just played")
-	_check(int(standing["my_games"]) == 1, "one game this round")
+	_check(not bool(standing["joined"]) and int(standing["round_ends_at"]) == 0 and int(standing["rules"]["round_days"]) == 0, "bronze has no group and no timer")
+	_check(int(standing["my_tier_points"]) == int(data["breakdown"]["score"]), "the tier points are the game just played")
 	_check(str(standing["rules"]["up_to"]) == "silver", "up_to is a tier id")
+
+	var runs: Dictionary = await backend.get_round_runs()
+	_check(runs["ok"] and not bool(runs["data"]["has_rounds"]) and (runs["data"]["runs"] as Array).size() == 1, "the run overview lists the game")
+	_check(bool(runs["data"]["runs"][0]["in_best"]) and int(runs["data"]["runs"][0]["breakdown"]["score"]) == int(data["breakdown"]["score"]), "with its breakdown")
+	var options: Dictionary = await backend.get_join_options()
+	_check(options["ok"] and (options["data"]["options"] as Array).is_empty(), "bronze has no groups to join")
+	_check(backend.is_online(), "the backend is online")
 	_check(not standing.has("rules_text") and not standing.has("tier_name"), "no prose on the wire")
 	var view := Views.league_screen(standing, [], cfg.league)
 	_check(str(view["standing"]["tier_name"]) == "Bronze", "the presenter names the tier")
@@ -133,6 +139,24 @@ func _run() -> void:
 
 	var gone: Dictionary = await backend.delete_account()
 	_check(gone["ok"] and save.auth_token() == "", "the account was deleted")
+
+	# A backend that cannot reach its server goes offline, says so, and hands
+	# back the last known values.
+	var dead_cfg := GameConfig.new()
+	dead_cfg.server_url = "http://127.0.0.1:9"
+	dead_cfg.save_path = "user://e2e_dead.json"
+	var dead_save := SaveData.load_or_create(dead_cfg)
+	dead_save.set_auth(dead_save.player_id(), "token-for-nowhere", 1)
+	var dead := HttpBackend.new(dead_cfg, dead_save)
+	root.add_child(dead)
+	await process_frame
+	var flips: Array = []
+	dead.connectivity_changed.connect(func(online: bool) -> void: flips.append(online))
+	var lost: Dictionary = await dead.get_league_standing()
+	_check(not lost["ok"] and str(lost["code"]) == "ERR_NETWORK" and not dead.is_online() and flips == [false], "no server: offline, and signalled")
+	var lost_runs: Dictionary = await dead.get_round_runs()
+	_check(not lost_runs["ok"] and lost_runs["data"] is Dictionary, "offline runs come back as the cached value")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(dead_cfg.save_path))
 
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)

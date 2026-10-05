@@ -173,8 +173,9 @@ func TestResolveTokenRejectsUnknownAndBanned(t *testing.T) {
 func TestDeleteAccountCascadesAndFixesGroupCount(t *testing.T) {
 	h := newHarness(t)
 	lv := h.levelOfSize(t, 6)
-	a := h.registerAndPlay(t, "Aaa", lv, 50, 0)
-	b := h.registerAndPlay(t, "Bbb", lv, 60, 0)
+	// Diamond: one global group without bots, so its size is its people.
+	a := h.registerAndPlayIn(t, "Aaa", "diamond", lv, 50, 0)
+	b := h.registerAndPlayIn(t, "Bbb", "diamond", lv, 60, 0)
 
 	before := h.standing(t, b)
 	if before.Group == nil || before.Group.Size != 2 {

@@ -9,6 +9,7 @@ signal league_requested
 signal energy_pressed
 signal settings_requested
 signal tutorial_requested
+signal offline_info_requested
 
 ## Translation keys, not text: a const cannot call into Loc.
 const STEP_KEYS := {-1: "STEP_EASIER", 0: "STEP_SAME", 1: "STEP_HARDER"}
@@ -16,6 +17,7 @@ const STEP_KEYS := {-1: "STEP_EASIER", 0: "STEP_SAME", 1: "STEP_HARDER"}
 @onready var settings_button: Button = $Margin/VBox/TopBar/SettingsButton
 @onready var how_to_play_button: Button = $Margin/VBox/TopBar/HowToPlayButton
 @onready var energy_button: Button = $Margin/VBox/TopBar/EnergyButton
+@onready var offline_button: Button = $Margin/VBox/TopBar/OfflineButton
 @onready var streak_chip: PanelContainer = $Margin/VBox/Hero/StreakChip
 @onready var streak_label: Label = $Margin/VBox/Hero/StreakChip/HBox/StreakLabel
 @onready var league_card: Button = $Margin/VBox/LeagueCard
@@ -44,6 +46,8 @@ func _ready() -> void:
 	energy_button.pressed.connect(energy_pressed.emit)
 	settings_button.pressed.connect(settings_requested.emit)
 	how_to_play_button.pressed.connect(tutorial_requested.emit)
+	offline_button.pressed.connect(offline_info_requested.emit)
+	Motion.make_pressable(offline_button)
 	_selected_style = StyleBoxFlat.new()
 	_selected_style.bg_color = Ui.ME_BG
 	_selected_style.set_corner_radius_all(Ui.RADIUS_L)
@@ -60,7 +64,7 @@ func _ready() -> void:
 ## difficulty, stars}|{}, options:[{step, level_no, size, difficulty, stars, enabled, reason}]}
 func refresh(view: Dictionary) -> void:
 	var energy: Dictionary = view.get("energy", {})
-	set_energy(int(energy.get("amount", 0)), bool(energy.get("unlimited", false)))
+	set_energy(int(energy.get("amount", 0)), bool(energy.get("unlimited", false)), int(energy.get("debt", 0)))
 	player_label.text = str(view.get("nickname", ""))
 	_refresh_league(view.get("league", {}))
 	var streak: Dictionary = view.get("streak", {})
@@ -101,17 +105,31 @@ func _refresh_league(league: Dictionary) -> void:
 	var tier_name := str(league.get("tier_name", Loc.t("TIER_BRONZE")))
 	league_title.text = Loc.f("LEAGUE_NAME", [tier_name])
 	medal.modulate = Ui.tier_color(str(league.get("tier_id", "bronze")))
-	if not bool(league.get("joined", false)):
-		league_line.text = Loc.t("HOME_LEAGUE_JOIN")
-		return
-	if int(league.get("promo_score", 0)) > 0:
+	set_offline(bool(league.get("offline", false)))
+	var line := ""
+	if not bool(league.get("has_rounds", true)):
+		# Bronze and Silver: no group and no timer, only the way to the next tier.
+		line = str(league.get("promo_text", ""))
+	elif not bool(league.get("joined", false)):
+		line = Loc.t("HOME_LEAGUE_JOIN")
+	elif int(league.get("promo_score", 0)) > 0:
 		# A tier that promotes by tier points: the progress replaces the zone.
-		league_line.text = Loc.f("HOME_LEAGUE_PROMO_LINE", [
+		line = Loc.f("HOME_LEAGUE_PROMO_LINE", [
 			int(league.get("rank", 0)), int(league.get("size", 0)), str(league.get("promo_text", ""))])
-		return
-	league_line.text = Loc.f("HOME_LEAGUE_LINE", [
-		int(league.get("rank", 0)), int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe"))),
-		int(league.get("score", 0)), str(league.get("ends_in_text", ""))])
+	elif bool(league.get("offline", false)):
+		# Offline the rank is stale; my own score is not.
+		line = Fmt.points(int(league.get("score", 0)))
+	else:
+		line = Loc.f("HOME_LEAGUE_LINE", [
+			int(league.get("rank", 0)), int(league.get("size", 0)), Fmt.zone(str(league.get("zone", "safe"))),
+			int(league.get("score", 0)), str(league.get("ends_in_text", ""))])
+	if bool(league.get("offline", false)):
+		line = Loc.f("HOME_LEAGUE_OFFLINE", [line])
+	league_line.text = line
+
+
+func set_offline(offline: bool) -> void:
+	offline_button.visible = offline
 
 
 func _select(step: int) -> void:
@@ -137,10 +155,15 @@ func selected_step() -> int:
 	return _selected
 
 
-func set_energy(amount: int, unlimited: bool) -> void:
+## `debt`: games played offline on an empty tank, shown after the amount.
+func set_energy(amount: int, unlimited: bool, debt: int = 0) -> void:
 	var changed := _energy_amount != amount and _energy_amount >= 0
 	_energy_amount = amount
-	energy_button.text = "∞" if unlimited else str(amount)
+	energy_button.text = "∞" if unlimited else (str(amount) if debt == 0 else "%d  −%d" % [amount, debt])
+	if debt > 0 and not unlimited:
+		energy_button.add_theme_color_override("font_color", Ui.ERROR)
+	else:
+		energy_button.remove_theme_color_override("font_color")
 	if changed and is_inside_tree():
 		Motion.bump(energy_button, 1.12)
 

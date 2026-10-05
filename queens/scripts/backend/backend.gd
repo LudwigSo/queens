@@ -25,24 +25,63 @@ extends Node
 ##                    joined, group, my_rank, my_round_score, my_games, zone,
 ##                    my_tier_points, rules}
 ##                    rules: {up_pct, down_pct, up_count, up_mode, promo_score,
-##                    up_to, best_n, round_mode, round_days, global, floor}
+##                    up_to, best_n, round_mode, round_days, global, floor,
+##                    online_required, online_grace_s}
+##                    round_days 0 (Bronze, Silver): no timer and no group;
+##                    round_ends_at is 0 and joined stays false.
 ##                    `up_to` is a tier *id*. Names and rule sentences are
 ##                    presentation: Views builds them, because a server has no
 ##                    locale and must not carry a copy of the translations.
 ##   RoundSummary    {round_index, tier_before, tier_after, outcome, reason,
 ##                    rank, group_size, round_score, tier_points, best_game,
-##                    seen}; reason "round" (a round ended) or "score" (the
-##                    tier points reached promo_score mid-round)
+##                    seen, join_options}; reason "round" (a round ended) or
+##                    "score" (the tier points reached promo_score);
+##                    join_options counts the friends' groups the player could
+##                    join in the new tier (get_join_options)
+##   RoundRuns       {tier, round_index, has_rounds, round_ends_at, best_n,
+##                    round_score, tier_points, cut_score, runs: [Run]}
+##   Run             {result_id, level_id, size, difficulty, stars, score,
+##                    counted, in_best, verified, finished_at, elapsed_seconds,
+##                    par_seconds, wrong_placements, hint_count, breakdown,
+##                    pending}; best first. `counted` false: the game missed
+##                    the online rule. `pending`: played offline, not synced.
+##   JoinOptions     {tier, round_index, joined, options: [{group_id, members,
+##                    friends: [{player_id, nickname}]}]}
 ##   FriendEntry     {player_id, nickname, tier, round_score, friend_since,
 ##                    friend_code}; following is directed (I follow you), with
 ##                    no accept step, and is capped per player.
 ##
-## A round is the scoring period of a tier (3 days in Bronze, a week
-## elsewhere; see LeagueRules). Round indices are only comparable within one
-## tier. Tier points are the sum of every solved game's score since the
-## player entered the tier; they restart at 0 with every tier change.
+## A round is the scoring period of a tier (a week; Bronze and Silver have
+## none, see LeagueRules). Round indices are only comparable within one tier.
+## Tier points are the sum of every counted game's score since the player
+## entered the tier; they restart at 0 with every tier change.
+##
+## Connectivity: is_online() is false from the first request that could not
+## reach the server until the next one that does, and connectivity_changed
+## fires on every flip. The offline stub is always online, unless a test sets
+## simulate_offline.
 
 signal standing_changed
+signal connectivity_changed(online: bool)
+
+var _online := true
+
+
+func is_online() -> bool:
+	return _online
+
+
+## True once the server knows this player. A player who installed the game
+## offline is not, and registers when the connection comes back.
+func is_registered() -> bool:
+	return true
+
+
+func _set_online(online: bool) -> void:
+	if online == _online:
+		return
+	_online = online
+	connectivity_changed.emit(online)
 
 
 static func ok(data: Variant = null) -> Dictionary:
@@ -111,6 +150,22 @@ func get_round_summary() -> Dictionary:
 
 
 func ack_round_summary(_round_index: int) -> Dictionary:
+	return fail("not implemented")
+
+
+## The games of the current round, best first (see RoundRuns).
+func get_round_runs() -> Dictionary:
+	return fail("not implemented")
+
+
+## Friends' groups of the current round that still have room (JoinOptions).
+func get_join_options() -> Dictionary:
+	return fail("not implemented")
+
+
+## Joins the current round now: into `group_id` from get_join_options, or by
+## the normal placement when it is "". Returns the new LeagueStanding.
+func join_group(_group_id: String) -> Dictionary:
 	return fail("not implemented")
 
 

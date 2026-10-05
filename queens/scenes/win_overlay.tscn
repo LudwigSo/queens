@@ -57,6 +57,21 @@ theme_type_variation = &"LabelGold"
 text = "WIN_TITLE"
 horizontal_alignment = 1
 
+[node name="LevelLabel" type="Label" parent="Panel/VBox"]
+visible = false
+layout_mode = 2
+auto_translate_mode = 2
+theme_type_variation = &"LabelCaptionInk"
+text = ""
+horizontal_alignment = 1
+
+[node name="LevelStars" type="HBoxContainer" parent="Panel/VBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("4_stars")
+icon_size = 18
+
 [node name="ScoreLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelScore"

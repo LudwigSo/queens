@@ -15,14 +15,34 @@ Open `/docs` for the rendered API, `/openapi.yaml` for the document.
 ## What it is responsible for
 
 The client already defined the contract before this existed:
-`queens/scripts/backend/backend.gd` has the fourteen methods and the record
-shapes, and `local_backend.gd` is a working offline implementation of them. This
-service is a port of that contract, minus the bots.
+`queens/scripts/backend/backend.gd` has the methods and the record shapes, and
+`local_backend.gd` is a working offline implementation of them. This service is
+a port of that contract.
 
 The one thing it changes is where the truth lives. Every score is recomputed
 from the server's own level row, because `par_seconds` is the numerator of the
 speed factor and a client that sends its own could pin the multiplier at its
 maximum. The same goes for `size`, `difficulty` and `stars`.
+
+## The league in one paragraph
+
+The rules are `shared/league.json`, embedded at build time (`go run
+./internal/levelset/cmd/copylevels` refreshes the copy). Bronze and Silver have
+no rounds: no round row, no group, a game only adds tier points until
+`promo_score` promotes. From Gold on a tier plays in weeks. Random placement
+fills a group to `group_size` (30); a player joins a friend's group (a follow in
+either direction) up to `group_max` (50), automatically at their first game of
+the week or explicitly through `POST /v1/league/join` after
+`GET /v1/league/join-options`. Gold and Platinum groups are topped up to 30 with
+bots. Nothing about a bot is stored: their scores are a pure function of the
+group id, the slot and the clock (`domain.BotProgress`, pinned against the
+GDScript by the parity fixtures), the active bots are always the first
+`fill_to - people` slots, and the closer ranks them with everyone else but
+settles only people. Diamond and Challenger (`online_required`) count a game
+only when a session covers it and it arrived within `online_grace_s` of
+finishing; anything else is stored with `results.counted = 0` and listed by
+`GET /v1/league/runs`, but adds nothing. Below them a missing session is an
+ordinary offline game and raises no flag.
 
 ## Layout
 
