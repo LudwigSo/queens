@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/ludwigsonnenberg/queens-server/internal/config"
@@ -21,35 +23,101 @@ type Service struct {
 	// client can tell whether its own copy has drifted.
 	League     *domain.LeagueConfig
 	LeagueHash string
-	// LevelSetHash is the ETag of the level table, refreshed at boot.
-	LevelSetHash string
-	// levels is the whole level table in memory: 100 rows that change only at
-	// boot, and the ceiling check needs their base points on every submit.
-	levels map[string]domain.Level
+	// levels is the whole level table in memory, because the ceiling check needs
+	// every base value on each submit. `queensd admin levels import` adds rows
+	// from another process while this one runs, so the index is swapped whole
+	// when the database holds more published levels than it does.
+	levels   atomic.Pointer[levelIndex]
+	reloadMu sync.Mutex
 
 	openings openingsCache
 }
 
-func New(st store.Store, cfg *config.Config, clock domain.Clock, league *domain.LeagueConfig, leagueHash, levelSetHash string, levels []domain.Level) *Service {
-	m := make(map[string]domain.Level, len(levels))
+type levelIndex struct {
+	byID      map[string]domain.Level
+	published int    // levels with a position: the count clients compare
+	setHash   string // the ETag of the level table
+}
+
+func newLevelIndex(levels []domain.Level, setHash string) *levelIndex {
+	idx := &levelIndex{byID: make(map[string]domain.Level, len(levels)), setHash: setHash}
 	for _, l := range levels {
-		m[l.ID] = l
+		idx.byID[l.ID] = l
+		if l.Position > 0 {
+			idx.published++
+		}
 	}
-	return &Service{
-		St: st, Cfg: cfg, Clock: clock, League: league,
-		LeagueHash: leagueHash, LevelSetHash: levelSetHash, levels: m,
-	}
+	return idx
+}
+
+func New(st store.Store, cfg *config.Config, clock domain.Clock, league *domain.LeagueConfig, leagueHash, levelSetHash string, levels []domain.Level) *Service {
+	s := &Service{St: st, Cfg: cfg, Clock: clock, League: league, LeagueHash: leagueHash}
+	s.levels.Store(newLevelIndex(levels, levelSetHash))
+	return s
 }
 
 func (s *Service) now() int64 { return s.Clock.Now() }
 
 // Level returns a cached level row.
 func (s *Service) Level(id string) (domain.Level, bool) {
-	l, ok := s.levels[id]
+	l, ok := s.levels.Load().byID[id]
 	return l, ok
 }
 
-func (s *Service) LevelCount() int { return len(s.levels) }
+// LoadedLevels is the number of level rows held, published or not.
+func (s *Service) LoadedLevels() int { return len(s.levels.Load().byID) }
+
+// LevelSetHash is the ETag of the level table as of the last (re)load.
+func (s *Service) LevelSetHash() string { return s.levels.Load().setHash }
+
+// levelFor is Level for request paths: an id this process has not seen may
+// have been imported since it started, so a miss checks the database once.
+func (s *Service) levelFor(ctx context.Context, id string) (domain.Level, bool, error) {
+	if l, ok := s.Level(id); ok {
+		return l, true, nil
+	}
+	if err := s.refreshLevels(ctx); err != nil {
+		return domain.Level{}, false, err
+	}
+	l, ok := s.Level(id)
+	return l, ok, nil
+}
+
+// refreshLevels reloads the index when the database publishes a different
+// number of levels than it holds. One COUNT(*) when nothing changed. Imports
+// are append-only, so a count is enough to notice one.
+func (s *Service) refreshLevels(ctx context.Context) error {
+	n, err := s.St.Repos().Levels.CountPublished(ctx)
+	if err != nil {
+		return err
+	}
+	if n == s.levels.Load().published {
+		return nil
+	}
+	return s.ReloadLevels(ctx)
+}
+
+// ReloadLevels reads the whole level table again and swaps the index.
+func (s *Service) ReloadLevels(ctx context.Context) error {
+	s.reloadMu.Lock()
+	defer s.reloadMu.Unlock()
+	repos := s.St.Repos()
+	levels, err := repos.Levels.All(ctx)
+	if err != nil {
+		return err
+	}
+	setHash := s.LevelSetHash()
+	if set, err := repos.Levels.CurrentLevelSet(ctx); err == nil {
+		setHash = set.Hash
+	} else if err != domain.ErrNotFound {
+		return err
+	}
+	next := newLevelIndex(levels, setHash)
+	if prev := s.levels.Swap(next); prev.published != next.published {
+		slog.Info("levels reloaded", "published", next.published, "was", prev.published, "level_set", setHash)
+	}
+	return nil
+}
 
 // tier looks up a tier and turns an unknown id into a 500. On the client an
 // unknown tier falls back to Bronze, which is a fine default there and a

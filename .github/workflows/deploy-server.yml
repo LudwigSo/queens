@@ -102,17 +102,52 @@ jobs:
       # Everything above proves the process is healthy on the host. This proves
       # the public route reaches it.
       - name: Smoke test the public URL
+        # A backstop that does not depend on getting every curl flag right.
+        # The checks below settle in well under a minute when DNS is sane.
+        timeout-minutes: 3
         run: |
-          set -x
-          curl -fsS --retry 3 --retry-delay 2 "$API_BASE/healthz"
-          curl -fsS "$API_BASE/readyz"
-          curl -fsSi "$API_BASE/v1/time" | grep -i '^x-server-time:'
+          host=$(printf '%s' "$API_BASE" | sed -E 's|^[a-z]+://||; s|[/:].*$||')
+          v4=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | tr '\n' ' ')
+          v6=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | tr '\n' ' ')
+          echo "base $API_BASE"
+          echo "host $host"
+          echo "A    ${v4:-(none)}"
+          echo "AAAA ${v6:-(none)}"
+
+          # Everything here is bounded. curl defaults to a 300s connect
+          # timeout and --retry repeats it, so an address that blackholes
+          # instead of refusing -- a parked A record, say -- would otherwise
+          # stall the job past its own timeout before saying anything useful.
+          code=$(curl -4 -sS --connect-timeout 5 --max-time 15 --retry 2 --retry-delay 5 \
+                   -o "$RUNNER_TEMP/healthz.json" -w '%{http_code}' "$API_BASE/healthz" || true)
+
+          if [ "${code:-000}" = "000" ]; then
+            echo "::error::Cannot reach $host over IPv4. Look at DNS before the server: the Deploy step above already proved queensd answers /readyz on the host itself."
+            echo "Resolved A:    ${v4:-(none)}"
+            echo "Resolved AAAA: ${v6:-(none)}"
+            echo
+            echo "GitHub runners have no IPv6 outbound, so a correct AAAA on its own does not"
+            echo "help -- the A record has to point at the Uberspace host too. Compare the"
+            echo "addresses above with the records 'uberspace web domain list' prints there."
+            echo
+            echo "To test the server independently of DNS, from any machine:"
+            echo "  curl --resolve $host:443:<uberspace-ipv4> $API_BASE/healthz"
+            exit 1
+          fi
+          test "$code" = "200" \
+            || { echo "::error::/healthz returned $code"; cat "$RUNNER_TEMP/healthz.json"; exit 1; }
+          echo "healthz ok"
+
+          # Past this point the service has answered once, so no retries.
+          curl -4 -fsS --connect-timeout 5 --max-time 15 "$API_BASE/readyz"; echo
+          curl -4 -fsSi --connect-timeout 5 --max-time 15 "$API_BASE/v1/time" | grep -i '^x-server-time:'
 
           # An unauthenticated call must come back as queensd's own
           # problem+json. If the webserver answers instead -- a 403 from a path
           # that falls through -- the client treats it as permanent and
           # silently drops every queued offline result.
-          code=$(curl -sS -o "$RUNNER_TEMP/me.json" -w '%{http_code}' "$API_BASE/v1/me")
+          code=$(curl -4 -sS --connect-timeout 5 --max-time 15 \
+                   -o "$RUNNER_TEMP/me.json" -w '%{http_code}' "$API_BASE/v1/me")
           cat "$RUNNER_TEMP/me.json"; echo
           test "$code" = "401" || { echo "::error::/v1/me returned $code, expected 401"; exit 1; }
           grep -q 'ERR_UNAUTHORIZED' "$RUNNER_TEMP/me.json" \

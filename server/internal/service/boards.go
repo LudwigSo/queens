@@ -20,7 +20,10 @@ type LeaderboardView struct {
 
 // Leaderboard serves one level's board in one of three scopes.
 func (s *Service) Leaderboard(ctx context.Context, playerID, levelID string, scope domain.Scope, limit int) (*LeaderboardView, error) {
-	lv, ok := s.Level(levelID)
+	lv, ok, err := s.levelFor(ctx, levelID)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, domain.Err(404, domain.CodeLevelUnknown)
 	}
@@ -120,6 +123,10 @@ type LevelMetaView struct {
 // changes or when this player starts a game, which is exactly as often as the
 // body does.
 func (s *Service) LevelMeta(ctx context.Context, playerID string) (*LevelMetaView, string, error) {
+	if err := s.refreshLevels(ctx); err != nil {
+		return nil, "", err
+	}
+	index := s.levels.Load()
 	rows, err := s.St.Repos().Levels.ListPlayerLevels(ctx, playerID)
 	if err != nil {
 		return nil, "", err
@@ -129,12 +136,12 @@ func (s *Service) LevelMeta(ctx context.Context, playerID string) (*LevelMetaVie
 		locks[pl.LevelID] = pl.LastStartedAt + s.Cfg.CooldownSeconds
 	}
 	out := &LevelMetaView{
-		Levels:          make(map[string]LevelMetaEntry, len(s.levels)),
-		LevelSetHash:    s.LevelSetHash,
+		Levels:          make(map[string]LevelMetaEntry, len(index.byID)),
+		LevelSetHash:    index.setHash,
 		CooldownSeconds: s.Cfg.CooldownSeconds,
 		ServerTime:      s.now(),
 	}
-	for id, lv := range s.levels {
+	for id, lv := range index.byID {
 		out.Levels[id] = LevelMetaEntry{ParSeconds: lv.Par(), LockedUntil: locks[id]}
 	}
 
@@ -148,7 +155,7 @@ func (s *Service) LevelMeta(ctx context.Context, playerID string) (*LevelMetaVie
 	for _, id := range ids {
 		fmt.Fprintf(h, "\n%s:%d", id, locks[id])
 	}
-	etag := fmt.Sprintf(`"%s.%s"`, first16(s.LevelSetHash), first16(hex.EncodeToString(h.Sum(nil))))
+	etag := fmt.Sprintf(`"%s.%s"`, first16(index.setHash), first16(hex.EncodeToString(h.Sum(nil))))
 	return out, etag, nil
 }
 

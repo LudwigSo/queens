@@ -79,14 +79,25 @@ type PlayerRepo interface {
 type LevelRepo interface {
 	Get(ctx context.Context, id string) (*domain.Level, error)
 	All(ctx context.Context) ([]domain.Level, error)
-	Upsert(ctx context.Context, lv *domain.Level, now int64) error
-	MarkNotInSet(ctx context.Context, keepIDs []string, now int64) ([]string, error)
+	// Published, GetMany and CountPublished see only levels with a position:
+	// the set clients download.
+	Published(ctx context.Context) ([]domain.Level, error)
+	GetMany(ctx context.Context, ids []string) ([]domain.Level, error)
+	CountPublished(ctx context.Context) (int, error)
+	MaxPosition(ctx context.Context) (int, error)
+	// Insert stores a new level; an existing id is domain.ErrConflict. There is
+	// no update: published levels are immutable.
+	Insert(ctx context.Context, lv *domain.Level, now int64) error
+	// Publish sets the position of a level that has none yet.
+	Publish(ctx context.Context, id string, position int, now int64) error
 	InsertLevelSet(ctx context.Context, hash string, count int, now int64) error
 	CurrentLevelSet(ctx context.Context) (*domain.LevelSet, error)
 
 	GetPlayerLevel(ctx context.Context, playerID, levelID string) (*domain.PlayerLevel, error)
 	ListPlayerLevels(ctx context.Context, playerID string) ([]domain.PlayerLevel, error)
 	RecordStart(ctx context.Context, playerID, levelID string, now int64) error
+	// ApplyResult folds an accepted result into the player's level state.
+	ApplyResult(ctx context.Context, playerID, levelID string, r domain.PlayerLevelResult) error
 	// EligibleLevelIDs lists the levels the player could have started inside
 	// [roundStart, roundEnd) given the cooldown. It is the input to the
 	// round-score ceiling check.

@@ -125,6 +125,35 @@ set -a; . ~/etc/queensd.env; set +a
 ~/bin/queensd admin flags --player <uuid>
 ```
 
+## Adding levels
+
+Levels go into the production database directly; no deploy and no app release.
+Clients download the new ones at their next launch (or when they come back
+online), and the running server serves them from its next level request on.
+
+```bash
+# On your machine: generate new boards after the existing ones.
+python tools/gen_boards.py queens/levels/queens.json --append --count 20 --seed 5000
+scp queens/levels/queens.json <host>:~/queens/levels-import.json
+
+# On the host: check, then publish.
+set -a; . ~/etc/queensd.env; set +a
+~/bin/queensd admin levels import --dry-run ~/queens/levels-import.json
+~/bin/queensd admin levels import ~/queens/levels-import.json
+~/bin/queensd admin levels list | tail
+```
+
+The import is additive and idempotent, so importing the whole file is fine: the
+levels already published are reported as unchanged. It refuses the whole file
+if a published board was edited, naming the id; published levels are
+immutable, so give a fixed board a new id. Every board is checked for exactly
+one solution before anything is written.
+
+Afterwards commit `queens/levels/queens.json` and refresh the server's embedded
+copy (`go run ./internal/levelset/cmd/copylevels` from `server/`), so the next
+APK bundles the levels and the next server build seeds them on a fresh
+database. Neither is urgent.
+
 ## Rolling back
 
 `deploy.sh` rolls back on its own if the new build does not reach `/readyz`
@@ -221,6 +250,45 @@ when.
 
 And after any restart, check that no `~/queens/queens.db-wal` is left behind:
 that proves the graceful shutdown and the WAL checkpoint got their 30 seconds.
+
+## When the URL is unreachable
+
+First separate a DNS problem from a server problem, which takes one command.
+Pin the name to the host and skip the lookup entirely:
+
+```bash
+curl --resolve www.ludwigso.de:443:185.26.156.58 https://www.ludwigso.de/queens/api/healthz
+```
+
+If that answers and the plain URL does not, it is DNS. Every time.
+
+The host is `encke.uberspace.de` and the records the domain must carry are:
+
+| Record | Value |
+| --- | --- |
+| `A` | `185.26.156.58` |
+| `AAAA` | `2a00:d0c0:200:0:b9:1a:9c:39` |
+
+`uberspace web domain list` prints the same pair on the host, which is the
+authority if it ever moves.
+
+**Check both families.** The first release failed exactly here: the `AAAA` had
+been set from Uberspace's instructions and the `A` was still on the
+registrar's parking addresses. That is the nastiest shape this can take,
+because the site works perfectly from any IPv6-capable browser while being
+unreachable for everyone else — and GitHub runners have no IPv6 outbound at
+all, so every deploy fails its smoke test while the server is entirely
+healthy. `bootstrap.sh` now refuses to finish when the domain does not resolve
+to the host, in both families.
+
+To see what the world sees, rather than what your resolver cached:
+
+```bash
+curl -sS -H 'accept: application/dns-json' 'https://cloudflare-dns.com/dns-query?name=ludwigso.de&type=A'
+```
+
+And always test with `curl -4`. That is what the runner does, and an IPv6
+connection will happily hide the fault.
 
 ## What is deliberately not automated
 

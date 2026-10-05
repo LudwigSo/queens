@@ -8,7 +8,7 @@ import (
 )
 
 // The embedded queens.json is a copy, because Go embed cannot reach outside the
-// module. This test is the enforcement; `go generate ./...` is the fix.
+// module. This test is the enforcement; `go run ./internal/levelset/cmd/copylevels` (from server/) is the fix.
 func TestLevelFileInSync(t *testing.T) {
 	src := filepath.Join("..", "..", "..", "queens", "levels", "queens.json")
 	want, err := os.ReadFile(src)
@@ -16,7 +16,7 @@ func TestLevelFileInSync(t *testing.T) {
 		t.Fatalf("read %s: %v", src, err)
 	}
 	if !bytes.Equal(normalize(want), normalize(Embedded())) {
-		t.Fatalf("server/internal/levelset/queens.json is stale.\nRun: go generate ./... (from server/)")
+		t.Fatalf("server/internal/levelset/queens.json is stale.\nRun: go run ./internal/levelset/cmd/copylevels (from server/)")
 	}
 }
 
@@ -31,8 +31,8 @@ func TestParseEmbedded(t *testing.T) {
 	if f.Format != 1 || f.Game != "queens" {
 		t.Errorf("unexpected header: format %d game %q", f.Format, f.Game)
 	}
-	if len(f.Levels) != 100 {
-		t.Errorf("expected 100 levels, got %d", len(f.Levels))
+	if len(f.Levels) != 1000 {
+		t.Errorf("expected 1000 levels, got %d", len(f.Levels))
 	}
 	for _, l := range f.Levels {
 		if l.Size < 6 || l.Size > 10 {

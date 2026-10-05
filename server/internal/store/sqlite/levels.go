@@ -9,13 +9,13 @@ import (
 type levelRepo struct{ r, w dbtx }
 
 const levelCols = `id, size, difficulty, stars, seed, regions_json, solution_json, content_hash,
-	par_override, in_current_set, created_at, updated_at`
+	par_override, in_current_set, position, created_at, updated_at`
 
 func scanLevel(s interface{ Scan(...any) error }) (*domain.Level, error) {
 	var l domain.Level
 	var inSet int
 	if err := s.Scan(&l.ID, &l.Size, &l.Difficulty, &l.Stars, &l.Seed, &l.RegionsJSON, &l.SolutionJSON,
-		&l.ContentHash, &l.ParOverride, &inSet, &l.CreatedAt, &l.UpdatedAt); err != nil {
+		&l.ContentHash, &l.ParOverride, &inSet, &l.Position, &l.CreatedAt, &l.UpdatedAt); err != nil {
 		return nil, mapErr(err)
 	}
 	l.InCurrentSet = inSet != 0
@@ -27,7 +27,11 @@ func (q *levelRepo) Get(ctx context.Context, id string) (*domain.Level, error) {
 }
 
 func (q *levelRepo) All(ctx context.Context) ([]domain.Level, error) {
-	rows, err := q.r.QueryContext(ctx, `SELECT `+levelCols+` FROM levels ORDER BY id ASC`)
+	return q.list(ctx, `SELECT `+levelCols+` FROM levels ORDER BY id ASC`)
+}
+
+func (q *levelRepo) list(ctx context.Context, query string, args ...any) ([]domain.Level, error) {
+	rows, err := q.r.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, mapErr(err)
 	}
@@ -43,56 +47,60 @@ func (q *levelRepo) All(ctx context.Context) ([]domain.Level, error) {
 	return out, rows.Err()
 }
 
-func (q *levelRepo) Upsert(ctx context.Context, lv *domain.Level, now int64) error {
+// Published lists the levels clients download, in client order.
+func (q *levelRepo) Published(ctx context.Context) ([]domain.Level, error) {
+	return q.list(ctx, `SELECT `+levelCols+` FROM levels WHERE position > 0 ORDER BY position ASC, id ASC`)
+}
+
+// GetMany returns the published levels among ids, in client order. Unknown and
+// unpublished ids are skipped.
+func (q *levelRepo) GetMany(ctx context.Context, ids []string) ([]domain.Level, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	return q.list(ctx, `SELECT `+levelCols+` FROM levels WHERE position > 0 AND id IN (`+
+		placeholders(len(ids))+`) ORDER BY position ASC, id ASC`, args...)
+}
+
+// CountPublished is the number clients compare their own level count with.
+func (q *levelRepo) CountPublished(ctx context.Context) (int, error) {
+	var n int
+	err := q.r.QueryRowContext(ctx, `SELECT COUNT(*) FROM levels WHERE position > 0`).Scan(&n)
+	return n, mapErr(err)
+}
+
+func (q *levelRepo) MaxPosition(ctx context.Context) (int, error) {
+	var n int
+	err := q.r.QueryRowContext(ctx, `SELECT COALESCE(MAX(position), 0) FROM levels`).Scan(&n)
+	return n, mapErr(err)
+}
+
+// Insert adds a new level. Levels are immutable once stored, so there is no
+// update path: levelset.Import refuses a changed board before it gets here.
+func (q *levelRepo) Insert(ctx context.Context, lv *domain.Level, now int64) error {
 	_, err := q.w.ExecContext(ctx, `INSERT INTO levels
 		(id, size, difficulty, stars, seed, regions_json, solution_json, content_hash, par_override,
-		 in_current_set, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-		ON CONFLICT (id) DO UPDATE SET
-		  stars = excluded.stars, seed = excluded.seed, regions_json = excluded.regions_json,
-		  solution_json = excluded.solution_json, content_hash = excluded.content_hash,
-		  in_current_set = 1, updated_at = excluded.updated_at`,
+		 in_current_set, position, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
 		lv.ID, lv.Size, lv.Difficulty, lv.Stars, lv.Seed, lv.RegionsJSON, lv.SolutionJSON, lv.ContentHash,
-		lv.ParOverride, now, now)
+		lv.ParOverride, lv.Position, now, now)
+	if isUnique(err) {
+		return domain.ErrConflict
+	}
 	return mapErr(err)
 }
 
-// MarkNotInSet flags levels that vanished from the shipped file. Rows are kept
-// forever: old results and leaderboards still point at them.
-func (q *levelRepo) MarkNotInSet(ctx context.Context, keepIDs []string, now int64) ([]string, error) {
-	args := make([]any, 0, len(keepIDs)+1)
-	for _, id := range keepIDs {
-		args = append(args, id)
-	}
-	sqlStr := `SELECT id FROM levels WHERE in_current_set = 1`
-	if len(keepIDs) > 0 {
-		sqlStr += ` AND id NOT IN (` + placeholders(len(keepIDs)) + `)`
-	}
-	sqlStr += ` ORDER BY id ASC`
-	rows, err := q.r.QueryContext(ctx, sqlStr, args...)
-	if err != nil {
-		return nil, mapErr(err)
-	}
-	var gone []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		gone = append(gone, id)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	for _, id := range gone {
-		if _, err := q.w.ExecContext(ctx,
-			`UPDATE levels SET in_current_set = 0, updated_at = ? WHERE id = ?`, now, id); err != nil {
-			return nil, mapErr(err)
-		}
-	}
-	return gone, nil
+// Publish gives an unpublished level (position 0) its position. It never moves
+// a published one: the client order is append-only too.
+func (q *levelRepo) Publish(ctx context.Context, id string, position int, now int64) error {
+	_, err := q.w.ExecContext(ctx,
+		`UPDATE levels SET position = ?, in_current_set = 1, updated_at = ? WHERE id = ? AND position = 0`,
+		position, now, id)
+	return mapErr(err)
 }
 
 func (q *levelRepo) InsertLevelSet(ctx context.Context, hash string, count int, now int64) error {
@@ -113,32 +121,37 @@ func (q *levelRepo) CurrentLevelSet(ctx context.Context) (*domain.LevelSet, erro
 	return &s, nil
 }
 
-func (q *levelRepo) GetPlayerLevel(ctx context.Context, playerID, levelID string) (*domain.PlayerLevel, error) {
+const playerLevelCols = `player_id, level_id, last_started_at, plays, completions, last_completed_at,
+	best_time, best_score, best_score_time, best_wrong, best_result_id, best_at`
+
+func scanPlayerLevel(s interface{ Scan(...any) error }) (*domain.PlayerLevel, error) {
 	var pl domain.PlayerLevel
-	err := q.r.QueryRowContext(ctx,
-		`SELECT player_id, level_id, last_started_at, plays FROM player_levels WHERE player_id = ? AND level_id = ?`,
-		playerID, levelID).Scan(&pl.PlayerID, &pl.LevelID, &pl.LastStartedAt, &pl.Plays)
-	if err != nil {
+	if err := s.Scan(&pl.PlayerID, &pl.LevelID, &pl.LastStartedAt, &pl.Plays, &pl.Completions, &pl.LastCompletedAt,
+		&pl.BestTime, &pl.BestScore, &pl.BestScoreTime, &pl.BestWrong, &pl.BestResultID, &pl.BestAt); err != nil {
 		return nil, mapErr(err)
 	}
 	return &pl, nil
 }
 
+func (q *levelRepo) GetPlayerLevel(ctx context.Context, playerID, levelID string) (*domain.PlayerLevel, error) {
+	return scanPlayerLevel(q.r.QueryRowContext(ctx,
+		`SELECT `+playerLevelCols+` FROM player_levels WHERE player_id = ? AND level_id = ?`, playerID, levelID))
+}
+
 func (q *levelRepo) ListPlayerLevels(ctx context.Context, playerID string) ([]domain.PlayerLevel, error) {
 	rows, err := q.r.QueryContext(ctx,
-		`SELECT player_id, level_id, last_started_at, plays FROM player_levels WHERE player_id = ? ORDER BY level_id ASC`,
-		playerID)
+		`SELECT `+playerLevelCols+` FROM player_levels WHERE player_id = ? ORDER BY level_id ASC`, playerID)
 	if err != nil {
 		return nil, mapErr(err)
 	}
 	defer rows.Close()
 	var out []domain.PlayerLevel
 	for rows.Next() {
-		var pl domain.PlayerLevel
-		if err := rows.Scan(&pl.PlayerID, &pl.LevelID, &pl.LastStartedAt, &pl.Plays); err != nil {
+		pl, err := scanPlayerLevel(rows)
+		if err != nil {
 			return nil, err
 		}
-		out = append(out, pl)
+		out = append(out, *pl)
 	}
 	return out, rows.Err()
 }
@@ -149,6 +162,47 @@ func (q *levelRepo) RecordStart(ctx context.Context, playerID, levelID string, n
 		 ON CONFLICT (player_id, level_id) DO UPDATE SET
 		   last_started_at = excluded.last_started_at, plays = player_levels.plays + 1`,
 		playerID, levelID, now)
+	return mapErr(err)
+}
+
+// ApplyResult folds one accepted result into the player's level state. The
+// play is counted here only for an offline game (RecordStart counted the
+// session-backed ones). The best-score update uses the same strict order as the
+// client's SaveData.update_best_score, so a full tie keeps the older run.
+func (q *levelRepo) ApplyResult(ctx context.Context, playerID, levelID string, r domain.PlayerLevelResult) error {
+	plays, started := 0, int64(0)
+	if r.CountPlay {
+		plays, started = 1, r.StartedAt
+	}
+	if _, err := q.w.ExecContext(ctx,
+		`INSERT INTO player_levels (player_id, level_id, last_started_at, plays) VALUES (?, ?, ?, ?)
+		 ON CONFLICT (player_id, level_id) DO UPDATE SET
+		   plays = player_levels.plays + excluded.plays,
+		   last_started_at = MAX(player_levels.last_started_at, excluded.last_started_at)`,
+		playerID, levelID, started, plays); err != nil {
+		return mapErr(err)
+	}
+	if !r.Completed {
+		return nil
+	}
+	if _, err := q.w.ExecContext(ctx,
+		`UPDATE player_levels SET
+		   completions = completions + 1,
+		   last_completed_at = MAX(last_completed_at, ?1),
+		   best_time = CASE WHEN best_time <= 0 OR ?2 < best_time THEN ?2 ELSE best_time END
+		 WHERE player_id = ?3 AND level_id = ?4`,
+		r.FinishedAt, r.Elapsed, playerID, levelID); err != nil {
+		return mapErr(err)
+	}
+	_, err := q.w.ExecContext(ctx,
+		`UPDATE player_levels SET
+		   best_score = ?1, best_wrong = ?2, best_score_time = ?3, best_result_id = ?4, best_at = ?5
+		 WHERE player_id = ?6 AND level_id = ?7
+		   AND (best_result_id = ''
+		    OR ?1 > best_score
+		    OR (?1 = best_score AND ?2 < best_wrong)
+		    OR (?1 = best_score AND ?2 = best_wrong AND ?3 < best_score_time))`,
+		r.Score, r.Wrong, r.Elapsed, r.ResultID, r.FinishedAt, playerID, levelID)
 	return mapErr(err)
 }
 

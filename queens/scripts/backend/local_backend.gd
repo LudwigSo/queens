@@ -826,6 +826,40 @@ func _friend_view(fr: Dictionary) -> Dictionary:
 	}
 
 
+## There is no server: the device's own levels are the whole set, so a level
+## sync finds nothing to fetch.
+func get_level_count() -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
+	return ok(catalog.size())
+
+
+func get_level_ids() -> Dictionary:
+	if simulate_offline:
+		return _offline([])
+	var ids: Array = []
+	for lv in catalog.levels:
+		ids.append(str(lv["id"]))
+	return ok(ids)
+
+
+func get_levels(ids: Array) -> Dictionary:
+	if simulate_offline:
+		return _offline([])
+	var out: Array = []
+	for id in ids:
+		if catalog.has(str(id)):
+			out.append(catalog.get_level(str(id)))
+	return ok(out)
+
+
+## null: the save file is the only record, so there is nothing to merge.
+func get_level_states() -> Dictionary:
+	if simulate_offline:
+		return _offline(null)
+	return ok(null)
+
+
 func get_friends() -> Dictionary:
 	if simulate_offline:
 		var cached: Array = []

@@ -25,6 +25,28 @@ func _init(level_list: Array) -> void:
 		_rank[ranked[i]["id"]] = i
 
 
+## Appends levels this catalog does not have yet, in the given order, and
+## re-ranks. `levels` grows in place, so everyone holding this catalog or its
+## `levels` array (the picker, the offline backend, the main screen) sees them.
+## Returns how many were added.
+func add_levels(level_list: Array) -> int:
+	var added := 0
+	for lv in level_list:
+		if by_id.has(lv["id"]):
+			continue
+		_index[lv["id"]] = levels.size()
+		levels.append(lv)
+		by_id[lv["id"]] = lv
+		added += 1
+	if added > 0:
+		ranked = levels.duplicate()
+		ranked.sort_custom(_compare)
+		_rank.clear()
+		for i in ranked.size():
+			_rank[ranked[i]["id"]] = i
+	return added
+
+
 static func _compare(a: Dictionary, b: Dictionary) -> bool:
 	if float(a["difficulty"]) != float(b["difficulty"]):
 		return float(a["difficulty"]) < float(b["difficulty"])

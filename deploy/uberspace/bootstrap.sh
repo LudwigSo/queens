@@ -27,6 +27,45 @@ say "The domain must already be on this account"
 uberspace web domain list
 echo "'$DOMAIN' has to appear above. If it does not: uberspace web domain add $DOMAIN"
 
+say "And it must actually point here"
+# Worth doing properly rather than by eye, because the half-broken case is
+# invisible from a desktop: an AAAA that points at Uberspace and an A that
+# still points at the registrar's parking makes the site work over IPv6 and
+# fail for everyone else -- including GitHub runners, which have no IPv6.
+me="$(hostname -f)"
+host_v4="$(getent ahostsv4 "$me"     | awk '{print $1}' | sort -u)"
+host_v6="$(getent ahostsv6 "$me"     | awk '{print $1}' | sort -u)"
+dom_v4="$( getent ahostsv4 "$DOMAIN" | awk '{print $1}' | sort -u)"
+dom_v6="$( getent ahostsv6 "$DOMAIN" | awk '{print $1}' | sort -u)"
+
+printf '  this host (%s)\n    A    %s\n    AAAA %s\n' "$me" "${host_v4:-none}" "${host_v6:-none}"
+printf '  %s\n    A    %s\n    AAAA %s\n' "$DOMAIN" "${dom_v4:-none}" "${dom_v6:-none}"
+
+dns_ok=1
+for want in $host_v4; do
+  echo "$dom_v4" | grep -qx "$want" || dns_ok=0
+done
+for want in $host_v6; do
+  echo "$dom_v6" | grep -qx "$want" || dns_ok=0
+done
+# Extra addresses are as bad as missing ones: traffic lands wherever they point.
+[ "$(echo "$dom_v4" | grep -c .)" = "$(echo "$host_v4" | grep -c .)" ] || dns_ok=0
+
+if [ "$dns_ok" != 1 ]; then
+  cat >&2 <<EOF
+
+!! $DOMAIN does not resolve to this host.
+!! Set these at your registrar, replacing whatever is there now:
+!!   A     $(echo "$host_v4" | tr '\n' ' ')
+!!   AAAA  $(echo "$host_v6" | tr '\n' ' ')
+!! Both families matter. An A record left on the registrar's parking address
+!! makes the site reachable over IPv6 only, which looks fine from a browser
+!! and fails every deploy.
+EOF
+  exit 1
+fi
+echo "  ok: both families point at this host"
+
 say "Routing $BACKEND_PATH to port $PORT"
 # --remove-prefix is what lets the server keep its own /v1, /healthz and /readyz
 # paths: it never learns it is mounted under a prefix.
