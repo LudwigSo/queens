@@ -44,6 +44,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Maven Central rate-limits shared runner IPs (HTTP 429), and a cold
+      # Gradle build fetches ~100 artifacts. The Godot build template pins the
+      # Gradle/AGP/Kotlin versions, so the Godot version is the cache key.
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-godot-${{ env.GODOT_VERSION }}
+
       - name: Prepare signing key
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -112,7 +123,23 @@ jobs:
           mkdir -p build
           "$ANDROID_HOME/platform-tools/adb" start-server
           godot --headless --import
-          godot --headless --install-android-build-template --export-release Android build/queens.apk
+          # A cold cache can still hit a 429; downloads that succeeded stay in
+          # ~/.gradle, so each retry asks Maven Central for less.
+          for attempt in 1 2 3; do
+            if godot --headless --install-android-build-template --export-release Android build/queens.apk \
+                && [ -f build/queens.apk ]; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Android export failed after $attempt attempts."
+              exit 1
+            fi
+            delay=$((attempt * 60))
+            echo "::warning::Android export failed (attempt $attempt), retrying in ${delay}s."
+            sleep "$delay"
+          done
+          # Release Gradle's lock files before the cache post-step saves ~/.gradle.
+          pkill -f GradleDaemon || true
 
       - uses: actions/upload-artifact@v4
         with:
