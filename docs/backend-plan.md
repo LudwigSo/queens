@@ -45,7 +45,7 @@ All claims checked. Corrections and additions that affect the design:
 | OPEN-2.3 errors | RFC 9457 `application/problem+json` + `code` + `params`, via `huma.NewError` |
 | OPEN-2.4 paths | `/v1/...` |
 | OPEN-3 friends | Server-generated `QN-` + 6 × `[A-Z2-7]`, `UNIQUE`, retry on collision; **directed** follows; cap 50 (`ERR_FRIEND_LIMIT`); rate limit is the enumeration defence (32⁶ ≈ 1.07 B codes); `friend_code_for()` stays in `local_backend.gd` as the offline placeholder |
-| OPEN-4 hosting | **Decide later** (user). Design assumes a TLS-terminating reverse proxy (`QUEENS_TRUST_PROXY`); no deployment files in this plan |
+| OPEN-4 hosting | **Resolved**: Uberspace 7, `https://www.ludwigso.de/queens/api` behind their TLS-terminating proxy with the path prefix stripped (`QUEENS_TRUST_PROXY=true`), supervisord, SQLite and backups under `~/queens`. Pipeline and runbook in `deploy/` |
 | OPEN-5 spec | DTOs below; `openapi.yaml` generated + drift-tested; contract snapshot tests |
 | OPEN-6 solution | Store `solution_json`, never expose; comment says why |
 | OPEN-7 local data | **Start fresh entirely** (user). No import, no cooldown seeding. Client keeps honouring its own pre-upgrade cooldowns via `max(server, local)` for display only |
@@ -715,7 +715,7 @@ static func _default_server_url() -> String:
     return SERVER_URL_RELEASE
 ```
 
-`--export-release` sets `release` and clears `debug`, so only the CI-published APK gets the production URL; editor, headless tests and debug APKs default to `LocalBackend`; `use_save_path()` forces `""` regardless. `android.yml` gains two seds beside the existing ones: `client_version` → `"1.0.<run_number>"`, and `SERVER_URL_RELEASE` ← repository variable `vars.QUEENS_SERVER_URL` when non-empty (staging without a commit). Until hosting is decided (OPEN-4) `SERVER_URL_RELEASE` stays `""` and release builds remain offline. Dev on device: Android 9+ blocks cleartext, so `adb reverse tcp:8080 tcp:8080` + `http://127.0.0.1:8080`.
+`--export-release` sets `release` and clears `debug`, so only the CI-published APK gets the production URL; editor, headless tests and debug APKs default to `LocalBackend`; `use_save_path()` forces `""` regardless. `android.yml` gains two seds beside the existing ones: `client_version` → `"1.0.<run_number>"`, and `SERVER_URL_RELEASE` ← repository variable `vars.QUEENS_SERVER_URL` when non-empty (staging without a commit). Hosting is now decided (OPEN-4), so `SERVER_URL_RELEASE` is committed as `https://www.ludwigso.de/queens/api` and the variable only overrides it for a staging build. Dev on device: Android 9+ blocks cleartext, so `adb reverse tcp:8080 tcp:8080` + `http://127.0.0.1:8080`.
 
 ## Parity harness
 

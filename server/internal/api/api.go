@@ -25,8 +25,13 @@ type Server struct {
 
 // New wires the middleware chain, outermost first:
 //
-//	RealIP (only behind a trusted proxy) -> RequestID -> Recoverer -> Timeout
-//	-> serverTime -> accessLog -> maxBytes -> Huma
+//	RequestID -> Recoverer -> Timeout -> serverTime -> accessLog -> maxBytes
+//	-> withIP -> Huma
+//
+// chi's RealIP is deliberately absent. It is deprecated in chi v5 for the
+// reason spelled out on clientIP, and it additionally trusts True-Client-IP
+// and X-Real-IP, which our proxy neither sets nor strips. withIP resolves the
+// caller once and is the only thing that reads the address.
 //
 // /healthz and /readyz are registered on chi directly so they stay out of the
 // generated OpenAPI document.
@@ -34,9 +39,6 @@ func New(svc *service.Service, cfg *config.Config) *Server {
 	InstallProblemErrors()
 
 	r := chi.NewRouter()
-	if cfg.TrustProxy {
-		r.Use(middleware.RealIP)
-	}
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(cfg.RequestTimeout))

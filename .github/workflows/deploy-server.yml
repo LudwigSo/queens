@@ -1,0 +1,119 @@
+name: Deploy server
+
+# Called by the Release workflow, and runnable on its own for a server-only
+# fix that does not need a new APK.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Uberspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Holds the deploy secrets, and gives the deploy somewhere to hang a
+    # protection rule if one is ever wanted.
+    environment: production
+    # queensd is a single instance by design: the rate limiters are in-process
+    # and the SQLite write pool holds one connection. Never two deploys at
+    # once, and never cancel one half-way through a symlink swap.
+    concurrency:
+      group: queensd-deploy
+      cancel-in-progress: false
+    env:
+      QUEENS_PORT: ${{ vars.QUEENS_PORT || '8721' }}
+      QUEENS_BACKEND_PATH: ${{ vars.QUEENS_BACKEND_PATH || 'www.ludwigso.de/queens/api' }}
+      API_BASE: ${{ vars.QUEENS_SERVER_URL || 'https://www.ludwigso.de/queens/api' }}
+      # Suppresses the weight-8 no_session anti-cheat signal for results
+      # finished before this instant. Deliberately in the future -- offline
+      # play is supported, and the signal would shadow-exclude honest players.
+      # See deploy/README.md before bringing it forward.
+      QUEENS_NO_SESSION_GRACE_UNTIL: ${{ vars.QUEENS_NO_SESSION_GRACE_UNTIL || '1798761600' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      # The gate. A release is rare and deliberate, so re-running the suite on
+      # the exact commit being deployed is worth the few minutes. -race is left
+      # to the Server workflow; this is the correctness check.
+      - name: Test
+        working-directory: server
+        run: go test -count=1 ./...
+
+      - name: Build
+        working-directory: server
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+            -ldflags="-s -w -X main.version=${{ github.sha }}" \
+            -o dist/queensd ./cmd/queensd
+          ./dist/queensd version || true
+
+      - name: Configure ssh
+        env:
+          SSH_KEY: ${{ secrets.UBERSPACE_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.UBERSPACE_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          test -s ~/.ssh/id_deploy || { echo "::error::UBERSPACE_SSH_KEY is empty"; exit 1; }
+          test -s ~/.ssh/known_hosts || { echo "::error::UBERSPACE_SSH_KNOWN_HOSTS is empty"; exit 1; }
+
+      - name: Upload the build
+        env:
+          HOST: ${{ secrets.UBERSPACE_SSH_HOST }}
+          USER_NAME: ${{ secrets.UBERSPACE_SSH_USER }}
+        run: |
+          stage="releases/${{ github.sha }}.incoming"
+          ssh -i ~/.ssh/id_deploy "$USER_NAME@$HOST" "rm -rf '$stage' && mkdir -p '$stage'"
+          scp -i ~/.ssh/id_deploy \
+            server/dist/queensd \
+            deploy/uberspace/queensd-run \
+            deploy/uberspace/queensd.ini \
+            "$USER_NAME@$HOST:$stage/"
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.UBERSPACE_SSH_HOST }}
+          USER_NAME: ${{ secrets.UBERSPACE_SSH_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+          PEPPER: ${{ secrets.QUEENS_TOKEN_PEPPER }}
+        run: |
+          test -n "$PEPPER" || { echo "::error::QUEENS_TOKEN_PEPPER is empty"; exit 1; }
+          # The pepper goes down the pipe, never into the remote command line:
+          # argv is readable by every other user on a shared host.
+          {
+            printf 'export QUEENS_TOKEN_PEPPER=%q\n' "$PEPPER"
+            cat deploy/uberspace/deploy.sh
+          } | ssh -i ~/.ssh/id_deploy "$USER_NAME@$HOST" \
+                "RELEASE_SHA='$RELEASE_SHA' \
+                 QUEENS_PORT='$QUEENS_PORT' \
+                 QUEENS_BACKEND_PATH='$QUEENS_BACKEND_PATH' \
+                 QUEENS_NO_SESSION_GRACE_UNTIL='$QUEENS_NO_SESSION_GRACE_UNTIL' \
+                 bash -s"
+
+      # Everything above proves the process is healthy on the host. This proves
+      # the public route reaches it.
+      - name: Smoke test the public URL
+        run: |
+          set -x
+          curl -fsS --retry 3 --retry-delay 2 "$API_BASE/healthz"
+          curl -fsS "$API_BASE/readyz"
+          curl -fsSi "$API_BASE/v1/time" | grep -i '^x-server-time:'
+
+          # An unauthenticated call must come back as queensd's own
+          # problem+json. If the webserver answers instead -- a 403 from a path
+          # that falls through -- the client treats it as permanent and
+          # silently drops every queued offline result.
+          code=$(curl -sS -o "$RUNNER_TEMP/me.json" -w '%{http_code}' "$API_BASE/v1/me")
+          cat "$RUNNER_TEMP/me.json"; echo
+          test "$code" = "401" || { echo "::error::/v1/me returned $code, expected 401"; exit 1; }
+          grep -q 'ERR_UNAUTHORIZED' "$RUNNER_TEMP/me.json" \
+            || { echo "::error::/v1/me did not answer with queensd's error body"; exit 1; }

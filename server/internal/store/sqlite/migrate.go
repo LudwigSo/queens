@@ -50,6 +50,14 @@ func loadMigrations() ([]migration, error) {
 // Migrate applies every pending migration, one transaction per file. It is
 // forward-only on purpose: one environment does not need down-migrations, and a
 // rollback is a restore from the nightly backup.
+//
+// Note what this does NOT do: a version in the table that is higher than any
+// file here is skipped silently, never reported. A rolled-back binary
+// therefore starts happily against a schema it does not know, and /readyz only
+// pings the database, so nothing notices until a write fails. Keep new
+// migrations additive and defaulted -- a new table, a nullable column, or one
+// with a DEFAULT -- so that binary N-1 keeps working against schema N and a
+// rollback stays a symlink swap instead of a restore. See deploy/README.md.
 func (d *DB) Migrate(ctx context.Context, now int64) error {
 	migs, err := loadMigrations()
 	if err != nil {

@@ -1,0 +1,60 @@
+name: Release
+
+# Develop on main; merge main into `release` when you want to ship.
+#
+# Order matters and is enforced by `needs`: the server goes out first. An old
+# server answers ERR_LEVEL_UNKNOWN for levels it has not imported, and
+# levelset.Sync refuses to start on a changed board -- so a client must never
+# reach players before the server it was built against.
+# No workflow_dispatch: merging into `release` is the one way to ship, so the
+# branch always says what is in production. A failed run is re-run from the
+# Actions tab, and a server-only fix goes out through Deploy server.
+on:
+  push:
+    branches: [release]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Next version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      version_code: ${{ steps.next.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Derived from the tags rather than github.run_number: this workflow's
+      # run numbers start at 1 and would collide with the releases the Android
+      # workflow already published. versionCode has to increase for ever, so
+      # continuing the existing sequence is the only safe choice.
+      - id: next
+        run: |
+          latest=$(git tag -l 'v1.0.*' | sed 's|^v1\.0\.||' | grep -E '^[0-9]+$' | sort -n | tail -1)
+          next=$(( ${latest:-0} + 1 ))
+          echo "version=1.0.$next" >> "$GITHUB_OUTPUT"
+          echo "version_code=$next" >> "$GITHUB_OUTPUT"
+          echo "Releasing 1.0.$next (previous: ${latest:-none})"
+
+  server:
+    name: Server
+    needs: version
+    uses: ./.github/workflows/deploy-server.yml
+    secrets: inherit
+
+  android:
+    name: Android
+    needs: [version, server]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/android.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      version_code: ${{ needs.version.outputs.version_code }}
+      publish: true
+    secrets: inherit
