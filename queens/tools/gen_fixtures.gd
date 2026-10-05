@@ -232,6 +232,42 @@ func _league_cases() -> Dictionary:
 					"expect": {"promote_count": int(ev["promote_count"]),
 						"relegate_count": int(ev["relegate_count"]), "members": out}})
 
+	# Bots: progress at fixed instants of a gold and a platinum week, plus the
+	# seed and name derivation.
+	var bots: Array = []
+	for tier in ["gold", "platinum"]:
+		var tier_cfg: Dictionary = LeagueRules.tier(cfg, tier)
+		var start := LeagueRules.round_start(cfg, tier, 2957)
+		var end := LeagueRules.round_end(cfg, tier, 2957)
+		for group_seed in [0, 1, 123456, 2147483646, 98765432101]:
+			for slot in [0, 1, 7, 28, 49]:
+				var s := LeagueRules.bot_seed(group_seed, slot)
+				for at in [start - 1, start, start + 86400, start + 3 * 86400 + 4321, end - 1, end]:
+					var p := LeagueRules.bot_progress(tier_cfg, cfg, s, start, end, at)
+					bots.append({"tier": tier, "group_seed": group_seed, "slot": slot, "seed": s,
+						"start": start, "end": end, "at": at,
+						"nickname": LeagueRules.bot_nickname(cfg, group_seed, slot),
+						"expect": {"round_score": int(p["round_score"]), "games": int(p["games"]),
+							"last_submit_at": int(p["last_submit_at"])}})
+	var bot_counts: Array = []
+	for tier in tiers:
+		for humans in [0, 1, 29, 30, 31, 50]:
+			bot_counts.append({"tier": tier, "humans": humans,
+				"expect": LeagueRules.bot_count(LeagueRules.tier(cfg, tier), humans)})
+
+	var online: Array = []
+	for tier in tiers:
+		for has_session in [false, true]:
+			for delay in [0, 599, 600, 601, 86400]:
+				online.append({"tier": tier, "has_session": has_session, "finished_at": 1000, "received_at": 1000 + delay,
+					"expect": LeagueRules.counts_for_league(cfg, tier, has_session, 1000, 1000 + delay)})
+
+	var cuts: Array = []
+	for scores in [[], [100], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150],
+			[150, 10, 140, 20, 130, 30, 120, 40, 110, 50, 100, 60, 90, 70, 80, 75, 75]]:
+		cuts.append({"scores": scores, "expect": LeagueRules.cut_score(scores, cfg)})
+
 	var transitions: Array = []
 	for tier in tiers:
 		for outcome in ["promoted", "stayed", "relegated", "inactive_frozen", "inactive_relegated"]:
@@ -253,7 +289,11 @@ func _league_cases() -> Dictionary:
 		"openings": openings,
 		"counts": counts,
 		"round_score": round_scores,
+		"cut_score": cuts,
 		"evaluate": evaluations,
+		"bots": bots,
+		"bot_count": bot_counts,
+		"counts_for_league": online,
 		"transitions": transitions,
 		"inactive_outcome": inactive,
 		"promote_tier": promote,

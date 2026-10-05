@@ -182,11 +182,11 @@ func _ready() -> void:
 	_save(out_dir + "10_level_select_locked.png")
 	print("screen = %s" % main.debug.screen())
 
-	# League: standings with bots, friends tab, adding a friend.
+	# League in bronze: no group and no timer, the way to silver and my games.
 	main.debug.show_league()
 	await _frames(2)
 	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
-	print("league: joined = %s, rank %d of %d, round score %d, zone %s, tier points %d / %d" % [standing["joined"], standing["my_rank"], standing["group"]["size"], standing["my_round_score"], standing["zone"], standing["my_tier_points"], standing["rules"]["promo_score"]])
+	print("league: joined = %s, tab = %s, tier points %d / %d" % [standing["joined"], main.league.tab, standing["my_tier_points"], standing["rules"]["promo_score"]])
 	_save(out_dir + "11_league_standings.png")
 	main.league.show_tab("friends")
 	main._on_add_friend("QN-ABC234")
@@ -226,6 +226,87 @@ func _ready() -> void:
 	await _frames(2)
 	_save(out_dir + "14b_promotion.png")
 	main.round_summary.close()
+	await _frames(1)
+
+	# Gold: a group topped up with bots, and the run overview of the week.
+	var local: LocalBackend = App.backend
+	local.data["profile"]["tier"] = "gold"
+	local.data["current_round"] = local.current_round()
+	local.start_game(main.levels[0]["id"])
+	for i in 17:
+		var lvx: Dictionary = main.levels[(i * 5) % main.levels.size()]
+		local.submit_result({"result_id": "shot-%d" % i, "level_id": lvx["id"], "size": lvx["size"], "difficulty": lvx["difficulty"],
+			"stars": lvx.get("stars", 0), "completed": true, "elapsed_seconds": 60.0 + i * 20.0, "wrong_placements": i % 3,
+			"hint_count": 0, "finished_at": App.now(), "started_at": App.now() - 120})
+	main.debug.show_league()
+	await _frames(3)
+	main.league.tabs.select("standings")
+	await _frames(2)
+	_save(out_dir + "17_league_gold_bots.png")
+	main.league.tabs.select("runs")
+	await _frames(2)
+	print("runs: %d rows, header = %s" % [main._runs.get("runs", []).size(), main.league._runs.get("header", "")])
+	_save(out_dir + "18_league_runs.png")
+	var first_run: Dictionary = main._runs["runs"][0]
+	main._show_run(str(first_run["result_id"]))
+	await _frames(3)
+	print("run detail visible = %s" % main.run_detail.visible)
+	_save(out_dir + "19_run_detail.png")
+	main.run_detail.close()
+	await _frames(1)
+
+	# Offline: the mark on top, the standings replaced by a notice, own score still moving.
+	local.simulate_offline = true
+	main.debug.show_home()
+	await _frames(3)
+	print("offline: home mark = %s" % main.home.offline_button.visible)
+	_save(out_dir + "20_home_offline.png")
+	main.debug.show_league()
+	await _frames(3)
+	main.league.tabs.select("standings")
+	await _frames(2)
+	_save(out_dir + "21_league_offline.png")
+	local.data["profile"]["tier"] = "diamond"
+	main.debug.show_league()
+	await _frames(3)
+	main.league.tabs.select("standings")
+	await _frames(2)
+	_save(out_dir + "22_league_offline_diamond.png")
+	local.data["profile"]["tier"] = "gold"
+
+	# Offline on an empty tank: play on credit, then the sheet explains the payback.
+	App.save.data["energy"]["unlimited"] = false
+	App.save.data["energy"]["amount"] = 0
+	App.energy.grant(0)
+	main.debug.show_home()
+	await _frames(2)
+	main.debug.play_step(0)
+	await _frames(3)
+	print("offline start on an empty tank: screen = %s, debt = %d" % [main.debug.screen(), App.energy.debt()])
+	_save(out_dir + "23_game_offline_note.png")
+	main.end_game(false)
+	main.debug.show_home()
+	await _frames(2)
+	main.debug.open_shop(false)
+	await _frames(2)
+	_save(out_dir + "24_energy_offline.png")
+	main.energy_dialog.close()
+	local.simulate_offline = false
+	await _frames(2)
+	main.debug.open_shop(false)
+	await _frames(2)
+	_save(out_dir + "25_energy_debt.png")
+	main.energy_dialog.close()
+	await _frames(1)
+
+	# The friend's-group offer after a promotion (fabricated options).
+	main.join_sheet.open(LeagueRules.tier_label("gold"), [
+		{"group_id": "lg_gold_1_001", "members": 12, "friends": [{"nickname": "Anna"}, {"nickname": "Ben"}]},
+		{"group_id": "lg_gold_1_004", "members": 31, "friends": [{"nickname": "Chris"}]}])
+	main.router.present(main.join_sheet)
+	await _frames(2)
+	_save(out_dir + "26_join_sheet.png")
+	main.join_sheet.close()
 	get_tree().quit()
 
 

@@ -92,6 +92,9 @@ func open(summary: Dictionary, tier_before_name: String, tier_after_name: String
 			chips.add_child(_chip(Loc.f("SUMMARY_TIER_POINTS", [int(summary.get("tier_points", 0))]), &"Chip", &"LabelCaptionInk"))
 		else:
 			chips.add_child(_chip(Loc.f("SUMMARY_POINTS", [int(summary.get("round_score", 0))]), &"Chip", &"LabelCaptionInk"))
+	elif by_score:
+		# Bronze and Silver have no group, so no rank: the tier points are the story.
+		chips.add_child(_chip(Loc.f("SUMMARY_TIER_POINTS", [int(summary.get("tier_points", 0))]), &"ChipPrimary", &"LabelOnDark"))
 	var best: Dictionary = summary.get("best_game", {})
 	if by_score:
 		body.text = Loc.f("SUMMARY_REACHED", [int(summary.get("tier_points", 0)), tier_before_name])

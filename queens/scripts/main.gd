@@ -14,6 +14,8 @@ extends Control
 @onready var board: Board = game_screen.board
 @onready var win_overlay: Control = $WinOverlay
 @onready var round_summary: Control = $RoundSummary
+@onready var run_detail: Control = $RunDetail
+@onready var join_sheet: Control = $JoinSheet
 @onready var energy_dialog: Control = $EnergyDialog
 @onready var message_dialog: Control = $MessageDialog
 @onready var pause_menu: Control = $PauseMenu
@@ -35,6 +37,9 @@ var detail_scope: String = "global"
 var _options: Dictionary = {}   ## step -> pick (the level each home card would start)
 var _pending_start: Dictionary = {}  ## a start refused for lack of energy, retried after a refill
 var _req: int = 0               ## Request token: drops stale backend answers.
+var _tier: String = "bronze"    ## The player's tier as last seen, for the offline wording.
+var _runs: Dictionary = {}      ## The run overview last shown, for the detail view.
+var _last_summary: Dictionary = {}  ## The round summary on screen, for the join offer after it.
 
 
 func _ready() -> void:
@@ -58,6 +63,7 @@ func _ready() -> void:
 	home.energy_pressed.connect(_open_energy_dialog.bind(false))
 	home.settings_requested.connect(_show_settings)
 	home.tutorial_requested.connect(_show_tutorial)
+	home.offline_info_requested.connect(_show_offline_info)
 	settings_screen.back_requested.connect(_on_settings_back)
 	settings_screen.setting_changed.connect(_on_setting_changed)
 	settings_screen.rename_requested.connect(_on_rename)
@@ -77,7 +83,11 @@ func _ready() -> void:
 	App.ads.ad_closed.connect(func(rewarded: bool) -> void:
 		energy_dialog.set_status(Loc.t("SHOP_STATUS_THANKS") if rewarded else Loc.t("SHOP_STATUS_NO_REWARD"))
 		if rewarded:
-			toast.show_message(Loc.f("TOAST_ENERGY_ADDED", [App.config.ad_reward_energy]), "success"))
+			var reward: Dictionary = App.energy.last_reward
+			if int(reward.get("repaid", 0)) > 0:
+				toast.show_message(Loc.f("TOAST_ENERGY_REPAID", [int(reward["granted"]), int(reward["repaid"])]), "success")
+			else:
+				toast.show_message(Loc.f("TOAST_ENERGY_ADDED", [App.config.ad_reward_energy]), "success"))
 	App.purchases.products_updated.connect(func(_products: Dictionary) -> void: _refresh_energy())
 	App.purchases.purchase_failed.connect(func(reason: String) -> void: energy_dialog.set_status(reason); toast.show_message(reason, "error"))
 	App.purchases.purchase_completed.connect(func(_id: String, _token: String) -> void:
@@ -93,6 +103,10 @@ func _ready() -> void:
 	league.back_requested.connect(_show_home.bind(true))
 	league.add_friend_requested.connect(_on_add_friend)
 	league.remove_friend_requested.connect(_on_remove_friend)
+	league.run_selected.connect(_show_run)
+	league.offline_info_requested.connect(_show_offline_info)
+	join_sheet.chosen.connect(_on_join_chosen)
+	App.connectivity_changed.connect(_on_connectivity_changed)
 	App.backend.standing_changed.connect(func() -> void:
 		if router.current() == "league":
 			_refresh_league())
@@ -150,6 +164,10 @@ func _notification(what: int) -> void:
 func _on_back() -> void:
 	if message_dialog.visible:
 		message_dialog.cancel()
+	elif join_sheet.visible:
+		join_sheet.close()
+	elif run_detail.visible:
+		run_detail.close()
 	elif energy_dialog.visible:
 		energy_dialog.close()
 	elif round_summary.visible:
@@ -220,7 +238,7 @@ func _show_home(back: bool = false) -> void:
 	_pause_game(false)
 	_req += 1
 	var my := _req
-	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
+	var standing: Dictionary = (await _league_state(false))["standing"]
 	if my != _req:
 		return
 	home.refresh(Views.home(App.save, App.catalog, App.energy, standing, _pick_options(), App.now()))
@@ -231,12 +249,34 @@ func _show_home(back: bool = false) -> void:
 	await _present_pending_summary()
 
 
+## The standing and, when it is needed, the run overview. Offline both are
+## the last ones the server sent with the queued games added, so the player's
+## own score keeps moving; the standing carries `offline` so the screens say
+## the ranking is not live.
+func _league_state(with_runs: bool) -> Dictionary:
+	var standing_res: Dictionary = await App.backend.get_league_standing()
+	var standing: Dictionary = standing_res["data"] if standing_res["data"] is Dictionary else {}
+	var runs := {}
+	var offline := App.is_offline()
+	if with_runs or offline:
+		var runs_res: Dictionary = await App.backend.get_round_runs()
+		runs = runs_res["data"] if runs_res["data"] is Dictionary else {}
+		offline = App.is_offline()
+	if offline:
+		runs = OfflineLeague.merge_runs(runs, standing, App.save.data.get("pending_results", []), App.config.league)
+		standing = OfflineLeague.estimate_standing(standing, runs)
+	if standing.has("tier"):
+		_tier = str(standing["tier"])
+	return {"standing": standing, "runs": runs}
+
+
 ## Shows the unseen round summary (a closed round, or a promotion by tier
 ## points) as a modal on top of whatever is open.
 func _present_pending_summary() -> void:
 	var summary: Dictionary = (await App.backend.get_round_summary())["data"]
-	if summary.is_empty() or round_summary.visible:
+	if summary == null or summary.is_empty() or round_summary.visible:
 		return
+	_last_summary = summary
 	var cfg: Dictionary = App.config.league
 	round_summary.open(summary,
 		LeagueRules.tier_name(cfg, str(summary.get("tier_before", ""))),
@@ -246,16 +286,73 @@ func _present_pending_summary() -> void:
 
 func _on_round_summary_closed(round_index: int) -> void:
 	App.backend.ack_round_summary(round_index)
+	var summary := _last_summary
+	_last_summary = {}
+	if int(summary.get("join_options", 0)) > 0:
+		await _offer_join(str(summary.get("tier_after", "")))
+
+
+## A promotion into a tier where friends are already playing this round: let
+## the player pick one of their groups.
+func _offer_join(tier_id: String) -> void:
+	var res: Dictionary = await App.backend.get_join_options()
+	if not res["ok"]:
+		return
+	var options: Array = res["data"].get("options", [])
+	if options.is_empty() or bool(res["data"].get("joined", false)) or join_sheet.visible:
+		return
+	join_sheet.open(LeagueRules.tier_name(App.config.league, tier_id), options)
+	router.present(join_sheet)
+
+
+func _on_join_chosen(group_id: String, label: String) -> void:
+	var res: Dictionary = await App.backend.join_group(group_id)
+	if not res["ok"]:
+		toast.show_message(res["error"], "error")
+		return
+	if label != "":
+		toast.show_message(Loc.f("TOAST_JOINED", [label]), "success")
+	if router.current() == "league":
+		await _refresh_league()
+	elif router.current() == "home":
+		_show_home(true)
+
+
+# --- offline ------------------------------------------------------------------
+
+func _on_connectivity_changed(online: bool) -> void:
+	home.set_offline(not online)
+	league.set_offline(not online)
+	if online:
+		toast.show_message(Loc.t("TOAST_BACK_ONLINE"), "success")
+	_refresh_energy()
+	match router.current():
+		"home":
+			if not win_overlay.visible:
+				_show_home(true)
+		"league":
+			_refresh_league()
+
+
+func _offline_text(key_plain: String, key_strict: String) -> String:
+	if LeagueRules.online_required(App.config.league, _tier):
+		return Loc.f(key_strict, [LeagueRules.tier_name(App.config.league, _tier)])
+	return Loc.t(key_plain)
+
+
+func _show_offline_info() -> void:
+	toast.show_message(_offline_text("TOAST_OFFLINE", "TOAST_OFFLINE_STRICT"), "info", 3.5)
 
 
 # --- energy -----------------------------------------------------------------
 
 func _energy_state() -> Dictionary:
-	return Views.energy_state(App.energy, App.ads, App.purchases, App.config.ad_reward_energy, App.unlimited_price_text())
+	return Views.energy_state(App.energy, App.ads, App.purchases, App.config.ad_reward_energy, App.unlimited_price_text(),
+		App.is_offline(), App.config.ad_min_playable)
 
 
 func _refresh_energy() -> void:
-	home.set_energy(App.energy.amount(), App.energy.is_unlimited())
+	home.set_energy(App.energy.amount(), App.energy.is_unlimited(), App.energy.debt())
 	energy_dialog.set_state(_energy_state())
 
 
@@ -275,7 +372,7 @@ func _on_energy_dialog_closed() -> void:
 	_resume_game()
 	if _pending_start.is_empty():
 		return
-	if not App.energy.can_start():
+	if not App.energy.can_start(App.is_offline()):
 		_pending_start.clear()
 		return
 	var pending := _pending_start.duplicate()
@@ -420,14 +517,27 @@ func _show_league() -> void:
 
 
 func _refresh_league() -> void:
-	var standing: Dictionary = (await App.backend.get_league_standing())["data"]
-	var friends: Array = (await App.backend.get_friends())["data"]
-	var profile: Dictionary = (await App.backend.get_profile())["data"]
+	var state: Dictionary = await _league_state(true)
+	var standing: Dictionary = state["standing"]
+	_runs = state["runs"]
+	var friends_res: Dictionary = await App.backend.get_friends()
+	var friends: Array = friends_res["data"] if friends_res["data"] is Array else []
+	var profile_res: Dictionary = await App.backend.get_profile()
+	var profile: Dictionary = profile_res["data"] if profile_res["data"] is Dictionary else {}
 	# The backend sends ids and numbers; the names and the rule sentence are
 	# built here, in the player's language.
 	var view := Views.league_screen(standing, friends, App.config.league)
 	league.refresh(view["standing"], view["friends"], str(profile.get("friend_code", "")), App.save.nickname(),
-		Views.league_summary(standing, App.now())["ends_in_text"])
+		Views.league_summary(standing, App.now())["ends_in_text"], Views.runs(_runs, App.catalog))
+
+
+## One game of the run overview, in the win overlay's panel.
+func _show_run(result_id: String) -> void:
+	for run in _runs.get("runs", []):
+		if str(run.get("result_id", "")) == result_id:
+			run_detail.show_run(Views.run_detail(run, App.catalog, App.config.league))
+			router.present(run_detail)
+			return
 
 
 func _on_add_friend(code: String) -> void:
@@ -511,7 +621,8 @@ func start_game(level: Dictionary, note: String = "") -> void:
 		message_dialog.open(Loc.t("DIALOG_LOCKED_TITLE"), Loc.f("DIALOG_LOCKED_BODY", [Cooldown.format_remaining(locked_for)]))
 		router.present(message_dialog)
 		return
-	if not App.energy.can_start():
+	var offline := App.is_offline()
+	if not App.energy.can_start(offline):
 		_pending_start = {"level": level, "note": note}
 		_open_energy_dialog(true)
 		return
@@ -520,7 +631,12 @@ func start_game(level: Dictionary, note: String = "") -> void:
 		end_game(false)
 	if router.current() == "home" and not win_overlay.visible:
 		home.drain_energy()
-	App.energy.charge_start()
+	var debt_before := App.energy.debt()
+	App.energy.charge_start(offline)
+	if App.energy.debt() > debt_before:
+		toast.show_message(Loc.t("TOAST_ENERGY_DEBT"), "info")
+	if offline:
+		note = _offline_text("GAME_OFFLINE_NOTE", "GAME_OFFLINE_STRICT_NOTE")
 	current_level = levels.find(level)
 	session = GameSession.new()
 	session.start(level, App.save.player_id(), App.now(), App.config.client_version)
@@ -653,7 +769,8 @@ func _on_solved() -> void:
 	var next := {}
 	for opt in _pick_options():
 		next[int(opt["step"])] = opt
-	var view := Views.win(result, bd, outcome, next, App.config.league, int(App.save.level_entry(result.level_id)["completions"]))
+	var offline_tier := _tier if league.is_empty() and App.is_offline() else ""
+	var view := Views.win(result, bd, outcome, next, App.config.league, int(App.save.level_entry(result.level_id)["completions"]), offline_tier)
 	# Let the board celebrate before the overlay slides in.
 	var delay := Motion.d(0.9)
 	if delay > 0.0:

@@ -57,15 +57,50 @@ type Tier struct {
 	MinSlots       *int   `json:"min_slots"`
 	MaxSlots       *int   `json:"max_slots"`
 	PlayersPerSlot *int   `json:"players_per_slot"`
+	OnlineRequired bool   `json:"online_required"`
+	Bots           *Bots  `json:"bots"`
+}
+
+// Bots tops a group of the tier up to FillTo with deterministic opponents; see
+// BotProgress.
+type Bots struct {
+	FillTo    int `json:"fill_to"`
+	GameScore int `json:"game_score"`
+	GamesMax  int `json:"games_max"`
+}
+
+// UnmarshalJSON keeps a missing round_days (7) apart from an explicit 0 (a tier
+// without rounds), which a plain int field cannot.
+func (t *Tier) UnmarshalJSON(data []byte) error {
+	type plain Tier
+	aux := struct {
+		*plain
+		RoundDays *int `json:"round_days"`
+	}{plain: (*plain)(t)}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	switch {
+	case aux.RoundDays == nil:
+		t.RoundDays = 7
+	case *aux.RoundDays < 0:
+		t.RoundDays = 0
+	default:
+		t.RoundDays = *aux.RoundDays
+	}
+	return nil
 }
 
 type LeagueConfig struct {
-	Format       int    `json:"format"`
-	GroupSize    int    `json:"group_size"`
-	MinGroupSize int    `json:"min_group_size"`
-	RoundMode    string `json:"round_mode"`
-	RoundBestN   int    `json:"round_best_n"`
-	Tiers        []Tier `json:"tiers"`
+	Format       int      `json:"format"`
+	GroupSize    int      `json:"group_size"`
+	GroupMax     int      `json:"group_max"`
+	MinGroupSize int      `json:"min_group_size"`
+	RoundMode    string   `json:"round_mode"`
+	RoundBestN   int      `json:"round_best_n"`
+	OnlineGraceS int64    `json:"online_grace_s"`
+	Tiers        []Tier   `json:"tiers"`
+	BotNames     []string `json:"bot_names"`
 }
 
 // LoadLeagueConfig decodes league.json and applies every default the GDScript
@@ -73,12 +108,15 @@ type LeagueConfig struct {
 // on purpose: a later "if n == 0 { n = 15 }" would turn a deliberate 0 into 15.
 func LoadLeagueConfig(data []byte) (*LeagueConfig, error) {
 	var raw struct {
-		Format       int    `json:"format"`
-		GroupSize    int    `json:"group_size"`
-		MinGroupSize int    `json:"min_group_size"`
-		RoundMode    string `json:"round_mode"`
-		RoundBestN   *int   `json:"round_best_n"`
-		Tiers        []Tier `json:"tiers"`
+		Format       int      `json:"format"`
+		GroupSize    int      `json:"group_size"`
+		GroupMax     int      `json:"group_max"`
+		MinGroupSize int      `json:"min_group_size"`
+		RoundMode    string   `json:"round_mode"`
+		RoundBestN   *int     `json:"round_best_n"`
+		OnlineGraceS *int64   `json:"online_grace_s"`
+		Tiers        []Tier   `json:"tiers"`
+		BotNames     []string `json:"bot_names"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("league config: %w", err)
@@ -86,13 +124,25 @@ func LoadLeagueConfig(data []byte) (*LeagueConfig, error) {
 	cfg := &LeagueConfig{
 		Format:       raw.Format,
 		GroupSize:    raw.GroupSize,
+		GroupMax:     raw.GroupMax,
 		MinGroupSize: raw.MinGroupSize,
 		RoundMode:    raw.RoundMode,
 		RoundBestN:   15,
+		OnlineGraceS: 600,
 		Tiers:        raw.Tiers,
+		BotNames:     raw.BotNames,
 	}
 	if raw.RoundBestN != nil {
 		cfg.RoundBestN = *raw.RoundBestN
+	}
+	if raw.OnlineGraceS != nil {
+		cfg.OnlineGraceS = *raw.OnlineGraceS
+	}
+	if cfg.GroupSize < 1 {
+		cfg.GroupSize = 30
+	}
+	if cfg.GroupMax < cfg.GroupSize {
+		cfg.GroupMax = cfg.GroupSize
 	}
 	if cfg.MinGroupSize == 0 {
 		cfg.MinGroupSize = 5
@@ -107,9 +157,6 @@ func LoadLeagueConfig(data []byte) (*LeagueConfig, error) {
 		t := &cfg.Tiers[i]
 		if t.UpMode == "" {
 			t.UpMode = UpModePct
-		}
-		if t.RoundDays < 1 {
-			t.RoundDays = 7
 		}
 		if t.Inactive == "" {
 			t.Inactive = "stay"
@@ -197,22 +244,139 @@ func ReachesPromo(t Tier, tierPoints int) bool {
 
 // --- rounds -----------------------------------------------------------------
 
-func (t Tier) RoundSeconds() int64 {
-	d := t.RoundDays
-	if d < 1 {
-		d = 1
-	}
-	return int64(d) * DaySeconds
-}
+// HasRounds is false for a tier with round_days 0 (Bronze, Silver): no timer, no
+// group, no ranking, only tier points.
+func (t Tier) HasRounds() bool { return t.RoundDays > 0 }
+
+func (t Tier) RoundSeconds() int64 { return int64(t.RoundDays) * DaySeconds }
 
 // RoundIndex of the round of this tier containing unixTime. Integer floor
-// division: negative-aware, unlike the truncating / of Go.
+// division: negative-aware, unlike the truncating / of Go. A tier without
+// rounds lives in round 0 forever.
 func RoundIndex(t Tier, unixTime int64) int64 {
+	if !t.HasRounds() {
+		return 0
+	}
 	return floorDiv(unixTime-RoundEpochOffset, t.RoundSeconds())
 }
 
-func RoundStart(t Tier, index int64) int64 { return index*t.RoundSeconds() + RoundEpochOffset }
-func RoundEnd(t Tier, index int64) int64   { return RoundStart(t, index+1) }
+// RoundStart and RoundEnd are 0 for a tier without rounds.
+func RoundStart(t Tier, index int64) int64 {
+	if !t.HasRounds() {
+		return 0
+	}
+	return index*t.RoundSeconds() + RoundEpochOffset
+}
+
+func RoundEnd(t Tier, index int64) int64 {
+	if !t.HasRounds() {
+		return 0
+	}
+	return RoundStart(t, index+1)
+}
+
+// --- groups, bots and the online rule ---------------------------------------
+
+// CountsForLeague mirrors LeagueRules.counts_for_league: every game counts in a
+// tier without online_required; in one with it, only a session-backed game
+// that reached the server within OnlineGraceS of finishing. finishedAt is
+// already clamped to the server clock.
+func (c *LeagueConfig) CountsForLeague(t Tier, hasSession bool, finishedAt, receivedAt int64) bool {
+	if !t.OnlineRequired {
+		return true
+	}
+	if !hasSession {
+		return false
+	}
+	return receivedAt-finishedAt <= c.OnlineGraceS
+}
+
+// BotCount is how many bots top a group of `humans` up to the tier's fill_to.
+func BotCount(t Tier, humans int) int {
+	if t.Bots == nil {
+		return 0
+	}
+	if n := t.Bots.FillTo - humans; n > 0 {
+		return n
+	}
+	return 0
+}
+
+const (
+	pmMod = 2147483647
+	pmMul = 48271
+)
+
+// pm is one Park-Miller step; x < 2^31 keeps the product exact.
+func pm(x int64) int64 { return (x * pmMul) % pmMod }
+
+func posmod(a, b int64) int64 {
+	m := a % b
+	if m < 0 {
+		m += b
+	}
+	return m
+}
+
+// BotSeed is the seed of the bot in `slot` of a group seeded `groupSeed`.
+func BotSeed(groupSeed int64, slot int) int64 {
+	return posmod(groupSeed, pmMod)*131 + int64(slot)*7919
+}
+
+// BotNickname mirrors LeagueRules.bot_nickname.
+func (c *LeagueConfig) BotNickname(groupSeed int64, slot int) string {
+	if len(c.BotNames) == 0 {
+		return fmt.Sprintf("Player %d", slot+1)
+	}
+	return c.BotNames[posmod(groupSeed+int64(slot), int64(len(c.BotNames)))]
+}
+
+// BotState is what a bot has played by some instant of its round.
+type BotState struct {
+	RoundScore   int   `json:"round_score"`
+	Games        int   `json:"games"`
+	LastSubmitAt int64 `json:"last_submit_at"`
+}
+
+// BotProgress mirrors LeagueRules.bot_progress literally. It is integer-only, so
+// both runtimes agree to the point, and every division has non-negative
+// operands, where Go's truncation and GDScript's floor coincide.
+func BotProgress(t Tier, cfg *LeagueConfig, bot, roundStart, roundEnd, at int64) BotState {
+	gamesMax, gameScore := int64(15), int64(400)
+	if t.Bots != nil {
+		gamesMax, gameScore = int64(t.Bots.GamesMax), int64(t.Bots.GameScore)
+	}
+	if gamesMax < 1 {
+		gamesMax = 1
+	}
+	if gameScore < 0 {
+		gameScore = 0
+	}
+	x := pm(pm(posmod(bot, pmMod-1) + 1)) // two warm-up steps, see the GDScript
+	x = pm(x)
+	activity := x % 100
+	x = pm(x)
+	skill := 60 + x%81
+	x = pm(x)
+	startPct := x % 40
+	total := 1 + activity*activity*(gamesMax-1)/9801
+	length := roundEnd - roundStart
+	if length < 0 {
+		length = 0
+	}
+	var scores []int
+	var last int64
+	for k := int64(0); k < total; k++ {
+		x = pm(x)
+		when := roundStart + length*(startPct*total+(100-startPct)*k)/(100*total)
+		if when > at {
+			break
+		}
+		scores = append(scores, int(gameScore*skill*(85+x%31)/10000))
+		last = when
+	}
+	return BotState{RoundScore: RoundScore(scores, cfg), Games: len(scores), LastSubmitAt: last}
+}
 
 // --- capped top tier --------------------------------------------------------
 
@@ -283,6 +447,21 @@ func RoundScore(scores []int, cfg *LeagueConfig) int {
 	return total
 }
 
+// CutScore mirrors LeagueRules.cut_score: the lowest counted score once N games
+// are in, else 0.
+func CutScore(scores []int, cfg *LeagueConfig) int {
+	if cfg.RoundMode == "sum" {
+		return 0
+	}
+	n := cfg.RoundBestN
+	if n <= 0 || len(scores) < n {
+		return 0
+	}
+	sorted := append([]int(nil), scores...)
+	sort.Sort(sort.Reverse(sort.IntSlice(sorted)))
+	return sorted[n-1]
+}
+
 // Member is one row of a league group.
 type Member struct {
 	PlayerID     string `json:"player_id"`
@@ -296,6 +475,9 @@ type Member struct {
 	Zone         string `json:"zone"`
 	LeftAt       int64  `json:"-"`
 	GroupID      string `json:"-"`
+	// Bot marks a synthetic member. It never leaves the server: a bot looks
+	// like anyone else in a standing, and the closer skips it.
+	Bot bool `json:"-"`
 }
 
 // SortMembers: higher score first, then fewer games, then earlier submit, then

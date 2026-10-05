@@ -129,12 +129,51 @@ func (q *leagueRepo) CreateGroup(ctx context.Context, g *domain.Group) error {
 	return mapErr(err)
 }
 
-// IncGroupCount is conditional so the capacity can never be exceeded. Under the
-// single SQLite writer it cannot fail; the check is what a Postgres port needs.
-func (q *leagueRepo) IncGroupCount(ctx context.Context, groupID string) (bool, error) {
+// IncGroupCount is conditional so a group can never grow past `limit` people:
+// the capacity for a random join, group_max for a friend's. A global group has
+// no capacity and no limit. Under the single SQLite writer it cannot fail; the
+// check is what a Postgres port needs.
+func (q *leagueRepo) IncGroupCount(ctx context.Context, groupID string, limit int) (bool, error) {
 	return affected(q.w.ExecContext(ctx,
 		`UPDATE league_groups SET member_count = member_count + 1
-		  WHERE id = ? AND state = 'open' AND (capacity IS NULL OR member_count < capacity)`, groupID))
+		  WHERE id = ? AND state = 'open' AND (capacity IS NULL OR member_count < ?)`, groupID, limit))
+}
+
+// FriendGroups lists the open groups of a round that hold someone I follow or
+// who follows me and have fewer than `limit` people, fullest first, each with
+// those friends. Friendship counts in either direction here: being followed by
+// someone already in a group is as good a reason to sit with them.
+func (q *leagueRepo) FriendGroups(ctx context.Context, playerID, tier string, idx int64, quarantine bool, limit int) ([]domain.FriendGroup, error) {
+	rows, err := q.r.QueryContext(ctx, `
+		SELECT g.id, g.member_count, lm.player_id, p.nickname
+		  FROM league_members lm
+		  JOIN league_groups g ON g.id = lm.group_id
+		  JOIN players p ON p.id = lm.player_id
+		 WHERE lm.tier = ? AND lm.round_index = ? AND lm.left_at IS NULL
+		   AND g.state = 'open' AND g.quarantine = ? AND g.capacity IS NOT NULL AND g.member_count < ?
+		   AND lm.player_id <> ?
+		   AND lm.player_id IN (SELECT friend_id FROM friends WHERE player_id = ?
+		                        UNION SELECT player_id FROM friends WHERE friend_id = ?)
+		 ORDER BY g.member_count DESC, g.id ASC, p.nickname ASC, lm.player_id ASC`,
+		tier, idx, boolToInt(quarantine), limit, playerID, playerID, playerID)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	defer rows.Close()
+	var out []domain.FriendGroup
+	for rows.Next() {
+		var gid, pid, nick string
+		var count int
+		if err := rows.Scan(&gid, &count, &pid, &nick); err != nil {
+			return nil, err
+		}
+		if len(out) == 0 || out[len(out)-1].GroupID != gid {
+			out = append(out, domain.FriendGroup{GroupID: gid, MemberCount: count})
+		}
+		last := &out[len(out)-1]
+		last.Friends = append(last.Friends, domain.FriendBrief{PlayerID: pid, Nickname: nick})
+	}
+	return out, rows.Err()
 }
 
 func (q *leagueRepo) DecGroupCountsForPlayer(ctx context.Context, playerID string) error {

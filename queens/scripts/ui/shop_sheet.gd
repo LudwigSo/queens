@@ -46,7 +46,8 @@ func close() -> void:
 	closed.emit()
 
 
-## state: {energy_text, amount, unlimited, can_start, ad_ready, ad_reward, price_text, purchases_available}
+## state: {energy_text, amount, debt, offline, repay_per_ad, min_playable, unlimited,
+## can_start, ad_ready, ad_reward, price_text, purchases_available}
 func set_state(state: Dictionary) -> void:
 	var unlimited: bool = state.get("unlimited", false)
 	energy_label.text = state.get("energy_text", "")
@@ -55,6 +56,10 @@ func set_state(state: Dictionary) -> void:
 		Motion.bump(energy_label, 1.2, Motion.SLOW)
 	_last_amount = amount
 	explain.text = Loc.t("SHOP_EXPLAIN_UNLIMITED") if unlimited else Loc.t("SHOP_EXPLAIN")
+	if not unlimited and bool(state.get("offline", false)):
+		explain.text = Loc.t("SHOP_OFFLINE")
+	elif not unlimited and int(state.get("debt", 0)) > 0:
+		explain.text = Loc.f("SHOP_DEBT", [int(state["debt"]), int(state.get("repay_per_ad", 0)), int(state.get("min_playable", 0))])
 	hint_banner.visible = blocked and not state.get("can_start", true)
 	watch_ad_button.visible = not unlimited
 	watch_ad_button.disabled = not state.get("ad_ready", false)

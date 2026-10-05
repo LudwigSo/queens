@@ -343,10 +343,26 @@ func (h *harness) seedTierGroup(t *testing.T, tier string, n int) []string {
 	return out
 }
 
+// registerIn creates a player and moves them straight into `tier`.
+func (h *harness) registerIn(t *testing.T, nickname, tier string) string {
+	t.Helper()
+	p := h.register(t, nickname)
+	if tier != "bronze" {
+		h.setTier(t, p, tier)
+	}
+	return p
+}
+
 // registerAndPlay creates a player who has completed one run of `lv`.
 func (h *harness) registerAndPlay(t *testing.T, nickname string, lv domain.Level, elapsed float64, wrong int) string {
 	t.Helper()
-	p := h.register(t, nickname)
+	return h.registerAndPlayIn(t, nickname, "bronze", lv, elapsed, wrong)
+}
+
+// registerAndPlayIn is registerAndPlay in a given tier.
+func (h *harness) registerAndPlayIn(t *testing.T, nickname, tier string, lv domain.Level, elapsed float64, wrong int) string {
+	t.Helper()
+	p := h.registerIn(t, nickname, tier)
 	st := h.start(t, p, lv.ID)
 	h.clock.Add(int64(elapsed) + 1)
 	h.submit(t, h.payload(p, lv, st, elapsed, wrong, 0))

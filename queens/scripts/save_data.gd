@@ -7,7 +7,8 @@ extends RefCounted
 ##   auth          player_id, token, issued_at - the server credential, stored
 ##                 in the clear. The token is exactly as strong as the device,
 ##                 and anyone who can read this file already owns the device.
-##   energy        amount, unlimited, purchase_token, ads_watched
+##   energy        amount, unlimited, purchase_token, ads_watched, debt (games
+##                 played offline on an empty tank, still to be paid back)
 ##   last_game     {level_id, difficulty, started_at} or {} - the last game *started*
 ##   current_game  marker of a running game (so a killed app yields a forfeit) or {}
 ##   levels        level id -> {last_started_at, plays, completions, best_time (fastest),
@@ -43,6 +44,7 @@ static func defaults(cfg: GameConfig) -> Dictionary:
 			"unlimited": false,
 			"purchase_token": "",
 			"ads_watched": 0,
+			"debt": 0,
 		},
 		"last_game": {},
 		"current_game": {},
@@ -166,6 +168,8 @@ static func migrate(dict: Dictionary, cfg: GameConfig) -> Dictionary:
 	for key in auth_defaults():
 		if not dict["auth"].has(key):
 			dict["auth"][key] = auth_defaults()[key]
+	if dict.get("energy") is Dictionary and not (dict["energy"] as Dictionary).has("debt"):
+		dict["energy"]["debt"] = 0
 	# Fill missing settings and per-level fields so callers can index without checks.
 	if not dict.get("settings") is Dictionary:
 		dict["settings"] = {}

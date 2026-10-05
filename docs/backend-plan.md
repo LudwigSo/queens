@@ -1,5 +1,13 @@
 # Queens backend — implementation plan
 
+> **Later change (2026-10-05, league rework).** Several decisions below no longer hold; `queens/README.md` ("League and leaderboards", "Energy") and `server/README.md` ("The league in one paragraph") describe the current rules. In short:
+> - Bronze and Silver have **no rounds** (`round_days: 0`): no group, no timer, tier points only. The Bronze 3-day round and every Bronze/Silver closer test below are gone.
+> - OPEN-10 is reversed: Gold and Platinum groups are **topped up to 30 with bots** (stateless, `domain.BotProgress`, parity-pinned). They compete for places and are never settled. `league_members.synthetic` stays unused.
+> - Groups: random fill to `group_size` 30, friends (either follow direction) up to `group_max` 50; new `GET /v1/league/join-options` and `POST /v1/league/join`.
+> - Diamond and Challenger are `online_required`: a game counts only with a session and synced within `online_grace_s` (600 s). Otherwise `results.counted = 0` (migration 0002). The weight-8 `no_session` flag now fires only in those tiers.
+> - New `GET /v1/league/runs`: the round's games best first, the best N marked, and `cut_score`.
+> - Client: offline indicator, own score estimated offline from the queue, energy may go into debt offline and is repaid by ads (each ad leaves at least 2 games).
+
 Source: `docs/backend-plan-handover.md` (design ~75 %). This plan closes every OPEN item there, verifies the handover against the code, and lays out the work milestone by milestone. Everything the handover marks SETTLED is taken as decided and only referenced here.
 
 ## Context

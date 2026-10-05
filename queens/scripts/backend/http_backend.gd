@@ -14,6 +14,9 @@ extends Backend
 ## keep rendering instead of crashing when the phone is offline.
 
 const POOL_SIZE := 4
+## While offline, how often a cheap GET /v1/time checks whether the server is
+## reachable again.
+const PROBE_SECONDS := 20.0
 const TIMEOUT_DEFAULT := 10.0
 const TIMEOUT_SUBMIT := 8.0
 const TIMEOUT_REGISTER := 15.0
@@ -46,6 +49,7 @@ var _meta: Dictionary = {}
 var _meta_etag: String = ""
 var _locks: Dictionary = {}
 var _summary: Dictionary = {}
+var _runs: Dictionary = {}
 var _ack_pending := -1
 var _league_config: Dictionary = {}
 var _config_hash: String = ""
@@ -56,6 +60,7 @@ var _offset := 0
 var _synced_wall := 0
 var _synced_ticks := 0
 var _last_resync := 0
+var _probe: Timer
 
 
 func _init(config: GameConfig, save: SaveData) -> void:
@@ -74,6 +79,22 @@ func _ready() -> void:
 		add_child(req)
 		_pool.append(req)
 		_free.append(req)
+	# Offline, a probe asks the server's clock every PROBE_SECONDS; the first
+	# answer flips the state back, and App takes it from there (sync, refresh).
+	_probe = Timer.new()
+	_probe.name = "Probe"
+	_probe.wait_time = PROBE_SECONDS
+	add_child(_probe)
+	_probe.timeout.connect(func() -> void: resync_time())
+	connectivity_changed.connect(func(online: bool) -> void:
+		if online:
+			_probe.stop()
+		else:
+			_probe.start())
+
+
+func is_registered() -> bool:
+	return _token != ""
 
 
 func provider_name() -> String:
@@ -171,6 +192,8 @@ func _call(method: int, path: String, body: Variant = null, opts: Dictionary = {
 		if attempt == 0 and retry and (transport_failed or status in [502, 503, 504]):
 			await _sleep(randf_range(0.5, 1.5))
 			continue
+		# Any answer at all, an error included, means the server is reachable.
+		_set_online(not transport_failed)
 		return _wrap(res)
 	return _transport_failure()
 
@@ -323,6 +346,8 @@ func init() -> Dictionary:
 	_remember_meta(d.get("level_meta", {}))
 	_bootstrapped = true
 	standing_changed.emit()
+	# Warm the run overview, so it is there the first time the phone is offline.
+	get_round_runs()
 	return ok(d)
 
 
@@ -413,6 +438,9 @@ func submit_result(result: Dictionary) -> Dictionary:
 		_profile["tier_points"] = int(d.get("tier_points", _profile["tier_points"]))
 	_standing_fresh_until = 0
 	standing_changed.emit()
+	# Keep the cached overview current: offline it is what the pending games are
+	# added to.
+	get_round_runs()
 	return ok(d)
 
 
@@ -478,6 +506,36 @@ func ack_round_summary(round_index: int) -> Dictionary:
 	if int(_summary.get("round_index", -1)) == round_index:
 		_summary = {}
 	return ok(null)
+
+
+## Offline, the last overview the server sent; the caller adds the queued
+## games (OfflineLeague.merge_runs).
+func get_round_runs() -> Dictionary:
+	var res := await _call(HTTPClient.METHOD_GET, "/v1/league/runs", null, {"retry": true})
+	if not res["ok"]:
+		res["data"] = _runs
+		return res
+	_runs = res["data"]
+	return ok(_runs)
+
+
+func get_join_options() -> Dictionary:
+	var res := await _call(HTTPClient.METHOD_GET, "/v1/league/join-options", null, {"retry": true})
+	if not res["ok"]:
+		res["data"] = {"tier": str(_standing.get("tier", "")), "round_index": 0, "joined": false, "options": []}
+		return res
+	return ok(res["data"])
+
+
+func join_group(group_id: String) -> Dictionary:
+	var res := await _call(HTTPClient.METHOD_POST, "/v1/league/join", {"group_id": group_id})
+	if not res["ok"]:
+		res["data"] = _standing
+		return res
+	_standing = res["data"]
+	_standing_fresh_until = now_utc() + STANDING_FRESH_SECONDS
+	standing_changed.emit()
+	return ok(_standing)
 
 
 func get_friends() -> Dictionary:

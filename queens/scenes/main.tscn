@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/home_screen.tscn" id="6_home"]
@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" path="res://scenes/settings_screen.tscn" id="13_settings"]
 [ext_resource type="PackedScene" path="res://scenes/tutorial.tscn" id="14_tutorial"]
 [ext_resource type="PackedScene" path="res://scenes/splash.tscn" id="15_splash"]
+[ext_resource type="PackedScene" path="res://scenes/join_sheet.tscn" id="16_join"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -63,6 +64,12 @@ layout_mode = 1
 layout_mode = 1
 
 [node name="RoundSummary" parent="." instance=ExtResource("10_round")]
+layout_mode = 1
+
+[node name="RunDetail" parent="." instance=ExtResource("4_win")]
+layout_mode = 1
+
+[node name="JoinSheet" parent="." instance=ExtResource("16_join")]
 layout_mode = 1
 
 [node name="EnergyDialog" parent="." instance=ExtResource("7_energy")]

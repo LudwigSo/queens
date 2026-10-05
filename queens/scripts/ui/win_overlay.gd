@@ -1,6 +1,9 @@
 extends Control
 ## "Solved!" panel over the board: the score counts up, the factor bars fill,
 ## badges stamp in, then the league line and the next-game choice.
+##
+## The same panel shows one game of the league's run overview again
+## (show_run): the level on top, no next-game choice, Close instead of Home.
 
 signal next_requested(step: int)   ## -1 easier, 0 same, +1 harder
 signal home_requested
@@ -12,6 +15,8 @@ const FACTOR_KEYS := {"accuracy": "FACTOR_ACCURACY", "speed": "FACTOR_SPEED", "h
 @onready var dim: ColorRect = $Dim
 @onready var panel: PanelContainer = $Panel
 @onready var crown: TextureRect = $Panel/VBox/Crown
+@onready var level_label: Label = $Panel/VBox/LevelLabel
+@onready var level_stars: StarRow = $Panel/VBox/LevelStars
 @onready var score_label: Label = $Panel/VBox/ScoreLabel
 @onready var badges: HBoxContainer = $Panel/VBox/Badges
 @onready var stats: HBoxContainer = $Panel/VBox/Stats
@@ -23,15 +28,24 @@ const FACTOR_KEYS := {"accuracy": "FACTOR_ACCURACY", "speed": "FACTOR_SPEED", "h
 @onready var same_button: Button = $Panel/VBox/Next/Same
 @onready var harder_button: Button = $Panel/VBox/Next/Harder
 @onready var home_button: Button = $Panel/VBox/HomeButton
+@onready var next_label: Label = $Panel/VBox/NextLabel
+@onready var next_row: HBoxContainer = $Panel/VBox/Next
 
 var _bars: Array = []
+var _detail := false
 
 
 func _ready() -> void:
 	harder_button.pressed.connect(_choose.bind(1))
 	same_button.pressed.connect(_choose.bind(0))
 	easier_button.pressed.connect(_choose.bind(-1))
-	home_button.pressed.connect(func() -> void: close(); home_requested.emit())
+	home_button.pressed.connect(func() -> void:
+		close()
+		if not _detail:
+			home_requested.emit())
+	$Dim.gui_input.connect(func(event: InputEvent) -> void:
+		if _detail and event is InputEventMouseButton and event.pressed:
+			close())
 
 
 ## The panel stays up until the game has actually started (main.start_game
@@ -49,6 +63,28 @@ func close() -> void:
 ## view: {score, badges:[String], stats:[{label, value}], factors:[{id, value, pct}],
 ## league:{tier_id, tier_name, rank, size, zone, score}|{}, next:{"-1": {size, enabled}, ...}}
 func show_result(view: Dictionary) -> void:
+	_set_detail(false)
+	_show(view)
+
+
+## One game of the run overview: view is Views.run_detail().
+func show_run(view: Dictionary) -> void:
+	_set_detail(true)
+	level_label.text = str(view.get("level_text", ""))
+	level_stars.set_stars(int(view.get("stars", 0)), 4)
+	_show(view)
+
+
+func _set_detail(detail: bool) -> void:
+	_detail = detail
+	level_label.visible = detail
+	level_stars.visible = detail
+	next_label.visible = not detail
+	next_row.visible = not detail
+	home_button.text = Loc.t("RUNS_CLOSE") if detail else Loc.t("WIN_HOME")
+
+
+func _show(view: Dictionary) -> void:
 	visible = true
 	Motion.fade(dim, 1.0, Motion.FAST)
 	Motion.pop_in(panel, Motion.SLOW, 0.9)
@@ -85,7 +121,10 @@ func show_result(view: Dictionary) -> void:
 	league_card.visible = not league.is_empty()
 	if not league.is_empty():
 		medal.modulate = Ui.tier_color(str(league.get("tier_id", "bronze")))
-		if str(league.get("promoted_to_name", "")) != "":
+		if league.has("note"):
+			# Offline, or a game the league did not count: say what happens to it.
+			league_label.text = str(league["note"])
+		elif str(league.get("promoted_to_name", "")) != "":
 			medal.modulate = Ui.tier_color(str(league.get("promoted_to", "bronze")))
 			league_label.text = Loc.f("WIN_PROMOTED", [str(league.get("promoted_to_name", ""))])
 		elif int(league.get("promo_score", 0)) > 0:

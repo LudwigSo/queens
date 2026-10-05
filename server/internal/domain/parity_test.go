@@ -295,6 +295,33 @@ type leagueFixture struct {
 		Tier   string `json:"tier"`
 		Expect string `json:"expect"`
 	} `json:"relegate_tier"`
+	CutScore []struct {
+		Scores []int `json:"scores"`
+		Expect int   `json:"expect"`
+	} `json:"cut_score"`
+	Bots []struct {
+		Tier      string   `json:"tier"`
+		GroupSeed int64    `json:"group_seed"`
+		Slot      int      `json:"slot"`
+		Seed      int64    `json:"seed"`
+		Start     int64    `json:"start"`
+		End       int64    `json:"end"`
+		At        int64    `json:"at"`
+		Nickname  string   `json:"nickname"`
+		Expect    BotState `json:"expect"`
+	} `json:"bots"`
+	BotCount []struct {
+		Tier   string `json:"tier"`
+		Humans int    `json:"humans"`
+		Expect int    `json:"expect"`
+	} `json:"bot_count"`
+	CountsForLeague []struct {
+		Tier       string `json:"tier"`
+		HasSession bool   `json:"has_session"`
+		FinishedAt int64  `json:"finished_at"`
+		ReceivedAt int64  `json:"received_at"`
+		Expect     bool   `json:"expect"`
+	} `json:"counts_for_league"`
 }
 
 func TestLeagueCases(t *testing.T) {
@@ -410,6 +437,42 @@ func TestLeagueCases(t *testing.T) {
 		for _, c := range f.RelegateTier {
 			if got := cfg.RelegateTier(c.Tier); got != c.Expect {
 				t.Errorf("RelegateTier(%s) = %s, want %s", c.Tier, got, c.Expect)
+			}
+		}
+	})
+	t.Run("cut_score", func(t *testing.T) {
+		for _, c := range f.CutScore {
+			if got := CutScore(c.Scores, cfg); got != c.Expect {
+				t.Errorf("CutScore(%v) = %d, want %d", c.Scores, got, c.Expect)
+			}
+		}
+	})
+	t.Run("bots", func(t *testing.T) {
+		if len(f.Bots) == 0 {
+			t.Fatal("no bot cases")
+		}
+		for _, c := range f.Bots {
+			if got := BotSeed(c.GroupSeed, c.Slot); got != c.Seed {
+				t.Errorf("BotSeed(%d, %d) = %d, want %d", c.GroupSeed, c.Slot, got, c.Seed)
+			}
+			if got := cfg.BotNickname(c.GroupSeed, c.Slot); got != c.Nickname {
+				t.Errorf("BotNickname(%d, %d) = %q, want %q", c.GroupSeed, c.Slot, got, c.Nickname)
+			}
+			if got := BotProgress(tier(c.Tier), cfg, c.Seed, c.Start, c.End, c.At); got != c.Expect {
+				t.Errorf("BotProgress(%s, seed %d, at %d) = %+v, want %+v", c.Tier, c.Seed, c.At, got, c.Expect)
+			}
+		}
+		for _, c := range f.BotCount {
+			if got := BotCount(tier(c.Tier), c.Humans); got != c.Expect {
+				t.Errorf("BotCount(%s, %d) = %d, want %d", c.Tier, c.Humans, got, c.Expect)
+			}
+		}
+	})
+	t.Run("counts_for_league", func(t *testing.T) {
+		for _, c := range f.CountsForLeague {
+			if got := cfg.CountsForLeague(tier(c.Tier), c.HasSession, c.FinishedAt, c.ReceivedAt); got != c.Expect {
+				t.Errorf("CountsForLeague(%s, session %v, %d -> %d) = %v, want %v",
+					c.Tier, c.HasSession, c.FinishedAt, c.ReceivedAt, got, c.Expect)
 			}
 		}
 	})

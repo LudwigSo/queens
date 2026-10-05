@@ -1,5 +1,4689 @@
 {
-  "config_hash": "3cb2cffa2fc43df303b48697e6cab885486511eaa769eee1144465d41594d193",
+  "bot_count": [
+    {
+      "expect": 0,
+      "humans": 0,
+      "tier": "bronze"
+    },
+    {
+      "expect": 0,
+      "humans": 1,
+      "tier": "bronze"
+    },
+    {
+      "expect": 0,
+      "humans": 29,
+      "tier": "bronze"
+    },
+    {
+      "expect": 0,
+      "humans": 30,
+      "tier": "bronze"
+    },
+    {
+      "expect": 0,
+      "humans": 31,
+      "tier": "bronze"
+    },
+    {
+      "expect": 0,
+      "humans": 50,
+      "tier": "bronze"
+    },
+    {
+      "expect": 0,
+      "humans": 0,
+      "tier": "silver"
+    },
+    {
+      "expect": 0,
+      "humans": 1,
+      "tier": "silver"
+    },
+    {
+      "expect": 0,
+      "humans": 29,
+      "tier": "silver"
+    },
+    {
+      "expect": 0,
+      "humans": 30,
+      "tier": "silver"
+    },
+    {
+      "expect": 0,
+      "humans": 31,
+      "tier": "silver"
+    },
+    {
+      "expect": 0,
+      "humans": 50,
+      "tier": "silver"
+    },
+    {
+      "expect": 30,
+      "humans": 0,
+      "tier": "gold"
+    },
+    {
+      "expect": 29,
+      "humans": 1,
+      "tier": "gold"
+    },
+    {
+      "expect": 1,
+      "humans": 29,
+      "tier": "gold"
+    },
+    {
+      "expect": 0,
+      "humans": 30,
+      "tier": "gold"
+    },
+    {
+      "expect": 0,
+      "humans": 31,
+      "tier": "gold"
+    },
+    {
+      "expect": 0,
+      "humans": 50,
+      "tier": "gold"
+    },
+    {
+      "expect": 30,
+      "humans": 0,
+      "tier": "platinum"
+    },
+    {
+      "expect": 29,
+      "humans": 1,
+      "tier": "platinum"
+    },
+    {
+      "expect": 1,
+      "humans": 29,
+      "tier": "platinum"
+    },
+    {
+      "expect": 0,
+      "humans": 30,
+      "tier": "platinum"
+    },
+    {
+      "expect": 0,
+      "humans": 31,
+      "tier": "platinum"
+    },
+    {
+      "expect": 0,
+      "humans": 50,
+      "tier": "platinum"
+    },
+    {
+      "expect": 0,
+      "humans": 0,
+      "tier": "diamond"
+    },
+    {
+      "expect": 0,
+      "humans": 1,
+      "tier": "diamond"
+    },
+    {
+      "expect": 0,
+      "humans": 29,
+      "tier": "diamond"
+    },
+    {
+      "expect": 0,
+      "humans": 30,
+      "tier": "diamond"
+    },
+    {
+      "expect": 0,
+      "humans": 31,
+      "tier": "diamond"
+    },
+    {
+      "expect": 0,
+      "humans": 50,
+      "tier": "diamond"
+    },
+    {
+      "expect": 0,
+      "humans": 0,
+      "tier": "challenger"
+    },
+    {
+      "expect": 0,
+      "humans": 1,
+      "tier": "challenger"
+    },
+    {
+      "expect": 0,
+      "humans": 29,
+      "tier": "challenger"
+    },
+    {
+      "expect": 0,
+      "humans": 30,
+      "tier": "challenger"
+    },
+    {
+      "expect": 0,
+      "humans": 31,
+      "tier": "challenger"
+    },
+    {
+      "expect": 0,
+      "humans": 50,
+      "tier": "challenger"
+    }
+  ],
+  "bots": [
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788799680,
+        "round_score": 711
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1788962976,
+        "round_score": 1733
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 3833
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 3833
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 214
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 214
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 214
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788994560,
+        "round_score": 835
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 3602
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 3602
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 252
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 252
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 252
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788817824,
+        "round_score": 396
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788961326,
+        "round_score": 1770
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 4732
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 4732
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788757344,
+        "round_score": 245
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788952896,
+        "round_score": 528
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 3,
+        "last_submit_at": 1789148448,
+        "round_score": 788
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 3,
+        "last_submit_at": 1789148448,
+        "round_score": 788
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788956928,
+        "round_score": 993
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 2350
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 2350
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788962976,
+        "round_score": 352
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789153488,
+        "round_score": 662
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789153488,
+        "round_score": 662
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788985958,
+        "round_score": 1033
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789254489,
+        "round_score": 2394
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789254489,
+        "round_score": 2394
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788970123,
+        "round_score": 1474
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789297265,
+        "round_score": 3850
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789297265,
+        "round_score": 3850
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788817824,
+        "round_score": 340
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788975676,
+        "round_score": 1529
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 10,
+        "last_submit_at": 1789291382,
+        "round_score": 3836
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 10,
+        "last_submit_at": 1789291382,
+        "round_score": 3836
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788920640,
+        "round_score": 268
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788920640,
+        "round_score": 268
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788920640,
+        "round_score": 268
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788781536,
+        "round_score": 453
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788969024,
+        "round_score": 1863
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789281504,
+        "round_score": 4030
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789281504,
+        "round_score": 4030
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788956928,
+        "round_score": 306
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788956928,
+        "round_score": 306
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788956928,
+        "round_score": 306
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788890400,
+        "round_score": 457
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 880
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 880
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788799680,
+        "round_score": 711
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1788962976,
+        "round_score": 1733
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 3833
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 3833
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 214
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 214
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 214
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788994560,
+        "round_score": 835
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 3602
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 3602
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 252
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 252
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 252
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788817824,
+        "round_score": 396
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788961326,
+        "round_score": 1770
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 4732
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 4732
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 531
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 531
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 531
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 531
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788890400,
+        "round_score": 267
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 531
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 531
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788751296,
+        "round_score": 441
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788899472,
+        "round_score": 911
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1789195824,
+        "round_score": 1856
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1789195824,
+        "round_score": 1856
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788926688,
+        "round_score": 304
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789135344,
+        "round_score": 667
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789135344,
+        "round_score": 667
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788956928,
+        "round_score": 1023
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 2472
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 2472
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "gold"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788799680,
+        "round_score": 899
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1788962976,
+        "round_score": 2191
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 4843
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 4843
+      },
+      "group_seed": 0,
+      "nickname": "Mira",
+      "seed": 0,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 270
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 270
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 270
+      },
+      "group_seed": 0,
+      "nickname": "Jonas",
+      "seed": 7919,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788994560,
+        "round_score": 1054
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 4551
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 4551
+      },
+      "group_seed": 0,
+      "nickname": "Paul",
+      "seed": 55433,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 318
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 318
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 318
+      },
+      "group_seed": 0,
+      "nickname": "Ella",
+      "seed": 221732,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788817824,
+        "round_score": 501
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788961326,
+        "round_score": 2237
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 5980
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 5980
+      },
+      "group_seed": 0,
+      "nickname": "Milan",
+      "seed": 388031,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788757344,
+        "round_score": 310
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788952896,
+        "round_score": 667
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 3,
+        "last_submit_at": 1789148448,
+        "round_score": 996
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 3,
+        "last_submit_at": 1789148448,
+        "round_score": 996
+      },
+      "group_seed": 1,
+      "nickname": "Jonas",
+      "seed": 131,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788956928,
+        "round_score": 1255
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 2971
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 2971
+      },
+      "group_seed": 1,
+      "nickname": "Lena",
+      "seed": 8050,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788962976,
+        "round_score": 445
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789153488,
+        "round_score": 837
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789153488,
+        "round_score": 837
+      },
+      "group_seed": 1,
+      "nickname": "Sophie",
+      "seed": 55564,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788985958,
+        "round_score": 1305
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789254489,
+        "round_score": 3025
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789254489,
+        "round_score": 3025
+      },
+      "group_seed": 1,
+      "nickname": "Moritz",
+      "seed": 221863,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788970123,
+        "round_score": 1863
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789297265,
+        "round_score": 4864
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789297265,
+        "round_score": 4864
+      },
+      "group_seed": 1,
+      "nickname": "Tessa",
+      "seed": 388162,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788817824,
+        "round_score": 430
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788975676,
+        "round_score": 1932
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 10,
+        "last_submit_at": 1789291382,
+        "round_score": 4846
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 10,
+        "last_submit_at": 1789291382,
+        "round_score": 4846
+      },
+      "group_seed": 123456,
+      "nickname": "Ole",
+      "seed": 16172736,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788920640,
+        "round_score": 339
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788920640,
+        "round_score": 339
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788920640,
+        "round_score": 339
+      },
+      "group_seed": 123456,
+      "nickname": "Rosa",
+      "seed": 16180655,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788781536,
+        "round_score": 572
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788969024,
+        "round_score": 2353
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789281504,
+        "round_score": 5090
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789281504,
+        "round_score": 5090
+      },
+      "group_seed": 123456,
+      "nickname": "Edda",
+      "seed": 16228169,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788956928,
+        "round_score": 387
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788956928,
+        "round_score": 387
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788956928,
+        "round_score": 387
+      },
+      "group_seed": 123456,
+      "nickname": "Nora",
+      "seed": 16394468,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788890400,
+        "round_score": 577
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 1111
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 1111
+      },
+      "group_seed": 123456,
+      "nickname": "Vincent",
+      "seed": 16560767,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788799680,
+        "round_score": 899
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1788962976,
+        "round_score": 2191
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 4843
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789289568,
+        "round_score": 4843
+      },
+      "group_seed": 2147483646,
+      "nickname": "Levi",
+      "seed": 281320357626,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 270
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 270
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788848064,
+        "round_score": 270
+      },
+      "group_seed": 2147483646,
+      "nickname": "Yara",
+      "seed": 281320365545,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788994560,
+        "round_score": 1054
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 4551
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 9,
+        "last_submit_at": 1789300320,
+        "round_score": 4551
+      },
+      "group_seed": 2147483646,
+      "nickname": "Tobi",
+      "seed": 281320413059,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 318
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 318
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788884352,
+        "round_score": 318
+      },
+      "group_seed": 2147483646,
+      "nickname": "Lina",
+      "seed": 281320579358,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788817824,
+        "round_score": 501
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1788961326,
+        "round_score": 2237
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 5980
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 11,
+        "last_submit_at": 1789296165,
+        "round_score": 5980
+      },
+      "group_seed": 2147483646,
+      "nickname": "Henri",
+      "seed": 281320745657,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 671
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 671
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 671
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788787584,
+        "round_score": 671
+      },
+      "group_seed": 98765432101,
+      "nickname": "Luca",
+      "seed": 278855506166,
+      "slot": 0,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788890400,
+        "round_score": 338
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 672
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789117200,
+        "round_score": 672
+      },
+      "group_seed": 98765432101,
+      "nickname": "Greta",
+      "seed": 278855514085,
+      "slot": 1,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788751296,
+        "round_score": 557
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788899472,
+        "round_score": 1151
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1789195824,
+        "round_score": 2345
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 4,
+        "last_submit_at": 1789195824,
+        "round_score": 2345
+      },
+      "group_seed": 98765432101,
+      "nickname": "Lina",
+      "seed": 278855561599,
+      "slot": 7,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 1,
+        "last_submit_at": 1788926688,
+        "round_score": 384
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789135344,
+        "round_score": 842
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1789135344,
+        "round_score": 842
+      },
+      "group_seed": 98765432101,
+      "nickname": "Henri",
+      "seed": 278855727898,
+      "slot": 28,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739199,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788739200,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1788825600,
+      "end": 1789344000,
+      "expect": {
+        "games": 0,
+        "last_submit_at": 0,
+        "round_score": 0
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789002721,
+      "end": 1789344000,
+      "expect": {
+        "games": 2,
+        "last_submit_at": 1788956928,
+        "round_score": 1292
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789343999,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 3123
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    },
+    {
+      "at": 1789344000,
+      "end": 1789344000,
+      "expect": {
+        "games": 5,
+        "last_submit_at": 1789247232,
+        "round_score": 3123
+      },
+      "group_seed": 98765432101,
+      "nickname": "Felix",
+      "seed": 278855894197,
+      "slot": 49,
+      "start": 1788739200,
+      "tier": "platinum"
+    }
+  ],
+  "config_hash": "e5cbe1eb9e7556f8fa307d9bf64c30b0a1df370b2dd9248dd96d0a5a11d598e7",
   "counts": [
     {
       "expect": {
@@ -29520,6 +34204,501 @@
       "n": 40,
       "tier": "challenger",
       "up_count": 3
+    }
+  ],
+  "counts_for_league": [
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1000,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1599,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1600,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1601,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 87400,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1000,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1599,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1600,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1601,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 87400,
+      "tier": "bronze"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1000,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1599,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1600,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1601,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 87400,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1000,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1599,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1600,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1601,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 87400,
+      "tier": "silver"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1000,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1599,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1600,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1601,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 87400,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1000,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1599,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1600,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1601,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 87400,
+      "tier": "gold"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1000,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1599,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1600,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1601,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 87400,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1000,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1599,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1600,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1601,
+      "tier": "platinum"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 87400,
+      "tier": "platinum"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1000,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1599,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1600,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1601,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 87400,
+      "tier": "diamond"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1000,
+      "tier": "diamond"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1599,
+      "tier": "diamond"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1600,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1601,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 87400,
+      "tier": "diamond"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1000,
+      "tier": "challenger"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1599,
+      "tier": "challenger"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1600,
+      "tier": "challenger"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 1601,
+      "tier": "challenger"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": false,
+      "received_at": 87400,
+      "tier": "challenger"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1000,
+      "tier": "challenger"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1599,
+      "tier": "challenger"
+    },
+    {
+      "expect": true,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1600,
+      "tier": "challenger"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 1601,
+      "tier": "challenger"
+    },
+    {
+      "expect": false,
+      "finished_at": 1000,
+      "has_session": true,
+      "received_at": 87400,
+      "tier": "challenger"
+    }
+  ],
+  "cut_score": [
+    {
+      "expect": 0,
+      "scores": []
+    },
+    {
+      "expect": 0,
+      "scores": [
+        100
+      ]
+    },
+    {
+      "expect": 0,
+      "scores": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        110,
+        120,
+        130,
+        140
+      ]
+    },
+    {
+      "expect": 10,
+      "scores": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        110,
+        120,
+        130,
+        140,
+        150
+      ]
+    },
+    {
+      "expect": 30,
+      "scores": [
+        150,
+        10,
+        140,
+        20,
+        130,
+        30,
+        120,
+        40,
+        110,
+        50,
+        100,
+        60,
+        90,
+        70,
+        80,
+        75,
+        75
+      ]
     }
   ],
   "evaluate": [
@@ -96639,39 +101818,39 @@
   ],
   "round_bounds": [
     {
-      "end": 604800,
+      "end": 0,
       "index": 0,
-      "start": 345600,
+      "start": 0,
       "tier": "bronze"
     },
     {
-      "end": 767059200,
+      "end": 0,
       "index": 2957,
-      "start": 766800000,
+      "start": 0,
       "tier": "bronze"
     },
     {
-      "end": 1789084800,
+      "end": 0,
       "index": 6900,
-      "start": 1788825600,
+      "start": 0,
       "tier": "bronze"
     },
     {
-      "end": 950400,
+      "end": 0,
       "index": 0,
-      "start": 345600,
+      "start": 0,
       "tier": "silver"
     },
     {
-      "end": 1789344000,
+      "end": 0,
       "index": 2957,
-      "start": 1788739200,
+      "start": 0,
       "tier": "silver"
     },
     {
-      "end": 4174070400,
+      "end": 0,
       "index": 6900,
-      "start": 4173465600,
+      "start": 0,
       "tier": "silver"
     },
     {
@@ -96749,7 +101928,7 @@
   ],
   "round_index": [
     {
-      "expect": -2,
+      "expect": 0,
       "t": 0,
       "tier": "bronze"
     },
@@ -96764,27 +101943,27 @@
       "tier": "bronze"
     },
     {
-      "expect": 6899,
+      "expect": 0,
       "t": 1788739200,
       "tier": "bronze"
     },
     {
-      "expect": 6900,
+      "expect": 0,
       "t": 1788912000,
       "tier": "bronze"
     },
     {
-      "expect": 6901,
+      "expect": 0,
       "t": 1789343999,
       "tier": "bronze"
     },
     {
-      "expect": 6902,
+      "expect": 0,
       "t": 1789344000,
       "tier": "bronze"
     },
     {
-      "expect": -1,
+      "expect": 0,
       "t": 0,
       "tier": "silver"
     },
@@ -96799,22 +101978,22 @@
       "tier": "silver"
     },
     {
-      "expect": 2957,
+      "expect": 0,
       "t": 1788739200,
       "tier": "silver"
     },
     {
-      "expect": 2957,
+      "expect": 0,
       "t": 1788912000,
       "tier": "silver"
     },
     {
-      "expect": 2957,
+      "expect": 0,
       "t": 1789343999,
       "tier": "silver"
     },
     {
-      "expect": 2958,
+      "expect": 0,
       "t": 1789344000,
       "tier": "silver"
     },

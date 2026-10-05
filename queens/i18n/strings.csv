@@ -56,6 +56,7 @@ HOME_START_EASY,Start easy,Leicht starten
 HOME_LEAGUE_JOIN,Play a game to join this round,Spiel eine Runde und mach mit
 HOME_LEAGUE_LINE,#%d of %d · %s · %d pts · ends in %s,#%d von %d · %s · %d Pkt. · endet in %s
 HOME_LEAGUE_PROMO_LINE,#%d of %d · %s,#%d von %d · %s
+HOME_LEAGUE_OFFLINE,%s · offline,%s · offline
 LEAGUE_NAME,%s league,%s-Liga
 STEP_EASIER,Easier,Leichter
 STEP_SAME,Same,Gleich
@@ -107,6 +108,13 @@ DIALOG_ALL_COOLING_TITLE,All levels cooling down,Alle Level gesperrt
 DIALOG_ALL_COOLING_BODY,The next level unlocks in %s.,Das nächste Level wird in %s frei.
 #,--- toasts ---,
 TOAST_ENERGY_ADDED,+%d energy,+%d Energie
+TOAST_ENERGY_REPAID,+%d energy · %d paid back,+%d Energie · %d zurückgezahlt
+TOAST_ENERGY_DEBT,Offline: playing on credit,Offline: Spielen auf Pump
+TOAST_OFFLINE,Offline: your games are saved and will be synced later.,Offline: deine Spiele werden gespeichert und später synchronisiert.
+TOAST_OFFLINE_STRICT,Offline: games played now don't count in the %s league.,Offline: jetzt gespielte Spiele zählen in der %s-Liga nicht.
+TOAST_BACK_ONLINE,Back online,Wieder online
+GAME_OFFLINE_NOTE,Offline: this game is synced later,Offline: dieses Spiel wird später synchronisiert
+GAME_OFFLINE_STRICT_NOTE,Offline: this game won't count in the %s league,Offline: dieses Spiel zählt in der %s-Liga nicht
 TOAST_UNLIMITED,Unlimited energy unlocked,Unbegrenzte Energie freigeschaltet
 TOAST_TUTORIAL_DONE,You're ready. Have fun!,Du bist bereit. Viel Spaß!
 TOAST_ALL_HARDER_COOLING,Every harder level is cooling down. Try Same or Easier.,Alle schwereren Level sind gesperrt. Versuch Gleich oder Leichter.
@@ -132,6 +140,8 @@ SHOP_STATUS_RESTORED,Purchase restored.,Kauf wiederhergestellt.
 SHOP_STATUS_NOTHING,Nothing to restore.,Nichts wiederherzustellen.
 SHOP_AD_PLAYING,Ad playing…,Werbung läuft…
 SHOP_AD_PLAYING_FAKE,Fake ad playing… %d,Test-Werbung läuft… %d
+SHOP_DEBT,Offline credit to pay back: %d energy. Each ad pays back up to %d and still leaves you %d games.,Offline-Schulden: %d Energie. Jede Werbung zahlt bis zu %d zurück und lässt dir trotzdem %d Spiele.
+SHOP_OFFLINE,You're offline: keep playing. Energy you don't have is paid back with ads once you're online.,"Du bist offline: spiel weiter. Fehlende Energie zahlst du zurück, sobald du online Werbung ansiehst."
 #,--- level overview and level detail ---,
 LEVELS_TITLE,All levels,Alle Level
 LEVELS_FILTER_ALL,All,Alle
@@ -172,6 +182,25 @@ LEAGUE_NO_FRIENDS,No friends yet. Swap codes to see each other here and land in 
 LEAGUE_GAMES_ONE,%d game,%d Spiel
 LEAGUE_GAMES_OTHER,%d games,%d Spiele
 LEAGUE_FRIEND_REMOVED,Friend removed,Freund entfernt
+LEAGUE_TAB_RUNS,My games,Meine Spiele
+LEAGUE_NO_TIMER,No timer: collect the points at your own pace.,Kein Zeitlimit: sammle die Punkte in deinem Tempo.
+LEAGUE_ONLINE_RULE,Only games played online count here.,Hier zählen nur online gespielte Spiele.
+LEAGUE_OFFLINE,You're offline. Your games are saved and will be synced later; the standings come back once you're online.,"Du bist offline. Deine Spiele sind gespeichert und werden später synchronisiert; die Tabelle kommt zurück, sobald du online bist."
+LEAGUE_OFFLINE_STRICT,You're offline. Games played offline don't count in the %s league: it needs a connection while you play.,Du bist offline. Offline gespielte Spiele zählen in der %s-Liga nicht: dort brauchst du beim Spielen eine Verbindung.
+LEAGUE_OFFLINE_BUTTON,Offline,Offline
+RUNS_BEAT,Beat %d points to raise your score,"Schlag %d Punkte, um deine Wertung zu verbessern"
+RUNS_FILLING,Your best %d games count. %d so far: every game adds.,Deine besten %d Spiele zählen. Bisher %d: jedes Spiel zählt dazu.
+RUNS_ALL_COUNT,Every game adds to your tier points.,Jedes Spiel zählt für deine Ligapunkte.
+RUNS_EMPTY,No games this round yet.,Noch keine Spiele in dieser Runde.
+RUNS_EMPTY_TIER,No games in this league yet.,Noch keine Spiele in dieser Liga.
+RUNS_COUNTED,Counting · %d pts,Zählt · %d Pkt.
+RUNS_NOT_COUNTED,Not counting,Zählt nicht
+RUNS_CUT,to beat,zu schlagen
+RUNS_PENDING,not synced,nicht synchronisiert
+RUNS_OFFLINE_GAME,played offline,offline gespielt
+RUNS_ROW,Level %d · %s,Level %d · %s
+RUNS_ROW_DIFF,diff %d,Schw. %d
+RUNS_CLOSE,Close,Schließen
 #,--- win overlay ---,
 WIN_TITLE,Solved!,Gelöst!
 WIN_POINTS,points,Punkte
@@ -191,6 +220,9 @@ WIN_FACTOR,×%s,×%s
 WIN_LEAGUE_LINE,%s league · %d pts · #%d of %d · %s,%s-Liga · %d Pkt. · #%d von %d · %s
 WIN_LEAGUE_PROMO_LINE,%s league · %s · #%d of %d,%s-Liga · %s · #%d von %d
 WIN_PROMOTED,Promoted to %s league!,Aufstieg in die %s-Liga!
+WIN_OFFLINE,Saved offline: it counts once it is synced.,"Offline gespeichert: es zählt, sobald es synchronisiert ist."
+WIN_OFFLINE_STRICT,Played offline: doesn't count in the %s league.,Offline gespielt: zählt nicht in der %s-Liga.
+WIN_NOT_COUNTED,Not counted: the %s league only counts games played online.,Zählt nicht: die %s-Liga wertet nur online gespielte Spiele.
 FACTOR_ACCURACY,Mistakes,Fehler
 FACTOR_SPEED,Speed,Tempo
 FACTOR_HINT,Hints,Tipps
@@ -209,6 +241,11 @@ SUMMARY_REACHED,Reached %d points in %s,%d Punkte in %s erreicht
 SUMMARY_BEST_GAME,Best game: %d points,Bestes Spiel: %d Punkte
 SUMMARY_PLAY_TO_CLIMB,Play this round to climb.,Spiel diese Runde und steig auf.
 SUMMARY_CONTINUE,Continue,Weiter
+JOIN_TITLE,Friends in the %s league,Freunde in der %s-Liga
+JOIN_BODY,"Play this round in a friend's group, or let the league place you.",Spiel diese Runde in der Gruppe eines Freundes oder lass dich von der Liga einteilen.
+JOIN_OPTION,%s · %d in the group,%s · %d in der Gruppe
+JOIN_RANDOM,Place me anywhere,Irgendwo einteilen
+TOAST_JOINED,You're in %s's group,Du bist in der Gruppe von %s
 #,--- settings ---,
 SETTINGS_TITLE,Settings,Einstellungen
 SETTINGS_SOUND_HEADING,SOUND & FEEL,TON & GEFÜHL
@@ -265,6 +302,7 @@ ERR_STORE_NOT_CONNECTED,Store not connected,Keine Verbindung zum Store
 ERR_PURCHASE,Purchase failed: %s,Kauf fehlgeschlagen: %s
 #,--- server errors ---,
 ERR_NETWORK,No connection to the server,Keine Verbindung zum Server
+ERR_GROUP_FULL,That group is full.,Diese Gruppe ist voll.
 ERR_SERVER,"Server error, please try again later","Serverfehler, bitte versuche es später noch einmal"
 ERR_UNAUTHORIZED,Not signed in to the server,Nicht am Server angemeldet
 ERR_BANNED,This account is blocked,Dieses Konto ist gesperrt

@@ -31,6 +31,7 @@ const (
 	CodeResultInvalid   = "ERR_RESULT_INVALID"
 	CodeFriendCodeUnkn  = "ERR_FRIEND_CODE_UNKNOWN"
 	CodeFriendLimit     = "ERR_FRIEND_LIMIT"
+	CodeGroupFull       = "ERR_GROUP_FULL"
 )
 
 // CodedError is what every service returns on a rejection. The API layer turns

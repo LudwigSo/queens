@@ -45,6 +45,7 @@ func _initialize() -> void:
 	_test_cooldown()
 	_test_level_picker()
 	_test_energy()
+	_test_offline_league()
 	_test_fake_providers()
 	_test_scoring()
 	_test_league_rules()
@@ -572,6 +573,89 @@ func _test_energy() -> void:
 	other.data["energy"]["amount"] = 3
 	ledger.bind_save(other)
 	_check(ledger.amount() == 3 and not ledger.is_unlimited(), "bind_save switches the backing save")
+	_test_energy_debt()
+
+
+## Offline an empty tank runs into debt; ads pay it back, gradually.
+func _test_energy_debt() -> void:
+	var cfg := GameConfig.new()
+	var save := SaveData.new()
+	save.data = SaveData.defaults(cfg)
+	save.data["energy"]["amount"] = 0
+	var ledger := EnergyLedger.new(save, cfg)
+	_check(not ledger.can_start() and ledger.can_start(true), "offline an empty tank may still start")
+	_check(not ledger.charge_start() and ledger.debt() == 0, "online an empty tank still refuses")
+	for i in 15:
+		ledger.charge_start(true)
+	_check(ledger.amount() == 0 and ledger.debt() == 15 and ledger.debt_text() == "−15", "fifteen offline games on credit")
+	_check(not ledger.can_start(), "back online, debt alone does not start a game")
+	var r1 := ledger.reward_ad(10)
+	_check(r1["repaid"] == 8 and r1["granted"] == 2 and ledger.amount() == 2 and ledger.debt() == 7, "an ad repays 8 and leaves 2 games")
+	ledger.charge_start()
+	ledger.charge_start()
+	var r2 := ledger.reward_ad(10)
+	_check(r2["repaid"] == 7 and ledger.amount() == 3 and ledger.debt() == 0 and ledger.debt_text() == "", "the next ad clears the rest")
+	var r3 := ledger.reward_ad(10)
+	_check(r3["repaid"] == 0 and ledger.amount() == 13, "without debt an ad pays out in full")
+	# Every ad leaves at least ad_min_playable, however deep the debt.
+	save.data["energy"]["amount"] = 0
+	save.data["energy"]["debt"] = 500
+	var leaves_two := true
+	for i in 10:
+		var before := ledger.amount()
+		ledger.reward_ad(10)
+		leaves_two = leaves_two and ledger.amount() - before >= cfg.ad_min_playable
+	_check(leaves_two and ledger.debt() == 420, "a deep debt is paid back 8 per ad")
+	# A refused start that ran into debt gives the debt back, not energy.
+	save.data["energy"]["amount"] = 0
+	save.data["energy"]["debt"] = 3
+	ledger.charge_start(true)
+	ledger.refund_start()
+	_check(ledger.debt() == 3 and ledger.amount() == 0, "a refund undoes the debt it took")
+	ledger.set_unlimited("t")
+	_check(ledger.debt() == 0 and ledger.debt_text() == "", "the purchase clears the debt")
+	var legacy := SaveData.migrate({"version": 2, "energy": {"amount": 4, "unlimited": false, "purchase_token": "", "ads_watched": 0},
+		"levels": {}, "settings": {}, "auth": SaveData.auth_defaults()}, cfg)
+	_check(int(legacy["energy"]["debt"]) == 0, "an older save gains the debt field")
+
+
+## Offline the client adds the queued games to the last overview it has.
+func _test_offline_league() -> void:
+	var cfg := GameConfig.new().league
+	var lv: Dictionary = levels[0]
+	var mk := func(id: String, elapsed: float) -> Dictionary:
+		return {"result_id": id, "level_id": lv["id"], "size": lv["size"], "difficulty": lv["difficulty"], "stars": lv.get("stars", 0),
+			"completed": true, "elapsed_seconds": elapsed, "wrong_placements": 0, "hint_count": 0, "finished_at": 1000}
+	var pending: Array = [mk.call("p1", 40.0), mk.call("p2", 400.0), {"result_id": "f", "completed": false}]
+	var s1 := Scoring.score(pending[0])
+	var s2 := Scoring.score(pending[1])
+	# Gold, with a server overview of 15 games of 100 points each.
+	var server_runs: Array = []
+	for i in 15:
+		server_runs.append({"result_id": "s%d" % i, "level_id": lv["id"], "score": 100, "counted": true, "in_best": true, "finished_at": i})
+	var runs := {"tier": "gold", "round_index": 5, "has_rounds": true, "best_n": 15, "round_score": 1500, "tier_points": 1500, "cut_score": 100, "runs": server_runs}
+	var standing := {"tier": "gold", "joined": true, "my_round_score": 1500, "my_tier_points": 1500, "rules": {"round_days": 7},
+		"group": {"members": [{"player_id": "me", "is_me": true, "round_score": 1500}]}}
+	var merged := OfflineLeague.merge_runs(runs, standing, pending, cfg)
+	_check(merged["runs"].size() == 17 and merged["runs"][0]["result_id"] == "p1" and bool(merged["runs"][0]["pending"]), "queued games join the overview, best first")
+	var in_best := 0
+	for r in merged["runs"]:
+		if r["in_best"]:
+			in_best += 1
+	var all_scores: Array = [s1, s2]
+	for i in 15:
+		all_scores.append(100)
+	_check(in_best == 15 and merged["round_score"] == LeagueRules.round_score(all_scores, cfg) and merged["cut_score"] == LeagueRules.cut_score(all_scores, cfg), "the best 15 are recounted with the queued games")
+	_check(merged["tier_points"] == 1500 + s1 + s2, "the tier points move by the queued games")
+	var est := OfflineLeague.estimate_standing(standing, merged)
+	_check(est["offline"] and est["my_round_score"] == merged["round_score"] and est["group"]["members"][0]["round_score"] == merged["round_score"], "my own score moves offline")
+	_check(OfflineLeague.merge_runs(runs, standing, [server_runs[0].merged({"completed": true})], cfg)["runs"].size() == 15, "a game the server already has is not added twice")
+	# Diamond: the queued games are listed but never count.
+	var dia := OfflineLeague.merge_runs({}, {"tier": "diamond", "my_round_score": 900, "my_tier_points": 0, "rules": {"round_days": 7}}, pending, cfg)
+	_check(dia["runs"].size() == 2 and not dia["runs"][0]["counted"] and not dia["runs"][0]["in_best"] and dia["round_score"] == 900 and dia["tier_points"] == 0, "diamond lists offline games without counting them")
+	# Bronze without a server overview: every game adds to the tier points.
+	var br := OfflineLeague.merge_runs({}, {"tier": "bronze", "my_tier_points": 200, "rules": {"round_days": 0}}, pending, cfg)
+	_check(not br["has_rounds"] and br["tier_points"] == 200 + s1 + s2 and br["runs"][0]["in_best"] and br["runs"][1]["in_best"], "bronze adds every queued game")
 
 
 func _test_fake_providers() -> void:
@@ -738,14 +822,54 @@ func _test_league_rules() -> void:
 	_check(LeagueRules.up_mode(cfg, "bronze") == "score" and LeagueRules.promo_score(LeagueRules.tier(cfg, "bronze")) == 3000 and LeagueRules.promo_score(LeagueRules.tier(cfg, "silver")) == 10000 and LeagueRules.promo_score(LeagueRules.tier(cfg, "gold")) == 0, "bronze and silver promote by tier points")
 	_check(not LeagueRules.reaches_promo(LeagueRules.tier(cfg, "bronze"), 2999) and LeagueRules.reaches_promo(LeagueRules.tier(cfg, "bronze"), 3000) and not LeagueRules.reaches_promo(LeagueRules.tier(cfg, "gold"), 99999), "the threshold is reached at promo_score and never in a percentage tier")
 
-	# Rounds: 3 days in bronze, calendar weeks elsewhere, same Monday epoch.
+	# Rounds: none in bronze and silver, calendar weeks elsewhere.
 	var t := Scoring.week_start(2957) + 2 * 86400
-	_check(LeagueRules.round_days(cfg, "bronze") == 3 and LeagueRules.round_days(cfg, "silver") == 7, "round length per tier")
-	_check(LeagueRules.round_index(cfg, "silver", t) == 2957 and LeagueRules.round_start(cfg, "gold", 2957) == Scoring.week_start(2957) and LeagueRules.round_end(cfg, "gold", 2957) == Scoring.week_end(2957), "7-day rounds are calendar weeks")
-	var br := LeagueRules.round_index(cfg, "bronze", t)
-	_check(LeagueRules.round_start(cfg, "bronze", br) <= t and t < LeagueRules.round_end(cfg, "bronze", br), "bronze round contains the time")
-	_check(LeagueRules.round_end(cfg, "bronze", br) - LeagueRules.round_start(cfg, "bronze", br) == 3 * 86400, "bronze rounds last three days")
-	_check((LeagueRules.round_start(cfg, "bronze", br) - LeagueRules.ROUND_EPOCH_OFFSET) % 86400 == 0, "rounds start at midnight UTC")
+	_check(LeagueRules.round_days(cfg, "bronze") == 0 and LeagueRules.round_days(cfg, "silver") == 0 and LeagueRules.round_days(cfg, "gold") == 7, "round length per tier")
+	_check(not LeagueRules.has_rounds(cfg, "bronze") and not LeagueRules.has_rounds(cfg, "silver") and LeagueRules.has_rounds(cfg, "gold") and LeagueRules.has_rounds(cfg, "challenger"), "bronze and silver run without a timer")
+	_check(LeagueRules.round_index(cfg, "platinum", t) == 2957 and LeagueRules.round_start(cfg, "gold", 2957) == Scoring.week_start(2957) and LeagueRules.round_end(cfg, "gold", 2957) == Scoring.week_end(2957), "7-day rounds are calendar weeks")
+	_check(LeagueRules.round_index(cfg, "bronze", t) == 0 and LeagueRules.round_index(cfg, "silver", 0) == 0 and LeagueRules.round_start(cfg, "bronze", 0) == 0 and LeagueRules.round_end(cfg, "silver", 0) == 0, "a tier without rounds lives in round 0 and never ends")
+	_check(LeagueRules.round_days({"tiers": [{"id": "x"}]}, "x") == 7, "a tier without round_days plays weeks")
+
+	# Groups: 30 at random, up to 50 with friends; bots fill gold and platinum.
+	_check(LeagueRules.group_size(cfg) == 30 and LeagueRules.group_max(cfg) == 50 and LeagueRules.group_max({"group_size": 30}) == 30, "group size and the friends' cap")
+	_check(LeagueRules.bot_count(LeagueRules.tier(cfg, "gold"), 1) == 29 and LeagueRules.bot_count(LeagueRules.tier(cfg, "platinum"), 30) == 0 and LeagueRules.bot_count(LeagueRules.tier(cfg, "gold"), 41) == 0, "bots top gold and platinum up to 30")
+	_check(LeagueRules.bot_count(LeagueRules.tier(cfg, "silver"), 1) == 0 and LeagueRules.bot_count(LeagueRules.tier(cfg, "diamond"), 1) == 0, "no bots elsewhere")
+	var gold_cfg := LeagueRules.tier(cfg, "gold")
+	var g_start := LeagueRules.round_start(cfg, "gold", 2957)
+	var g_end := LeagueRules.round_end(cfg, "gold", 2957)
+	var monotone := true
+	var finals: Array = []
+	var names := {}
+	for slot in 29:
+		var seed_value := LeagueRules.bot_seed(123456, slot)
+		names[LeagueRules.bot_nickname(cfg, 123456, slot)] = true
+		var prev := -1
+		for step in 8:
+			var p := LeagueRules.bot_progress(gold_cfg, cfg, seed_value, g_start, g_end, g_start + step * 86400)
+			if int(p["round_score"]) < prev:
+				monotone = false
+			prev = int(p["round_score"])
+		var fin := LeagueRules.bot_progress(gold_cfg, cfg, seed_value, g_start, g_end, g_end)
+		finals.append(fin)
+		if int(fin["games"]) < 1 or int(fin["games"]) > 15 or int(fin["last_submit_at"]) >= g_end or int(fin["last_submit_at"]) < g_start:
+			monotone = false
+	_check(monotone, "a bot's score only grows, and it plays 1..15 games inside the round")
+	_check(names.size() == 29, "the bots of a group have distinct names")
+	_check(LeagueRules.bot_progress(gold_cfg, cfg, 99, g_start, g_end, g_start - 1)["games"] == 0, "a bot has played nothing before the round starts")
+	_check(LeagueRules.bot_progress(gold_cfg, cfg, 99, g_start, g_end, t) == LeagueRules.bot_progress(gold_cfg, cfg, 99, g_start, g_end, t), "bot progress is deterministic")
+	var spread := {}
+	for fin in finals:
+		spread[int(fin["games"])] = true
+	_check(spread.size() > 3, "bots differ in how much they play")
+
+	# The online rule: only diamond and challenger need a session and a quick sync.
+	_check(LeagueRules.counts_for_league(cfg, "gold", false, 100, 100 + 30 * 86400), "a lower tier counts a game synced weeks later")
+	_check(not LeagueRules.counts_for_league(cfg, "diamond", false, 100, 100), "diamond needs a session")
+	_check(LeagueRules.counts_for_league(cfg, "challenger", true, 100, 700) and not LeagueRules.counts_for_league(cfg, "challenger", true, 100, 701), "challenger accepts ten minutes of grace")
+
+	# The score to beat.
+	_check(LeagueRules.cut_score([500, 100], cfg) == 0 and LeagueRules.cut_score(many, cfg) == 60 and LeagueRules.cut_score(many.slice(0, 15), cfg) == 10, "the cut is the 15th best once 15 games are in")
+	_check(LeagueRules.cut_score(many, sum_cfg) == 0, "nothing to beat in sum mode")
 
 	# Challenger slots: one per 10 diamond players, 5..50; openings after its own relegation.
 	_check(LeagueRules.slots(cfg, "challenger", 60) == 6 and LeagueRules.slots(cfg, "challenger", 20) == 5 and LeagueRules.slots(cfg, "challenger", 2000) == 50, "challenger slots follow the diamond population within 5..50")
@@ -824,7 +948,6 @@ func _test_local_backend() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var clock := [Scoring.week_start(2957) + 2 * 86400]   # a Wednesday
 	var now_fn := func() -> int: return clock[0]
-	var bronze_round := LeagueRules.round_index(cfg.league, "bronze", clock[0])
 	var backend := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend.init()
 	var reg := backend.register_player("player-1", "Ludwig")
@@ -833,38 +956,35 @@ func _test_local_backend() -> void:
 	_check(LocalBackend.is_valid_code(code) and code == LocalBackend.friend_code_for("player-1"), "friend code is derived from the player id")
 	_check(not LocalBackend.is_valid_code("QN-abc"), "malformed friend codes are rejected")
 
+	# Bronze has no timer, no group and no ranking.
 	var standing: Dictionary = backend.get_league_standing()["data"]
-	_check(not standing["joined"] and standing["my_rank"] == 0 and standing["round_index"] == bronze_round, "not in a group before the first game")
-	_check(standing["round_ends_at"] == LeagueRules.round_end(cfg.league, "bronze", bronze_round) and standing["round_days"] == 3 and standing["rules"]["up_to"] == "silver", "standing carries round end and rules")
-	_check(standing["rules"]["up_count"] == -1 and not standing["rules"]["global"] and standing["rules"]["promo_score"] == 3000 and standing["rules"]["up_to"] == "silver" and standing["my_tier_points"] == 0, "bronze promotes by tier points")
+	_check(not standing["joined"] and standing["my_rank"] == 0 and standing["round_index"] == 0 and standing["round_ends_at"] == 0 and standing["round_days"] == 0, "bronze has no round")
+	_check(standing["rules"]["up_count"] == -1 and not standing["rules"]["global"] and standing["rules"]["promo_score"] == 3000 and standing["rules"]["up_to"] == "silver" and standing["my_tier_points"] == 0 and not standing["rules"]["online_required"], "bronze promotes by tier points")
 
 	var lv: Dictionary = levels[0]
 	var start := backend.start_game(lv["id"])
-	_check(start["ok"] and start["data"]["joined"] and start["data"]["round_index"] == bronze_round, "start_game joins the round")
-	standing = backend.get_league_standing()["data"]
-	_check(standing["joined"] and standing["group"]["size"] == cfg.league["group_size"], "group has group_size members including me")
-	_check(standing["my_round_score"] == 0 and standing["my_rank"] > 0, "joined with zero points")
-	var bots_playing := 0
-	for m in standing["group"]["members"]:
-		if not m["is_me"] and int(m["round_score"]) > 0:
-			bots_playing += 1
-	_check(bots_playing > 10, "bots have played by Wednesday")
+	_check(start["ok"] and not start["data"]["joined"] and start["data"]["round_index"] == 0, "a bronze start joins nothing")
+	_check(not backend.get_league_standing()["data"]["joined"] and backend.get_profile()["data"]["stats"]["rounds_played"] == 0, "still no group after the start")
 
 	var result := {"result_id": "r-1", "player_id": "player-1", "level_id": lv["id"], "size": lv["size"], "difficulty": lv["difficulty"],
 		"completed": true, "elapsed_seconds": 40.0, "wrong_placements": 0, "started_at": clock[0] - 60,
 		"finished_at": clock[0], "week_index": 2957}
 	var sub := backend.submit_result(result)
-	_check(sub["ok"] and sub["data"]["breakdown"]["score"] == Scoring.score(result), "submit computes the score")
-	_check(sub["data"]["round_score"] == Scoring.score(result) and sub["data"]["group_rank"] > 0 and sub["data"]["group_size"] == 30 and sub["data"]["round_index"] == bronze_round, "submit reports round score and rank")
+	_check(sub["ok"] and sub["data"]["breakdown"]["score"] == Scoring.score(result) and sub["data"]["counted"], "submit computes the score")
+	_check(sub["data"]["round_score"] == 0 and sub["data"]["group_rank"] == 0 and sub["data"]["group_size"] == 0 and sub["data"]["round_index"] == 0, "a bronze game has no rank")
 	_check(sub["data"]["tier_points"] == Scoring.score(result) and sub["data"]["promo_score"] == 3000 and sub["data"]["promoted_to"] == "" and backend.get_profile()["data"]["tier_points"] == Scoring.score(result), "submit adds the score to the tier points")
 	var again := backend.submit_result(result)
-	_check(again["ok"] and again["data"]["round_score"] == sub["data"]["round_score"], "submit is idempotent per result id")
+	_check(again["ok"] and again["data"]["tier_points"] == sub["data"]["tier_points"], "submit is idempotent per result id")
 	_check(backend.get_profile()["data"]["stats"]["games"] == 1 and backend.get_profile()["data"]["stats"]["flawless"] == 1, "profile stats count the game once")
 	var forfeit := result.duplicate()
 	forfeit.merge({"result_id": "r-2", "completed": false}, true)
 	var sub2 := backend.submit_result(forfeit)
-	_check(sub2["ok"] and sub2["data"]["breakdown"]["score"] == 0 and sub2["data"]["round_score"] == sub["data"]["round_score"] and sub2["data"]["tier_points"] == Scoring.score(result), "a forfeit scores 0 and changes nothing")
+	_check(sub2["ok"] and sub2["data"]["breakdown"]["score"] == 0 and sub2["data"]["tier_points"] == Scoring.score(result), "a forfeit scores 0 and changes nothing")
 	_check(backend.submit_result({})["ok"] == false, "missing result id fails")
+
+	# The run overview of a tier without rounds: every game counts, nothing to beat.
+	var runs: Dictionary = backend.get_round_runs()["data"]
+	_check(not runs["has_rounds"] and runs["best_n"] == 0 and runs["cut_score"] == 0 and runs["runs"].size() == 1 and runs["runs"][0]["in_best"] and runs["tier_points"] == Scoring.score(result), "bronze runs list every game")
 
 	# Level leaderboard: bots, me, scopes.
 	var board: Dictionary = backend.get_level_leaderboard(lv["id"], "global", 10)["data"]
@@ -894,98 +1014,115 @@ func _test_local_backend() -> void:
 	_check(not backend.remove_friend("nobody")["ok"], "removing a stranger fails")
 	_check(backend.set_nickname("Q")["ok"] == false and backend.set_nickname("Queen Bee")["ok"], "nickname validation")
 
-	# Bots are stable across instances, and everything persists.
+	# Everything persists; weeks pass without a summary, bronze has no rounds.
+	clock[0] += 30 * 86400
 	var backend2 := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend2.init()
-	var standing2: Dictionary = backend2.get_league_standing()["data"]
-	_check(standing2["joined"] and standing2["my_round_score"] == Scoring.score(result) and standing2["group"]["members"][0]["nickname"] == standing["group"]["members"][0]["nickname"], "standing survives a restart")
-	var same_scores := true
-	var fresh: Dictionary = backend.get_league_standing()["data"]
-	for i in fresh["group"]["members"].size():
-		if fresh["group"]["members"][i]["round_score"] != standing2["group"]["members"][i]["round_score"]:
-			same_scores = false
-	_check(same_scores, "bot scores are deterministic")
-	_check(backend2.get_profile()["data"]["nickname"] == "Queen Bee", "nickname persisted")
+	_check(backend2.get_profile()["data"]["nickname"] == "Queen Bee" and backend2.get_profile()["data"]["tier_points"] == Scoring.score(result), "the profile survives a restart")
+	_check(backend2.get_round_summary()["data"].is_empty() and backend2.data["current_round"] == 0 and backend2.get_profile()["data"]["tier"] == "bronze", "a month in bronze settles nothing")
 
-	# A bronze round ending promotes nobody, however strong; the tier points carry over.
+	# Reaching 3000 tier points promotes on the spot.
 	var big := result.duplicate()
-	big.merge({"result_id": "big-0", "size": 10, "difficulty": 55.0, "elapsed_seconds": 100.0, "wrong_placements": 0}, true)
+	big.merge({"result_id": "big-0", "size": 10, "difficulty": 55.0, "elapsed_seconds": 100.0, "wrong_placements": 0, "finished_at": clock[0]}, true)
 	var big_score := Scoring.score(big)
-	backend2.submit_result(big)
 	var points_before := int(backend2.get_profile()["data"]["tier_points"])
-	_check(points_before == Scoring.score(result) + big_score and points_before < 3000, "tier points add up over the games")
-	_check(backend2.get_league_standing()["data"]["my_rank"] > 0 and backend2.get_league_standing()["data"]["zone"] == "safe" and backend2.get_league_standing()["data"]["group"]["promote_count"] == 0, "nobody in a bronze group is in a promotion zone")
-	var bronze_ends := LeagueRules.round_end(cfg.league, "bronze", bronze_round)
-	clock[0] = bronze_ends + 3600
-	var backend3 := LocalBackend.new(cfg, catalog, now_fn, path)
-	backend3.init()
-	var summary: Dictionary = backend3.get_round_summary()["data"]
-	_check(summary["round_index"] == bronze_round and summary["outcome"] == "stayed" and summary["reason"] == "round" and summary["tier_after"] == "bronze" and summary["rank"] > 0, "a bronze round ends without a promotion")
-	_check(summary["best_game"]["score"] == big_score, "summary names the best game")
-	_check(backend3.get_profile()["data"]["tier"] == "bronze" and backend3.get_profile()["data"]["tier_points"] == points_before, "tier points survive the round end")
-	var next_bronze := bronze_round + 1
-	_check(backend3.data["current_round"] == next_bronze and backend3.data["rounds"].size() <= 1, "the next bronze round is open, closed rounds are forgotten")
-	backend3.ack_round_summary(bronze_round)
-	_check(backend3.get_round_summary()["data"].is_empty(), "summary acknowledged")
-	# Reaching 3000 tier points promotes on the spot into the running silver week.
-	backend3.start_game(lv["id"])
 	var games_needed := ceili(float(3000 - points_before) / big_score)
 	for i in games_needed:
 		var r := big.duplicate()
-		r.merge({"result_id": "big-%d" % (i + 1), "finished_at": clock[0]}, true)
-		var res: Dictionary = backend3.submit_result(r)["data"]
+		r.merge({"result_id": "big-%d" % i}, true)
+		var res: Dictionary = backend2.submit_result(r)["data"]
 		if i < games_needed - 1:
 			_check(res["promoted_to"] == "" and res["tier"] == "bronze" and res["tier_points"] < 3000, "below the threshold nothing happens (game %d)" % i)
 		else:
-			_check(res["promoted_to"] == "silver" and res["tier"] == "bronze" and res["round_index"] == next_bronze and res["tier_points"] >= 3000 and res["group_rank"] > 0, "the crossing game reports the promotion")
-	_check(backend3.get_profile()["data"]["tier"] == "silver" and backend3.get_profile()["data"]["tier_points"] == 0, "promoted to silver, the tier points restart")
-	var promo: Dictionary = backend3.get_round_summary()["data"]
-	_check(promo["outcome"] == "promoted" and promo["reason"] == "score" and promo["tier_before"] == "bronze" and promo["tier_after"] == "silver" and promo["round_index"] == next_bronze and promo["tier_points"] >= 3000 and promo["rank"] > 0 and promo["group_size"] == 30, "promotion summary")
-	_check(promo["best_game"]["score"] == big_score, "the promotion summary names the best game of the abandoned round")
-	var silver_week := LeagueRules.round_index(cfg.league, "silver", clock[0])
-	_check(backend3.data["current_round"] == silver_week and backend3.data["rounds"].size() <= 1, "the running silver week is the open round, the bronze round is forgotten")
-	var silver_standing: Dictionary = backend3.get_league_standing()["data"]
-	_check(not silver_standing["joined"] and silver_standing["tier"] == "silver" and silver_standing["round_index"] == silver_week and silver_standing["round_days"] == 7 and silver_standing["rules"]["promo_score"] == 10000 and silver_standing["rules"]["up_to"] == "gold" and silver_standing["my_tier_points"] == 0, "silver is open and unjoined, 10000 points to gold")
-	backend3.ack_round_summary(next_bronze)
-	# A restart later in the same week keeps everything and closes nothing.
-	clock[0] += 3600
-	var backend3b := LocalBackend.new(cfg, catalog, now_fn, path)
-	backend3b.init()
-	_check(backend3b.get_profile()["data"]["tier"] == "silver" and backend3b.get_round_summary()["data"].is_empty() and backend3b.data["current_round"] == silver_week and backend3b.data["history"].size() == 2, "the promotion persists and no round rolls over")
-	# Silver -> Gold at 10000 points, straight into the gold week.
-	backend3b.data["profile"]["tier_points"] = 10000 - 1
-	backend3b.start_game(lv["id"])
+			_check(res["promoted_to"] == "silver" and res["tier"] == "bronze" and res["tier_points"] >= 3000 and res["group_rank"] == 0, "the crossing game reports the promotion")
+	_check(backend2.get_profile()["data"]["tier"] == "silver" and backend2.get_profile()["data"]["tier_points"] == 0, "promoted to silver, the tier points restart")
+	var promo: Dictionary = backend2.get_round_summary()["data"]
+	_check(promo["outcome"] == "promoted" and promo["reason"] == "score" and promo["tier_before"] == "bronze" and promo["tier_after"] == "silver" and promo["tier_points"] >= 3000 and promo["rank"] == 0 and promo["group_size"] == 0, "promotion summary")
+	_check(promo["best_game"]["score"] == big_score and int(promo.get("join_options", 0)) == 0, "the summary names the best bronze game; silver has no groups to join")
+	backend2.ack_round_summary(int(promo["round_index"]))
+	var silver_standing: Dictionary = backend2.get_league_standing()["data"]
+	_check(not silver_standing["joined"] and silver_standing["tier"] == "silver" and silver_standing["round_days"] == 0 and silver_standing["rules"]["promo_score"] == 10000 and silver_standing["rules"]["up_to"] == "gold", "silver: no timer, 10000 points to gold")
+
+	# Silver -> Gold at 10000 points. A friend already in gold is offered.
+	backend2.data["friends"].append({"player_id": "friend:QN-GOLD22", "nickname": "Goldie", "tier": "gold", "friend_code": "QN-GOLD22",
+		"friend_since": clock[0], "skill": 1.0, "games_per_week": 8})
+	backend2.data["profile"]["tier_points"] = 10000 - 1
 	var gold_game := big.duplicate()
-	gold_game.merge({"result_id": "gold-1", "finished_at": clock[0]}, true)
-	var gold_res: Dictionary = backend3b.submit_result(gold_game)["data"]
-	_check(gold_res["promoted_to"] == "gold" and gold_res["promo_score"] == 10000 and backend3b.get_profile()["data"]["tier"] == "gold" and backend3b.get_profile()["data"]["tier_points"] == 0, "silver promotes to gold at 10000 points")
-	var gold_summary: Dictionary = backend3b.get_round_summary()["data"]
-	_check(gold_summary["tier_after"] == "gold" and gold_summary["reason"] == "score" and gold_summary["round_index"] == silver_week and backend3b.data["current_round"] == silver_week, "the gold week is open after the promotion")
-	_check(backend3b.get_league_standing()["data"]["rules"]["promo_score"] == 0 and backend3b.get_league_standing()["data"]["rules"]["up_pct"] == 20, "gold is back to percentage promotion")
-	backend3b.ack_round_summary(silver_week)
+	gold_game.merge({"result_id": "gold-1"}, true)
+	var gold_res: Dictionary = backend2.submit_result(gold_game)["data"]
+	_check(gold_res["promoted_to"] == "gold" and gold_res["promo_score"] == 10000 and backend2.get_profile()["data"]["tier"] == "gold" and backend2.get_profile()["data"]["tier_points"] == 0, "silver promotes to gold at 10000 points")
+	var gold_summary: Dictionary = backend2.get_round_summary()["data"]
+	_check(gold_summary["tier_after"] == "gold" and gold_summary["reason"] == "score" and int(gold_summary["join_options"]) == 1, "the gold summary offers the friend's group")
+	var opts: Dictionary = backend2.get_join_options()["data"]
+	_check(not opts["joined"] and opts["options"].size() == 1 and opts["options"][0]["friends"][0]["nickname"] == "Goldie", "join options name the friend")
+	backend2.ack_round_summary(int(gold_summary["round_index"]))
+	var joined: Dictionary = backend2.join_group(str(opts["options"][0]["group_id"]))["data"]
+	_check(joined["joined"] and joined["group"]["size"] == 30 and joined["rules"]["promo_score"] == 0 and joined["rules"]["up_pct"] == 20, "joined gold: a group topped up to 30")
+	var friend_in_group := false
+	var bots := 0
+	for m in joined["group"]["members"]:
+		if m["is_friend"] and m["nickname"] == "Goldie":
+			friend_in_group = true
+		if str(m["player_id"]).begins_with("bot:"):
+			bots += 1
+	_check(friend_in_group and bots == 28, "me, my friend and 28 bots")
+	_check(backend2.get_join_options()["data"]["joined"] and backend2.get_join_options()["data"]["options"].is_empty(), "nothing to choose once joined")
+
+	# Bots are the shared ones: deterministic, and they play over the week.
+	var gold_week := LeagueRules.round_index(cfg.league, "gold", clock[0])
+	var backend3 := LocalBackend.new(cfg, catalog, now_fn, path)
+	backend3.init()
+	var g1: Dictionary = backend3.get_league_standing()["data"]
+	var same: bool = g1["group"]["members"].size() == joined["group"]["members"].size()
+	for i in g1["group"]["members"].size():
+		if same and g1["group"]["members"][i]["round_score"] != joined["group"]["members"][i]["round_score"]:
+			same = false
+	_check(same, "bot scores are deterministic across instances")
+	var gold_play := big.duplicate()
+	gold_play.merge({"result_id": "gold-2", "finished_at": clock[0]}, true)
+	var gp: Dictionary = backend3.submit_result(gold_play)["data"]
+	_check(gp["round_score"] == big_score and gp["group_rank"] > 0 and gp["group_size"] == 30 and gp["tier"] == "gold" and gp["round_index"] == gold_week, "a gold game ranks in the group")
+	var gold_runs: Dictionary = backend3.get_round_runs()["data"]
+	_check(gold_runs["has_rounds"] and gold_runs["best_n"] == 15 and gold_runs["runs"].size() == 1 and gold_runs["round_score"] == big_score and gold_runs["cut_score"] == 0, "gold runs: the week's games")
+
+	# Simulated offline: every league call fails like a dead network, with the last value.
+	var flips: Array = []
+	backend3.connectivity_changed.connect(func(online: bool) -> void: flips.append(online))
+	backend3.simulate_offline = true
+	var off_sub := backend3.submit_result(big)
+	var off_standing := backend3.get_league_standing()
+	_check(not backend3.is_online() and not off_sub["ok"] and off_sub["code"] == "ERR_NETWORK" and not off_sub["permanent"], "offline: a submit fails temporarily")
+	_check(not off_standing["ok"] and off_standing["data"]["joined"], "offline: the standing comes back as the last known value")
+	backend3.simulate_offline = false
+	_check(backend3.is_online() and flips == [false, true], "connectivity flips are signalled")
+
 	# Three idle weeks from platinum: relegated to gold, then the gold floor holds.
-	backend3b.data["profile"]["tier"] = "platinum"
-	backend3b.data["profile"]["tier_points"] = 777
-	backend3b._save()
-	clock[0] = Scoring.week_start(2960) + 10
+	backend3.data["profile"]["tier"] = "platinum"
+	backend3.data["profile"]["tier_points"] = 777
+	backend3.data["current_round"] = gold_week
+	backend3._save()
+	clock[0] = Scoring.week_start(gold_week + 3) + 10
 	var backend4 := LocalBackend.new(cfg, catalog, now_fn, path)
 	backend4.init()
 	var s2: Dictionary = backend4.get_round_summary()["data"]
 	var hist: Array = backend4.data["history"]
-	_check(hist.size() == 6 and hist[3]["outcome"] == "inactive_relegated" and hist[3]["tier_after"] == "gold" and hist[3]["reason"] == "round" and hist[4]["outcome"] == "inactive_frozen", "idle weeks: platinum relegates to gold, gold freezes")
-	_check(s2["round_index"] == 2959 and s2["outcome"] == "inactive_frozen" and backend4.get_profile()["data"]["tier"] == "gold", "gold is never lost")
+	_check(hist.size() == 5 and hist[2]["outcome"] == "inactive_relegated" and hist[2]["tier_after"] == "gold" and hist[2]["reason"] == "round" and hist[3]["outcome"] == "inactive_frozen", "idle weeks: platinum relegates to gold, gold freezes")
+	_check(s2["round_index"] == gold_week + 2 and s2["outcome"] == "inactive_frozen" and backend4.get_profile()["data"]["tier"] == "gold", "gold is never lost")
 	_check(backend4.get_profile()["data"]["tier_points"] == 0, "a tier change at a round end restarts the tier points")
 	# Diamond promotes into the open Challenger slots; both are global standings that grow.
+	var week_now := Scoring.week_index(clock[0])
 	backend4.data["profile"]["tier"] = "diamond"
 	backend4.start_game(lv["id"])
 	var dia: Dictionary = backend4.get_league_standing()["data"]
-	var diamond_players := 60 + 3 * (2960 - 2957)
-	_check(dia["joined"] and dia["rules"]["global"] and dia["group"]["size"] == diamond_players, "diamond is one standing of the whole (growing) population")
-	_check(dia["rules"]["up_count"] == 3 and dia["group"]["promote_count"] == 3 and dia["rules"]["up_to"] == "challenger", "diamond promotes exactly the open challenger slots")
+	var diamond_players := 60 + 3 * (week_now - 2957)
+	_check(dia["joined"] and dia["rules"]["global"] and dia["rules"]["online_required"] and dia["group"]["size"] == diamond_players, "diamond is one standing of the whole (growing) population")
+	var slots_now := LeagueRules.slots(cfg.league, "challenger", diamond_players)
+	var open_now := LeagueRules.openings(cfg.league, "challenger", diamond_players, slots_now)
+	_check(open_now > 0 and dia["rules"]["up_count"] == open_now and dia["group"]["promote_count"] == open_now and dia["rules"]["up_to"] == "challenger", "diamond promotes exactly the open challenger slots")
 	backend4.data["profile"]["tier"] = "challenger"
 	backend4.start_game(lv["id"])
 	var ch: Dictionary = backend4.get_league_standing()["data"]
-	_check(ch["group"]["size"] == 6 and ch["group"]["promote_count"] == 0 and ch["group"]["relegate_count"] == 3 and ch["rules"]["up_to"] == "", "challenger is full at its slot count and drops the bottom half")
+	_check(ch["group"]["size"] == slots_now and ch["group"]["promote_count"] == 0 and ch["group"]["relegate_count"] == int(round(slots_now / 2.0)) and ch["rules"]["up_to"] == "", "challenger is full at its slot count and drops the bottom half")
 	clock[0] = Scoring.week_start(3100) + 10
 	backend4.data["profile"]["tier"] = "diamond"
 	backend4.start_game(lv["id"])
@@ -1018,12 +1155,23 @@ func _test_local_backend() -> void:
 	_check(v2b.data["format"] == LocalBackend.FORMAT and v2b.get_profile()["data"]["tier_points"] == 0 and v2b.data["rounds"].size() == 1 and v2b.get_league_standing()["data"]["joined"] and v2b.get_league_standing()["data"]["my_round_score"] == 100, "a format-2 file gains tier points and keeps its round")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(v2_path))
 	v2b.free()
+	# A save from before Bronze lost its timer: the stale bronze round is dropped.
+	var v3_path := "user://test_tmp/backend_v3.json"
+	var v3 := FileAccess.open(v3_path, FileAccess.WRITE)
+	v3.store_string(JSON.stringify({"format": 3, "profile": {"player_id": "v3", "nickname": "Three", "friend_code": "QN-AAAAAC", "tier": "bronze", "tier_points": 1200, "created_at": 1, "stats": {"games": 3}},
+		"results": {}, "rounds": {"bronze:9000": {"joined": true, "group_id": "lg_bronze_9000_001", "scores": [1200], "games": 3, "last_submit_at": 1, "tier": "bronze", "index": 9000}},
+		"current_round": 9000, "friends": [], "pending_summary": {}, "history": []}))
+	v3.close()
+	var v3b := LocalBackend.new(cfg, catalog, now_fn, v3_path)
+	v3b.init()
+	_check(v3b.data["current_round"] == 0 and v3b.data["rounds"].is_empty() and v3b.get_profile()["data"]["tier_points"] == 1200 and v3b.get_round_summary()["data"].is_empty(), "an old bronze round is dropped, the tier points stay")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(v3_path))
+	v3b.free()
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	backend.free()
 	backend2.free()
 	backend3.free()
-	backend3b.free()
 	backend4.free()
 
 
@@ -1369,6 +1517,34 @@ func _test_views() -> void:
 	_check(win["next"]["1"]["enabled"] and not win["next"]["0"]["enabled"] and not win["next"].has("-1"), "win next options")
 	_check(win["stats"].size() == 5 and win["stats"][4]["label"] == "Hints", "hint stat only when used")
 	_check(win["stats"][0]["label"] == "Base" and win["stats"][0]["value"] == "400", "the base points are shown first")
+	# Offline, and a game the league did not count, say so instead of a rank.
+	_check(Views.win(result, bd, {}, {}, cfg.league, 2, "gold")["league"]["note"] == "Saved offline: it counts once it is synced.", "offline win note")
+	_check(Views.win(result, bd, {}, {}, cfg.league, 2, "diamond")["league"]["note"] == "Played offline: doesn't count in the Diamond league.", "offline win note in diamond")
+	_check(Views.win(result, bd, {"league": {"tier": "challenger", "counted": false}}, {}, cfg.league, 2)["league"]["note"] == "Not counted: the Challenger league only counts games played online.", "a late game in challenger")
+	_check(Views.win(result, bd, {}, {}, cfg.league, 2)["league"].is_empty(), "no league card without a result and online")
+	# Bronze: no timer in the summary.
+	_check(not Views.league_summary({"tier": "bronze", "round_days": 0, "rules": {"round_days": 0, "promo_score": 3000, "up_to": "silver"}}, now)["has_rounds"], "the bronze summary has no rounds")
+	# The run overview: the 15th best is the score to beat, the rest is muted.
+	var run_list: Array = []
+	for i in 17:
+		run_list.append({"result_id": "r%d" % i, "level_id": levels[i]["id"], "size": 7, "difficulty": 20, "stars": 2,
+			"score": 1000 - i * 10, "counted": true, "in_best": i < 15, "pending": i == 16, "breakdown": bd, "elapsed_seconds": 70.0})
+	var rv := Views.runs({"has_rounds": true, "best_n": 15, "cut_score": 860, "round_score": 13950, "runs": run_list}, catalog)
+	_check(rv["header"] == "Beat 860 points to raise your score" and rv["rows"].size() == 17, "runs header names the score to beat")
+	_check(rv["rows"][13]["state"] == "best" and rv["rows"][14]["state"] == "cut" and rv["rows"][14]["tags"] == ["to beat"] and rv["rows"][15]["state"] == "extra", "the 15th row is the one to beat")
+	_check(rv["rows"][16]["tags"] == ["not synced"] and rv["rows"][0]["title"] == "Level 1 · 7×7" and rv["counted_title"] == "Counting · 13950 pts", "runs rows carry the level and the sync state")
+	var filling := Views.runs({"has_rounds": true, "best_n": 15, "cut_score": 0, "runs": run_list.slice(0, 4)}, catalog)
+	_check(filling["header"] == "Your best 15 games count. 4 so far: every game adds." and filling["rows"][3]["state"] == "best", "below 15 games every game adds")
+	_check(Views.runs({"has_rounds": false, "runs": []}, catalog)["empty_text"] == "No games in this league yet.", "an empty bronze overview")
+	var off_run: Dictionary = run_list[0].duplicate()
+	off_run["counted"] = false
+	off_run["in_best"] = false
+	_check(Views.runs({"has_rounds": true, "best_n": 15, "runs": [off_run]}, catalog)["rows"][0]["tags"] == ["played offline"], "an uncounted diamond game is marked")
+	var rd := Views.run_detail(run_list[0], catalog, cfg.league)
+	_check(rd["score"] == 1000 and rd["level_text"] == "Level 1 · 7x7 · diff 20" and rd["next"].is_empty() and rd["league"].is_empty() and rd["stats"].size() == 4, "run detail reuses the win panel")
+	energy.charge_start()
+	var es := Views.energy_state(energy, FakeAdsProvider.new(), FakePurchaseProvider.new(), 10, "1 €", true, 2)
+	_check(es["offline"] and es["can_start"] and es["repay_per_ad"] == 8, "the energy sheet knows it is offline")
 
 
 func _test_settings() -> void:

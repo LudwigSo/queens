@@ -51,7 +51,13 @@ Starting a game costs one energy; giving up does not refund it. A fresh
 install has 10. Tapping the energy counter on the home screen opens a panel
 where a rewarded ad adds 10 energy and a one-time purchase (2.99 EUR)
 switches to unlimited energy for good. All numbers live in
-`scripts/config.gd`. In the editor and in tests the ad and the store are
+`scripts/config.gd`.
+
+Offline an empty tank does not stop you: the game starts anyway and the
+energy goes into debt (the counter shows it, e.g. `0  −3`). Back online the
+debt is paid back from the ads, gradually: an ad repays at most 8 of it, so
+every ad still leaves at least two games to play (`ad_min_playable`). The
+purchase clears the debt. In the editor and in tests the ad and the store are
 fakes (`scripts/providers/fake_*.gd`) that always succeed after a short
 delay; the real AdMob and Google Play Billing providers are only used on
 Android when their plugins are installed.
@@ -85,30 +91,39 @@ The level overview shows the best score per level.
 
 ### League and leaderboards
 
-Every solved game also counts for the league. Each tier plays in rounds:
-three days in Bronze, a calendar week (Monday to Sunday, UTC) everywhere
-else. Your round score is the sum of your best 15 games of the round, so
-grinding beyond that only helps by replacing a weaker game. Up to Platinum
-you play in a group of up to 30 players of the same tier. From Gold on, the
-end of the round moves the top share up a tier and, from Platinum on, the
-bottom share down. Bronze and Silver promote by *tier points* instead:
+Every solved game also counts for the league. Bronze and Silver have no
+timer: you collect *tier points* at your own pace. From Gold on, every tier
+plays in calendar weeks (Monday to Sunday, UTC); your round score is the sum
+of your best 15 games of the week, so grinding beyond that only helps by
+replacing a weaker game. The end of the week moves the top share up a tier
+and, from Platinum on, the bottom share down:
 
 | Tier | round | up | down | round without a game |
 | --- | --- | --- | --- | --- |
-| Bronze | 3 days | 3000 tier points, at once | none | stay |
-| Silver | week | 10000 tier points, at once | none | stay |
+| Bronze | none | 3000 tier points, at once | none | – |
+| Silver | none | 10000 tier points, at once | none | – |
 | Gold | week | 20 % | never | stay |
 | Platinum | week | 15 % | 25 % | relegate |
 | Diamond | week | open Challenger slots | 20 % | relegate |
 | Challenger | week | – | bottom half | relegate |
 
-Bronze and Silver are the on-ramp. Every solved game adds its score to
-your tier points; the moment they reach the threshold you move up, on the
-spot, into the round of the next tier that is already running, and the
-counter restarts at 0 (it also restarts on every other tier change). Their
-rounds are a leaderboard for company: the standings and the timer are
-there, but nobody moves at the end of one, and there is no way down. The
-thresholds are `promo_score` per tier in `scripts/config.gd`. Gold is a
+Bronze and Silver are the on-ramp: no group, no ranking, no timer. Every
+solved game adds its score to your tier points; the moment they reach the
+threshold you move up, on the spot, and the counter restarts at 0 (it also
+restarts on every other tier change). There is no way down. The thresholds
+are `promo_score` per tier in `shared/league.json`.
+
+Gold and Platinum play in groups: random placement fills a group to 30
+players, and friends can join a friend's group up to 50. You land with a
+friend automatically when one of their groups has room, and after a
+promotion the game asks which friend's group you want. Groups are topped up
+to 30 with bots, so an early league never looks empty; a bot plays through
+the week like anyone else, can take a promotion place, never changes tier,
+and gives up its seat to every real player who joins.
+
+The league screen's *My games* tab lists the games of the week, best first:
+the 15 that count, the one you have to beat to raise your score (marked),
+and the rest. Tapping a game shows its result panel again. Gold is a
 floor: once you are Gold you are never relegated, not
 even for an idle week. Platinum and Diamond are where skill decides and
 players move in both directions. Diamond is one global standing of everyone
@@ -122,16 +137,20 @@ Challenger drops back to Diamond, and Diamond promotes exactly as many
 players as slots are then open. As Diamond grows, so do the Challenger
 slots, until the cap of 50 is reached.
 
-A promotion always joins the round of the next tier that is already
-running. The rules live in `GameConfig.league` (`scripts/config.gd`)
+Diamond and Challenger count a game only when it was played online: started
+with a server session and synced within ten minutes of finishing
+(`online_grace_s`). Below that a game played offline counts whenever it is
+synced, in the week it arrives.
+
+The rules live in `shared/league.json` (loaded into `GameConfig.league`)
 and the maths in `scripts/league_rules.gd`. Each level also has its own
 leaderboard (best score per player, plus a "fastest flawless" view),
 reachable from the level overview.
 
 `scripts/backend/backend.gd` is the contract. Two implementations exist.
-`local_backend.gd` is the offline stand-in that fills the group with
-deterministic bots anchored to your own scores, simulates the round rollover
-on start, and fabricates friends from friend codes. `http_backend.gd` talks
+`local_backend.gd` is the offline stand-in that fills the groups with the
+same bots the server uses, simulates the round rollover on start, and
+fabricates friends from friend codes. `http_backend.gd` talks
 to the Go service in `server/`, where scores are recomputed from the
 server's own level table, the league is shared between real players, and
 identity survives a reinstall.
@@ -139,8 +158,12 @@ identity survives a reinstall.
 Which one runs is decided by `GameConfig.server_url`, and it is empty
 everywhere except a release build, so the editor, the test suite and the
 screenshot runner always play offline. When the server is unreachable the
-game keeps working: results queue in `pending_results` and drain on the next
-launch, exactly as they do today.
+game keeps working: a cloud icon marks the offline state, results queue in
+`pending_results`, and your own score keeps moving
+(`scripts/offline_league.gd` adds the queued games to the last standing)
+while the ranking waits. In Diamond and Challenger the game says that
+offline games will not count. The queue is sent as soon as the server
+answers again (a probe asks every 20 seconds), and on every launch.
 
 The rules both sides obey live in `shared/league.json`, which the server
 embeds a copy of, and the scoring maths is pinned across the two runtimes by

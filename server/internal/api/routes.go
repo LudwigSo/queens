@@ -130,6 +130,25 @@ type StandingOutput struct {
 	Body         service.StandingView
 }
 
+type RunsInput struct{ AuthHeader }
+
+type RunsOutput struct {
+	Body service.RunsView
+}
+
+type JoinOptionsInput struct{ AuthHeader }
+
+type JoinOptionsOutput struct {
+	Body service.JoinOptionsView
+}
+
+type JoinInput struct {
+	AuthHeader
+	Body struct {
+		GroupID string `json:"group_id" required:"false" maxLength:"64" doc:"A group from join-options; empty for the normal placement."`
+	}
+}
+
 type SummaryInput struct{ AuthHeader }
 
 type SummaryOutput struct {
@@ -416,6 +435,68 @@ func (s *Server) register() {
 			return nil, errorOf(err)
 		}
 		return &StandingOutput{CacheControl: "private, max-age=15", Body: *view}, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "league-runs", Method: http.MethodGet, Path: "/v1/league/runs",
+		Summary: "My games of the current round",
+		Description: "Best first, with the best N marked and the score a new game has to beat. " +
+			"In a tier without rounds, every game since entering the tier.",
+		Tags: []string{"league"},
+	}, func(ctx context.Context, in *RunsInput) (*RunsOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.readsP, p.ID); err != nil {
+			return nil, err
+		}
+		view, err := s.Svc.Runs(ctx, p.ID)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		return &RunsOutput{Body: *view}, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "league-join-options", Method: http.MethodGet, Path: "/v1/league/join-options",
+		Summary:     "Friends' groups I could join this round",
+		Description: "Empty in a global tier, in a tier without rounds, and once I am in a group.",
+		Tags:        []string{"league"},
+	}, func(ctx context.Context, in *JoinOptionsInput) (*JoinOptionsOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.readsP, p.ID); err != nil {
+			return nil, err
+		}
+		view, err := s.Svc.JoinOptions(ctx, p.ID)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		return &JoinOptionsOutput{Body: *view}, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "league-join", Method: http.MethodPost, Path: "/v1/league/join",
+		Summary: "Join the current round now",
+		Description: "Into a friend's group from join-options, or by the normal placement when group_id is empty. " +
+			"Idempotent: a player who is already in a group stays there. 409 ERR_GROUP_FULL when the group is not on offer.",
+		Tags: []string{"league"},
+	}, func(ctx context.Context, in *JoinInput) (*StandingOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.friendsP, p.ID); err != nil {
+			return nil, err
+		}
+		view, err := s.Svc.JoinGroup(ctx, p.ID, in.Body.GroupID)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		return &StandingOutput{CacheControl: "no-store", Body: *view}, nil
 	})
 
 	huma.Register(a, huma.Operation{
