@@ -113,6 +113,7 @@ TOAST_ENERGY_DEBT,Offline: playing on credit,Offline: Spielen auf Pump
 TOAST_OFFLINE,Offline: your games are saved and will be synced later.,Offline: deine Spiele werden gespeichert und später synchronisiert.
 TOAST_OFFLINE_STRICT,Offline: games played now don't count in the %s league.,Offline: jetzt gespielte Spiele zählen in der %s-Liga nicht.
 TOAST_BACK_ONLINE,Back online,Wieder online
+TOAST_NEW_LEVELS,New levels: %d,Neue Level: %d
 GAME_OFFLINE_NOTE,Offline: this game is synced later,Offline: dieses Spiel wird später synchronisiert
 GAME_OFFLINE_STRICT_NOTE,Offline: this game won't count in the %s league,Offline: dieses Spiel zählt in der %s-Liga nicht
 TOAST_UNLIMITED,Unlimited energy unlocked,Unbegrenzte Energie freigeschaltet

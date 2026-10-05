@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/ludwigsonnenberg/queens-server/internal/api"
 	"github.com/ludwigsonnenberg/queens-server/internal/config"
 	"github.com/ludwigsonnenberg/queens-server/internal/domain"
+	"github.com/ludwigsonnenberg/queens-server/internal/levelset"
 	"github.com/ludwigsonnenberg/queens-server/internal/service"
 	"github.com/ludwigsonnenberg/queens-server/internal/store"
 	"github.com/ludwigsonnenberg/queens-server/internal/store/sqlite"
@@ -128,6 +130,10 @@ func adminUsage() string {
   unban --player ID
   rename --player ID --to NAME    rename a player (the moderation remedy)
   players [--limit N]             list recent players
+  levels import [--dry-run] FILE  publish the new levels of a level file (additive;
+                                  a changed board is refused). A running server
+                                  serves them on its next level request.
+  levels list                     list the published levels in game order
 
 There is no admin HTTP surface: that is an authentication, authorisation and
 audit problem this service does not need on day one.
@@ -144,6 +150,7 @@ func adminCmd(args []string) error {
 	player := fs.String("player", "", "player id")
 	to := fs.String("to", "", "new nickname (rename)")
 	limit := fs.Int("limit", 50, "maximum rows")
+	dryRun := fs.Bool("dry-run", false, "levels import: report, then roll back")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -244,7 +251,73 @@ func adminCmd(args []string) error {
 		}
 		return nil
 
+	case "levels":
+		rest := fs.Args()
+		if len(rest) == 0 {
+			return fmt.Errorf("levels needs import or list\n\n%s", adminUsage())
+		}
+		// Flags may follow the action: `levels import --dry-run FILE`.
+		if err := fs.Parse(rest[1:]); err != nil {
+			return err
+		}
+		switch rest[0] {
+		case "import":
+			if fs.NArg() != 1 {
+				return fmt.Errorf("levels import needs exactly one FILE")
+			}
+			return importLevels(ctx, db, fs.Arg(0), *dryRun, svc.Clock.Now())
+		case "list":
+			levels, err := db.Repos().Levels.Published(ctx)
+			if err != nil {
+				return err
+			}
+			for _, l := range levels {
+				fmt.Printf("%4d  %s  %2dx%-2d  %d*  difficulty %d\n", l.Position, l.ID, l.Size, l.Size, l.Stars, l.Difficulty)
+			}
+			return nil
+		default:
+			return fmt.Errorf("unknown levels action %q\n\n%s", rest[0], adminUsage())
+		}
+
 	default:
 		return fmt.Errorf("unknown admin command %q\n\n%s", sub, adminUsage())
 	}
+}
+
+// errDryRun rolls the import transaction back after its report is taken.
+var errDryRun = errors.New("dry run")
+
+// importLevels publishes the new levels of a file. It writes to the database the
+// running server uses; the server notices the higher level count on its next
+// level request and reloads, so no restart is needed.
+func importLevels(ctx context.Context, db store.Store, path string, dryRun bool, now int64) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	f, err := levelset.Parse(data)
+	if err != nil {
+		return err
+	}
+	var rep levelset.Report
+	err = db.InTx(ctx, func(ctx context.Context, r store.Repos) error {
+		var err error
+		if rep, err = levelset.Import(ctx, r, f, now); err != nil {
+			return err
+		}
+		if dryRun {
+			return errDryRun
+		}
+		return nil
+	})
+	if err != nil && !(dryRun && errors.Is(err, errDryRun)) {
+		return err
+	}
+	verb := "imported:"
+	if dryRun {
+		verb = "dry run, nothing written:"
+	}
+	fmt.Printf("%s %d new, %d published, %d unchanged; %d levels published in total\n",
+		verb, rep.Added, rep.Published, rep.Unchanged, rep.Total)
+	return nil
 }

@@ -125,6 +125,35 @@ set -a; . ~/etc/queensd.env; set +a
 ~/bin/queensd admin flags --player <uuid>
 ```
 
+## Adding levels
+
+Levels go into the production database directly; no deploy and no app release.
+Clients download the new ones at their next launch (or when they come back
+online), and the running server serves them from its next level request on.
+
+```bash
+# On your machine: generate new boards after the existing ones.
+python tools/gen_boards.py queens/levels/queens.json --append --count 20 --seed 5000
+scp queens/levels/queens.json <host>:~/queens/levels-import.json
+
+# On the host: check, then publish.
+set -a; . ~/etc/queensd.env; set +a
+~/bin/queensd admin levels import --dry-run ~/queens/levels-import.json
+~/bin/queensd admin levels import ~/queens/levels-import.json
+~/bin/queensd admin levels list | tail
+```
+
+The import is additive and idempotent, so importing the whole file is fine: the
+levels already published are reported as unchanged. It refuses the whole file
+if a published board was edited, naming the id; published levels are
+immutable, so give a fixed board a new id. Every board is checked for exactly
+one solution before anything is written.
+
+Afterwards commit `queens/levels/queens.json` and refresh the server's embedded
+copy (`go run ./internal/levelset/cmd/copylevels` from `server/`), so the next
+APK bundles the levels and the next server build seeds them on a fresh
+database. Neither is urgent.
+
 ## Rolling back
 
 `deploy.sh` rolls back on its own if the new build does not reach `/readyz`

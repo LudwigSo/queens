@@ -107,6 +107,7 @@ func _ready() -> void:
 	league.offline_info_requested.connect(_show_offline_info)
 	join_sheet.chosen.connect(_on_join_chosen)
 	App.connectivity_changed.connect(_on_connectivity_changed)
+	App.levels_changed.connect(_on_levels_changed)
 	App.backend.standing_changed.connect(func() -> void:
 		if router.current() == "league":
 			_refresh_league())
@@ -319,6 +320,18 @@ func _on_join_chosen(group_id: String, label: String) -> void:
 
 
 # --- offline ------------------------------------------------------------------
+
+## Levels downloaded at launch or on reconnect. `levels` is the catalog's own
+## array, so it already holds them; only the screens showing levels redraw.
+func _on_levels_changed(added: Array) -> void:
+	toast.show_message(Loc.f("TOAST_NEW_LEVELS", [added.size()]), "success")
+	match router.current():
+		"levels":
+			level_select.refresh(Views.level_cards(levels, App.save, App.catalog, App.now(), App.config.cooldown_seconds))
+		"home":
+			if not win_overlay.visible:
+				_show_home(true)
+
 
 func _on_connectivity_changed(online: bool) -> void:
 	home.set_offline(not online)

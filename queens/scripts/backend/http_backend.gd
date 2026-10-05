@@ -508,6 +508,63 @@ func ack_round_summary(round_index: int) -> Dictionary:
 	return ok(null)
 
 
+func get_level_count() -> Dictionary:
+	var res := await _call(HTTPClient.METHOD_GET, "/v1/levels/count", null, {"retry": true})
+	if not res["ok"]:
+		return res
+	return ok(int((res["data"] as Dictionary).get("count", 0)))
+
+
+func get_level_ids() -> Dictionary:
+	var res := await _call(HTTPClient.METHOD_GET, "/v1/levels/ids", null, {"retry": true})
+	if not res["ok"]:
+		res["data"] = []
+		return res
+	var ids: Array = []
+	for id in (res["data"] as Dictionary).get("ids", []):
+		ids.append(str(id))
+	return ok(ids)
+
+
+func get_levels(ids: Array) -> Dictionary:
+	var parts := PackedStringArray()
+	for id in ids:
+		parts.append(str(id).uri_encode())
+	var res := await _call(HTTPClient.METHOD_GET, "/v1/levels?ids=" + ",".join(parts), null, {"retry": true})
+	if not res["ok"]:
+		res["data"] = []
+		return res
+	return ok((res["data"] as Dictionary).get("levels", []))
+
+
+func get_level_states() -> Dictionary:
+	var res := await _call(HTTPClient.METHOD_GET, "/v1/me/levels", null, {"retry": true})
+	if not res["ok"]:
+		return res
+	var out := {}
+	var levels: Dictionary = (res["data"] as Dictionary).get("levels", {})
+	for id in levels:
+		out[str(id)] = normalize_level_state(levels[id])
+	return ok(out)
+
+
+## JSON numbers arrive as floats; the save keeps counters and times as ints,
+## and only the two durations as floats.
+static func normalize_level_state(raw: Dictionary) -> Dictionary:
+	return {
+		"last_started_at": int(raw.get("last_started_at", 0)),
+		"plays": int(raw.get("plays", 0)),
+		"completions": int(raw.get("completions", 0)),
+		"last_completed_at": int(raw.get("last_completed_at", 0)),
+		"best_time": float(raw.get("best_time", 0.0)),
+		"best_score": int(raw.get("best_score", 0)),
+		"best_score_time": float(raw.get("best_score_time", 0.0)),
+		"best_wrong": int(raw.get("best_wrong", 0)),
+		"best_result_id": str(raw.get("best_result_id", "")),
+		"best_at": int(raw.get("best_at", 0)),
+	}
+
+
 ## Offline, the last overview the server sent; the caller adds the queued
 ## games (OfflineLeague.merge_runs).
 func get_round_runs() -> Dictionary:

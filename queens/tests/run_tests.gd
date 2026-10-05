@@ -8,6 +8,7 @@ const Levels := preload("res://scripts/levels.gd")
 const GenFixtures := preload("res://tools/gen_fixtures.gd")
 const BoardScript := preload("res://scripts/board_model.gd")
 const BoardViewScript := preload("res://scripts/board.gd")
+const LevelSyncTests := preload("res://tests/level_sync_tests.gd")
 
 var failures: int = 0
 var checks: int = 0
@@ -19,7 +20,8 @@ var levels: Array = []
 func _initialize() -> void:
 	Loc.load_csv()
 	TranslationServer.set_locale("en")
-	levels = Levels.load_all()
+	# The bundled file only: levels a dev run downloaded into user:// stay out.
+	levels = Levels.load_all("")
 	_check(levels.size() > 0, "level file has levels")
 	var ids: Dictionary = {}
 	var uuid := RegEx.create_from_string("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -55,6 +57,8 @@ func _initialize() -> void:
 	_test_auth_storage()
 	_test_fixture_parity()
 	_test_android_providers_degrade()
+	# The fake backend answers synchronously, so this await never suspends.
+	await LevelSyncTests.new().run(_check, levels)
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 

@@ -198,8 +198,8 @@ func TestLevelMetaCarriesParAndLocksAndAStableETag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(meta.Levels) != h.svc.LevelCount() {
-		t.Errorf("meta covers %d levels, want %d", len(meta.Levels), h.svc.LevelCount())
+	if len(meta.Levels) != h.svc.LoadedLevels() {
+		t.Errorf("meta covers %d levels, want %d", len(meta.Levels), h.svc.LoadedLevels())
 	}
 	if meta.Levels[lv.ID].ParSeconds != lv.Par() {
 		t.Errorf("par wrong: %v", meta.Levels[lv.ID].ParSeconds)

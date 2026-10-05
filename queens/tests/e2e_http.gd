@@ -54,7 +54,7 @@ func _run() -> void:
 	_check(absi(backend.now_utc() - int(Time.get_unix_time_from_system())) < 120, "server time is close to ours")
 
 	var meta: Dictionary = (await backend.get_level_meta())["data"]
-	_check(meta.size() == 100, "level meta covers every level (%d)" % meta.size())
+	_check(meta.size() >= 100, "level meta covers every level (%d)" % meta.size())
 	var level_id := ""
 	for id in meta:
 		level_id = id
@@ -106,6 +106,33 @@ func _run() -> void:
 	_check(not bool(standing["joined"]) and int(standing["round_ends_at"]) == 0 and int(standing["rules"]["round_days"]) == 0, "bronze has no group and no timer")
 	_check(int(standing["my_tier_points"]) == int(data["breakdown"]["score"]), "the tier points are the game just played")
 	_check(str(standing["rules"]["up_to"]) == "silver", "up_to is a tier id")
+
+	# Level sync: the server may publish more levels than this build bundles
+	# (queensd admin levels import). After a sync the device has them all.
+	var count: Dictionary = await backend.get_level_count()
+	_check(count["ok"] and int(count["data"]) >= 100, "the server counts its levels")
+	var cache := "user://e2e_levels_cache.json"
+	if FileAccess.file_exists(cache):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(cache))
+	var cat := LevelCatalog.new(Levels.load_all(""))
+	var added: Array = await LevelSync.sync_levels(backend, cat, cache)
+	_check(cat.size() == int(count["data"]), "after a sync the catalog holds the server's %d levels (%d new)" % [int(count["data"]), added.size()])
+	_check(Levels.load_all(cache).size() == cat.size(), "the downloads are cached")
+	_check((await LevelSync.sync_levels(backend, cat, cache)).is_empty(), "a second sync finds nothing new")
+	if not added.is_empty():
+		var fresh_id := str(added[0]["id"])
+		_check(Levels.validate(added[0]) == "" and cat.display_index(fresh_id) >= 100, "a downloaded level is a valid board at the end")
+		var fresh_start: Dictionary = await backend.start_game(fresh_id)
+		_check(fresh_start["ok"], "a downloaded level is playable: %s" % str(fresh_start.get("error", "")))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(cache))
+
+	# Level state: the server derived my state on the level from the result.
+	var states: Dictionary = await backend.get_level_states()
+	_check(states["ok"] and (states["data"] as Dictionary).has(level_id), "the server holds my level state")
+	if states["ok"] and (states["data"] as Dictionary).has(level_id):
+		var mine: Dictionary = states["data"][level_id]
+		_check(mine["plays"] == 1 and mine["completions"] == 1 and mine["best_result_id"] == result.result_id, "one play, one completion, this run as the best: %s" % [mine])
+		_check(mine["best_score"] == int(data["breakdown"]["score"]) and mine["last_completed_at"] > 0, "with the server's score")
 
 	var runs: Dictionary = await backend.get_round_runs()
 	_check(runs["ok"] and not bool(runs["data"]["has_rounds"]) and (runs["data"]["runs"] as Array).size() == 1, "the run overview lists the game")

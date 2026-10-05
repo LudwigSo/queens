@@ -12,6 +12,8 @@ signal app_resumed
 signal backend_ready
 ## The backend went offline or came back; screens show or hide the offline mark.
 signal connectivity_changed(online: bool)
+## New levels arrived from the server and are in the catalog now.
+signal levels_changed(added: Array)
 
 const Levels := preload("res://scripts/levels.gd")
 
@@ -30,13 +32,14 @@ var level_locks: Dictionary = {}
 
 var _save_queued: bool = false
 var _flushing: bool = false
+var _syncing: bool = false
 
 
 func _ready() -> void:
 	Loc.load_csv()
 	config = GameConfig.new()
 	save = SaveData.load_or_create(config)
-	catalog = LevelCatalog.new(Levels.load_all())
+	catalog = LevelCatalog.new(Levels.load_all(config.level_cache_path))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Time.get_ticks_usec()
 	picker = LevelPicker.new(catalog, config, rng)
@@ -61,6 +64,7 @@ func _ready() -> void:
 	await _start_backend()
 	await _forfeit_dangling_game()
 	await flush_pending_results()
+	await sync_with_server()
 	backend_ready.emit()
 
 
@@ -182,6 +186,7 @@ func _on_connectivity_changed(online: bool) -> void:
 		await backend.register_player(save.player_id(), save.nickname())
 		_apply_server_config()
 	await flush_pending_results()
+	await sync_with_server()
 	backend.standing_changed.emit()
 
 
@@ -218,6 +223,26 @@ func flush_pending_results() -> void:
 	save.data["pending_results"] = kept
 	save.mark_changed()
 	_flushing = false
+
+
+## Pulls what the server holds that this device may not: new levels, and the
+## player's state on every level. Runs at launch and when the connection comes
+## back, after the result queue was flushed, so the server's state already
+## includes this device's games. Offline (or before registration) it does
+## nothing and the cached copies stay as they are.
+func sync_with_server() -> void:
+	if _syncing or backend == null or not backend.is_registered():
+		return
+	_syncing = true
+	var added: Array = await LevelSync.sync_levels(backend, catalog, config.level_cache_path)
+	if not added.is_empty():
+		print("levels: %d new from the server, %d in total" % [added.size(), catalog.size()])
+		levels_changed.emit(added)
+	var states: Dictionary = await backend.get_level_states()
+	if states["ok"] and states["data"] is Dictionary:
+		save.apply_server_level_states(states["data"])
+		save_now()
+	_syncing = false
 
 
 ## A game that was running when the app was killed counts as forfeited.

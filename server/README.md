@@ -26,7 +26,7 @@ maximum. The same goes for `size`, `difficulty` and `stars`.
 
 ## The league in one paragraph
 
-The rules are `shared/league.json`, embedded at build time (`go run
+The rules are `queens/shared/league.json`, embedded at build time (`go run
 ./internal/levelset/cmd/copylevels` refreshes the copy). Bronze and Silver have
 no rounds: no round row, no group, a game only adds tier points until
 `promo_score` promotes. From Gold on a tier plays in weeks. Random placement
@@ -81,13 +81,31 @@ connection pool, which is a FIFO that honours context cancellation, rather than
 through `SQLITE_BUSY` retries. Reads use a separate pool and never queue behind
 a slow submit. `_txlock=immediate` removes the read-then-write upgrade deadlock.
 
-**Levels are data, not schema.** The file is re-imported on every boot. A
-changed `size` or `difficulty` refuses to start, naming the level: both feed
-`base` and `par_seconds`, so accepting the change would silently invalidate
-every score ever recorded on that level. Give the changed board a new id
-instead. Deploy the server before shipping a client with new levels; an old
-server answers `ERR_LEVEL_UNKNOWN` and the client falls back to offline play for
-that level rather than blocking the game.
+**Levels are data, not schema, and append-only.** The database is the source
+of truth for the level set. The copy of `queens/levels/queens.json` embedded in
+the binary is imported additively on every boot, and `queensd admin levels
+import FILE` imports any level file at run time: new ids are published after
+the last level, known ids must be byte-for-byte the same board, and a level
+missing from a file is left alone. A changed board (any field) is refused,
+naming the level: clients compare level counts, not contents, so an edit would
+never reach a device that has the old board, and scores on it would compare
+different puzzles. Give a fixed board a new id instead.
+
+A running server notices an import on its next level request (one `COUNT(*)`)
+and reloads its level index, so new levels need neither a server deploy nor a
+client release. At launch the client asks `GET /v1/levels/count`; when that
+differs from its own count it fetches `GET /v1/levels/ids`, downloads the
+missing boards with `GET /v1/levels?ids=...` (50 per request, solution
+included: the client needs it to mark wrong queens) and caches them in
+`user://levels_cache.json`. Runbook: `../deploy/README.md`, "Adding levels".
+
+**Level state per player.** `player_levels` holds each player's state on every
+level they started (plays, completions, last completion, best time, best run),
+the server-side twin of the `levels` entry in the client's save file. A
+session-backed start counts the play; every accepted result, verified or not,
+adds the rest (an offline game also counts its play when it arrives). Clients
+read it with `GET /v1/me/levels` at launch and on reconnect, take it as the
+truth, and replay their still-unsent results on top.
 
 ## Deployment
 

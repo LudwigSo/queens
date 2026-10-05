@@ -50,6 +50,13 @@ extends Node
 ##   FriendEntry     {player_id, nickname, tier, round_score, friend_since,
 ##                    friend_code}; following is directed (I follow you), with
 ##                    no accept step, and is capped per player.
+##   LevelBoard      {id, position, size, regions, solution, difficulty,
+##                    stars, seed}: a downloadable level, in the shape of
+##                    res://levels/queens.json (see LevelSync)
+##   LevelState      {last_started_at, plays, completions, last_completed_at,
+##                    best_time, best_score, best_score_time, best_wrong,
+##                    best_result_id, best_at}: the server's copy of a save.json
+##                    `levels` entry, which it derives from accepted results
 ##
 ## A round is the scoring period of a tier (a week; Bronze and Silver have
 ## none, see LeagueRules). Round indices are only comparable within one tier.
@@ -63,6 +70,9 @@ extends Node
 
 signal standing_changed
 signal connectivity_changed(online: bool)
+
+## The server's bound on get_levels (service.MaxLevelsPerRequest).
+const MAX_LEVELS_PER_REQUEST := 50
 
 var _online := true
 
@@ -184,4 +194,27 @@ func remove_friend(_player_id: String) -> Dictionary:
 ## Erases the account on the server. There is no recovery: the credential
 ## lives on this device only.
 func delete_account() -> Dictionary:
+	return fail("not implemented")
+
+
+## How many levels the server publishes. Levels are append-only, so the same
+## count as the device's means the same set (LevelSync).
+func get_level_count() -> Dictionary:
+	return fail("not implemented")
+
+
+## Every published level id, in game order.
+func get_level_ids() -> Dictionary:
+	return fail("not implemented")
+
+
+## The LevelBoards among `ids` (at most MAX_LEVELS_PER_REQUEST), in game
+## order; unknown ids are left out.
+func get_levels(_ids: Array) -> Dictionary:
+	return fail("not implemented")
+
+
+## level id -> LevelState for every level the player ever started, or null
+## when there is no server to hold them (then the save file is the truth).
+func get_level_states() -> Dictionary:
 	return fail("not implemented")
