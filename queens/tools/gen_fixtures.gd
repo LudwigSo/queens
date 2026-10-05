@@ -31,7 +31,7 @@ func _initialize() -> void:
 
 	var digest := _sweep_digest()
 	var f := FileAccess.open(dir.path_join("sweep.sha256"), FileAccess.WRITE)
-	f.store_string("sha256:%s\ncases:%d\nlevels:%d\n" % [digest["hash"], digest["cases"], digest["levels"]])
+	f.store_string("sha256:%s\ncases:%d\npairs:%d\n" % [digest["hash"], digest["cases"], digest["pairs"]])
 	f.close()
 
 	print("wrote fixtures to ", dir)
@@ -324,19 +324,24 @@ static func elapsed_set() -> Array:
 	return out
 
 
-## Hashes the score of every level x mistakes x hints x elapsed combination.
-## This is the real proof: it answers the "is Go's pow the same as the engine's"
-## question empirically rather than by argument.
+## Hashes the score of every (size, difficulty) x mistakes x hints x elapsed
+## combination. This is the real proof: it answers the "is Go's pow the same as
+## the engine's" question empirically rather than by argument.
+##
+## A score depends on a level only through its size and difficulty, so the
+## sweep walks the distinct pairs of the bundled file, sorted, rather than every
+## level: it covers every input a shipped level can produce and does not grow
+## with the level count.
 func _sweep_digest() -> Dictionary:
-	var levels: Array = Levels.load_all()
+	var pairs := sweep_pairs(Levels.load_all(""))
 	var elapsed := elapsed_set()
 	var ctx := HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
 	var buffer := PackedStringArray()
 	var count := 0
-	for lv in levels:
-		var size := int(lv["size"])
-		var difficulty := float(lv["difficulty"])
+	for pair in pairs:
+		var size := int(pair.x)
+		var difficulty := float(pair.y)
 		for wrong in range(0, 26):
 			for hints in range(0, 7):
 				for e in elapsed:
@@ -351,4 +356,18 @@ func _sweep_digest() -> Dictionary:
 				buffer = PackedStringArray()
 	if buffer.size() > 0:
 		ctx.update(("\n".join(buffer) + "\n").to_utf8_buffer())
-	return {"hash": ctx.finish().hex_encode(), "cases": count, "levels": levels.size()}
+	return {"hash": ctx.finish().hex_encode(), "cases": count, "pairs": pairs.size()}
+
+
+## The distinct (size, difficulty) pairs of a level list, sorted by size, then
+## difficulty. The Go side (sweepPairs in parity_test.go) builds the same list.
+static func sweep_pairs(levels: Array) -> Array[Vector2i]:
+	var seen := {}
+	var out: Array[Vector2i] = []
+	for lv in levels:
+		var p := Vector2i(int(lv["size"]), int(lv["difficulty"]))
+		if not seen.has(p):
+			seen[p] = true
+			out.append(p)
+	out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x or (a.x == b.x and a.y < b.y))
+	return out

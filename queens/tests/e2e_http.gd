@@ -121,7 +121,7 @@ func _run() -> void:
 	_check((await LevelSync.sync_levels(backend, cat, cache)).is_empty(), "a second sync finds nothing new")
 	if not added.is_empty():
 		var fresh_id := str(added[0]["id"])
-		_check(Levels.validate(added[0]) == "" and cat.display_index(fresh_id) >= 100, "a downloaded level is a valid board at the end")
+		_check(Levels.validate(added[0]) == "" and cat.display_index(fresh_id) >= Levels.load_all("").size(), "a downloaded level is a valid board after the bundled ones")
 		var fresh_start: Dictionary = await backend.start_game(fresh_id)
 		_check(fresh_start["ok"], "a downloaded level is playable: %s" % str(fresh_start.get("error", "")))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(cache))

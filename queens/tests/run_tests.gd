@@ -1834,7 +1834,7 @@ func _test_auth_storage() -> void:
 ## runtimes -- which would mean a player's score differs depending on who added
 ## it up.
 ##
-## The 4-million-case sweep is skipped when QUEENS_FAST_TESTS is set; CI runs it.
+## The multi-million-case sweep is skipped when QUEENS_FAST_TESTS is set; CI runs it.
 func _test_fixture_parity() -> void:
 	var dir := ProjectSettings.globalize_path("res://").path_join("../shared/fixtures").simplify_path()
 	var scoring_path := dir.path_join("scoring_cases.json")
