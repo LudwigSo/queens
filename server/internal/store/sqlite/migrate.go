@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -59,6 +60,12 @@ func loadMigrations() ([]migration, error) {
 // with a DEFAULT -- so that binary N-1 keeps working against schema N and a
 // rollback stays a symlink swap instead of a restore. See deploy/README.md.
 func (d *DB) Migrate(ctx context.Context, now int64) error {
+	return d.migrate(ctx, now, math.MaxInt)
+}
+
+// migrate applies the pending migrations up to and including version upTo, so
+// a test can seed data under an old schema and then run a backfill on it.
+func (d *DB) migrate(ctx context.Context, now int64, upTo int) error {
 	migs, err := loadMigrations()
 	if err != nil {
 		return err
@@ -86,6 +93,9 @@ func (d *DB) Migrate(ctx context.Context, now int64) error {
 	}
 
 	for _, m := range migs {
+		if m.version > upTo {
+			break
+		}
 		if applied[m.version] {
 			continue
 		}

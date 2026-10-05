@@ -92,13 +92,16 @@ func open(ctx context.Context, cfg *config.Config) (*sqlite.DB, *service.Service
 		db.Close()
 		return nil, nil, err
 	}
-	// Levels are data, not schema: the file is re-imported on every boot. A
-	// changed size or difficulty refuses to start here rather than silently
-	// invalidating every past score on that level.
-	setHash, err := levelset.Sync(ctx, db, levelset.Embedded(), clock.Now())
+	// Levels are data, not schema: the embedded file is imported additively on
+	// every boot, next to whatever `admin levels import` added at run time. A
+	// changed board refuses to start here: published levels are immutable.
+	rep, err := levelset.Sync(ctx, db, levelset.Embedded(), clock.Now())
 	if err != nil {
 		db.Close()
 		return nil, nil, err
+	}
+	if rep.Added+rep.Published > 0 {
+		slog.Info("levels imported from the embedded file", "added", rep.Added, "published", rep.Published, "total", rep.Total)
 	}
 	levels, err := db.Repos().Levels.All(ctx)
 	if err != nil {
@@ -106,7 +109,7 @@ func open(ctx context.Context, cfg *config.Config) (*sqlite.DB, *service.Service
 		return nil, nil, err
 	}
 	league := domain.DefaultLeagueConfig()
-	svc := service.New(db, cfg, clock, league, domain.LeagueConfigHash(), setHash, levels)
+	svc := service.New(db, cfg, clock, league, domain.LeagueConfigHash(), rep.SetHash, levels)
 	return db, svc, nil
 }
 
@@ -126,7 +129,7 @@ func serve() error {
 	}
 	defer db.Close()
 	slog.Info("starting", "version", version, "env", cfg.Env, "db", cfg.DBPath,
-		"levels", svc.LevelCount(), "level_set", svc.LevelSetHash)
+		"levels", svc.LoadedLevels(), "level_set", svc.LevelSetHash())
 
 	srv := api.New(svc, cfg)
 	done := make(chan struct{})
@@ -238,6 +241,6 @@ func migrateOnly() error {
 		return err
 	}
 	defer db.Close()
-	slog.Info("migrated", "db", cfg.DBPath, "levels", svc.LevelCount())
+	slog.Info("migrated", "db", cfg.DBPath, "levels", svc.LoadedLevels())
 	return nil
 }

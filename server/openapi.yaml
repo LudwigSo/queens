@@ -365,6 +365,47 @@ components:
         - stars
         - par_seconds
       type: object
+    LevelCountOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/LevelCountOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        count:
+          description: "Published levels. Append-only: equal to the client's count means the same set."
+          format: int64
+          type: integer
+        server_time:
+          format: int64
+          type: integer
+      required:
+        - count
+        - server_time
+      type: object
+    LevelIDsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/LevelIDsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        ids:
+          description: Every published level id, in game order.
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - ids
+      type: object
     LevelMetaEntry:
       additionalProperties: false
       properties:
@@ -406,6 +447,122 @@ components:
         - cooldown_seconds
         - server_time
       type: object
+    LevelState:
+      additionalProperties: false
+      properties:
+        best_at:
+          format: int64
+          type: integer
+        best_result_id:
+          description: "\"\" = no completed run."
+          type: string
+        best_score:
+          format: int64
+          type: integer
+        best_score_time:
+          format: double
+          type: number
+        best_time:
+          description: Fastest completed run in seconds; 0 = none.
+          format: double
+          type: number
+        best_wrong:
+          format: int64
+          type: integer
+        completions:
+          format: int64
+          type: integer
+        last_completed_at:
+          format: int64
+          type: integer
+        last_started_at:
+          format: int64
+          type: integer
+        plays:
+          format: int64
+          type: integer
+      required:
+        - last_started_at
+        - plays
+        - completions
+        - last_completed_at
+        - best_time
+        - best_score
+        - best_score_time
+        - best_wrong
+        - best_result_id
+        - best_at
+      type: object
+    LevelView:
+      additionalProperties: false
+      properties:
+        difficulty:
+          format: int64
+          type: integer
+        id:
+          type: string
+        position:
+          description: "Order in the game: 1, 2, ... Append-only."
+          format: int64
+          type: integer
+        regions:
+          description: Row-major region id per cell.
+          items:
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+          type:
+            - array
+            - "null"
+        seed:
+          format: int64
+          type: integer
+        size:
+          format: int64
+          type: integer
+        solution:
+          description: Queen column per row.
+          items:
+            format: int64
+            type: integer
+          type:
+            - array
+            - "null"
+        stars:
+          format: int64
+          type: integer
+      required:
+        - id
+        - position
+        - size
+        - regions
+        - solution
+        - difficulty
+        - stars
+        - seed
+      type: object
+    LevelsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/LevelsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        levels:
+          items:
+            $ref: "#/components/schemas/LevelView"
+          type:
+            - array
+            - "null"
+      required:
+        - levels
+      type: object
     Member:
       additionalProperties: false
       properties:
@@ -441,6 +598,24 @@ components:
         - is_friend
         - rank
         - zone
+      type: object
+    MyLevelsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - //schemas/MyLevelsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        levels:
+          additionalProperties:
+            $ref: "#/components/schemas/LevelState"
+          description: level id -> my state on it; levels never started are absent.
+          type: object
+      required:
+        - levels
       type: object
     PatchMeInputBody:
       additionalProperties: false
@@ -1440,6 +1615,102 @@ paths:
       summary: Mark the summary seen
       tags:
         - league
+  /v1/levels:
+    get:
+      description: Full boards including the solution, which the client needs to mark wrong queens. Boards never change, so the response is cacheable for a day.
+      operationId: get-levels
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+        - description: Comma-separated level ids, at most 50. Unknown ids are skipped.
+          explode: false
+          in: query
+          name: ids
+          schema:
+            description: Comma-separated level ids, at most 50. Unknown ids are skipped.
+            items:
+              type: string
+            maxItems: 50
+            type:
+              - array
+              - "null"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevelsOutputBody"
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Download levels by id
+      tags:
+        - levels
+  /v1/levels/count:
+    get:
+      description: Step one of the launch-time level sync. Levels are append-only and immutable, so a client whose count matches has the same set.
+      operationId: level-count
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevelCountOutputBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: How many levels are published
+      tags:
+        - levels
+  /v1/levels/ids:
+    get:
+      operationId: level-ids
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevelIDsOutputBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: Every published level id, in game order
+      tags:
+        - levels
   /v1/levels/meta:
     get:
       description: Strongly ETagged. The body is per player, so the tag combines the level-set hash with a digest of this player's own starts.
@@ -1612,6 +1883,37 @@ paths:
       summary: Rename
       tags:
         - identity
+  /v1/me/levels:
+    get:
+      description: The source of truth for the client's per-level progress. Derived from every accepted result, verified or not; a client replays its unsent results on top.
+      operationId: my-levels
+      parameters:
+        - description: Bearer <token>
+          in: header
+          name: Authorization
+          schema:
+            description: Bearer <token>
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyLevelsOutputBody"
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Error
+      summary: My state on every level
+      tags:
+        - levels
   /v1/players:
     post:
       description: Creates an account for a client-chosen UUID. 409 ERR_ID_TAKEN if it exists.

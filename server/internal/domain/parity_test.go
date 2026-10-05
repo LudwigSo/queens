@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -505,17 +506,17 @@ func elapsedSweepSet() []float64 {
 	return out
 }
 
-// TestSweepDigest is the real proof of the port. Four million scores over every
-// shipped level are hashed in both runtimes and the digests compared, which
-// answers the "is math.Pow the same as the engine's" question empirically
-// rather than by argument.
+// TestSweepDigest is the real proof of the port. Millions of scores over every
+// (size, difficulty) pair of the shipped levels are hashed in both runtimes and
+// the digests compared, which answers the "is math.Pow the same as the
+// engine's" question empirically rather than by argument.
 func TestSweepDigest(t *testing.T) {
 	raw, err := os.ReadFile(fixturePath("sweep.sha256"))
 	if err != nil {
 		t.Fatalf("read sweep.sha256: %v", err)
 	}
 	var wantHash string
-	var wantCases, wantLevels int
+	var wantCases, wantPairs int
 	for _, line := range strings.Split(strings.ReplaceAll(string(raw), "\r", ""), "\n") {
 		key, value, ok := strings.Cut(line, ":")
 		if !ok {
@@ -526,17 +527,17 @@ func TestSweepDigest(t *testing.T) {
 			wantHash = value
 		case "cases":
 			wantCases, _ = strconv.Atoi(value)
-		case "levels":
-			wantLevels, _ = strconv.Atoi(value)
+		case "pairs":
+			wantPairs, _ = strconv.Atoi(value)
 		}
 	}
 	if wantHash == "" {
 		t.Fatal("sweep.sha256 has no digest")
 	}
 
-	levels := sweepLevels(t)
-	if len(levels) != wantLevels {
-		t.Fatalf("the level file has %d levels, the fixture was generated from %d", len(levels), wantLevels)
+	levels := sweepPairs(t)
+	if len(levels) != wantPairs {
+		t.Fatalf("the level file has %d (size, difficulty) pairs, the fixture was generated from %d", len(levels), wantPairs)
 	}
 
 	h := sha256.New()
@@ -573,7 +574,10 @@ type sweepLevel struct {
 
 // sweepLevels reads the level file in its on-disk order, which is the order the
 // generator walks.
-func sweepLevels(t *testing.T) []sweepLevel {
+// sweepPairs returns the distinct (size, difficulty) pairs of the level file,
+// sorted by size, then difficulty: the list gen_fixtures.gd walks (sweep_pairs).
+// A score depends on a level only through these two values.
+func sweepPairs(t *testing.T) []sweepLevel {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("..", "..", "..", "queens", "levels", "queens.json"))
 	if err != nil {
@@ -588,9 +592,20 @@ func sweepLevels(t *testing.T) []sweepLevel {
 	if err := json.Unmarshal(data, &f); err != nil {
 		t.Fatalf("decode level file: %v", err)
 	}
+	seen := map[sweepLevel]bool{}
 	out := make([]sweepLevel, 0, len(f.Levels))
 	for _, l := range f.Levels {
-		out = append(out, sweepLevel{size: l.Size, difficulty: l.Difficulty})
+		p := sweepLevel{size: l.Size, difficulty: l.Difficulty}
+		if !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].size != out[j].size {
+			return out[i].size < out[j].size
+		}
+		return out[i].difficulty < out[j].difficulty
+	})
 	return out
 }

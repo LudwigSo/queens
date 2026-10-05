@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -522,18 +523,20 @@ func TestBootstrap(t *testing.T) {
 	if cfg["round_best_n"].(float64) != 15 {
 		t.Errorf("league config looks wrong: %v", cfg["round_best_n"])
 	}
-	if len(b["level_meta"].(map[string]any)) != c.svc.LevelCount() {
+	if len(b["level_meta"].(map[string]any)) != c.svc.LoadedLevels() {
 		t.Error("level_meta must cover every level")
 	}
 }
 
-// The solution is stored but must never leave the server.
+// The solution leaves the server in exactly one place: GET /v1/levels, the level
+// download, because the client needs it to mark wrong queens (and the bundled
+// levels already ship it inside the APK). Nothing else may carry board data.
 func TestSolutionNeverLeaks(t *testing.T) {
 	c := newClient(t)
 	c.register("Ann")
 	levels, _ := c.svc.St.Repos().Levels.All(context.Background())
-	for _, path := range []string{"/v1/bootstrap", "/v1/levels/meta",
-		"/v1/levels/" + levels[0].ID + "/leaderboard"} {
+	for _, path := range []string{"/v1/bootstrap", "/v1/levels/meta", "/v1/levels/count", "/v1/levels/ids",
+		"/v1/me/levels", "/v1/levels/" + levels[0].ID + "/leaderboard"} {
 		_, body := c.do(http.MethodGet, path, nil)
 		if bytes.Contains(body, []byte("solution")) || bytes.Contains(body, []byte("regions")) {
 			t.Errorf("%s leaks board data: %s", path, body)
@@ -542,3 +545,93 @@ func TestSolutionNeverLeaks(t *testing.T) {
 }
 
 func mustBody(resp *http.Response, body []byte) []byte { return body }
+
+// The launch-time level sync: count, ids, download.
+func TestLevelSyncOverHTTP(t *testing.T) {
+	c := newClient(t)
+	c.register("Ann")
+	ctx := context.Background()
+	published, err := c.svc.St.Repos().Levels.Published(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, body := c.do(http.MethodGet, "/v1/levels/count", nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("count = %d %s", resp.StatusCode, body)
+	}
+	if n := int(decode(t, body)["count"].(float64)); n != len(published) {
+		t.Errorf("count %d, want %d", n, len(published))
+	}
+
+	resp, body = c.do(http.MethodGet, "/v1/levels/ids", nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("ids = %d %s", resp.StatusCode, body)
+	}
+	ids := decode(t, body)["ids"].([]any)
+	if len(ids) != len(published) || ids[0] != published[0].ID || ids[len(ids)-1] != published[len(published)-1].ID {
+		t.Errorf("ids are not the published levels in game order")
+	}
+
+	resp, body = c.do(http.MethodGet, "/v1/levels?ids="+published[4].ID+","+published[1].ID+",nope", nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("download = %d %s", resp.StatusCode, body)
+	}
+	if cc := resp.Header.Get("Cache-Control"); cc != "private, max-age=86400" {
+		t.Errorf("Cache-Control %q", cc)
+	}
+	got := decode(t, body)["levels"].([]any)
+	if len(got) != 2 {
+		t.Fatalf("download returned %d levels, want 2: %s", len(got), body)
+	}
+	first := got[0].(map[string]any)
+	if first["id"] != published[1].ID || int(first["position"].(float64)) != 2 {
+		t.Errorf("download is not in game order: %v", first["id"])
+	}
+	for _, k := range []string{"id", "position", "size", "regions", "solution", "difficulty", "stars", "seed"} {
+		if _, ok := first[k]; !ok {
+			t.Errorf("a downloaded level is missing %q", k)
+		}
+	}
+
+	many := make([]string, 51)
+	for i := range many {
+		many[i] = published[i].ID
+	}
+	resp, body = c.do(http.MethodGet, "/v1/levels?ids="+strings.Join(many, ","), nil)
+	if resp.StatusCode != 422 {
+		t.Errorf("51 ids = %d %s, want 422", resp.StatusCode, body)
+	}
+}
+
+func TestMyLevelsOverHTTP(t *testing.T) {
+	c := newClient(t)
+	c.register("Ann")
+	resp, body := c.do(http.MethodGet, "/v1/me/levels", nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("me/levels = %d %s", resp.StatusCode, body)
+	}
+	if n := len(decode(t, body)["levels"].(map[string]any)); n != 0 {
+		t.Errorf("a new player has %d level states", n)
+	}
+	lv := c.svc.St.Repos()
+	published, _ := lv.Levels.Published(context.Background())
+	resp, body = c.do(http.MethodPost, "/v1/games", map[string]any{"level_id": published[0].ID})
+	if resp.StatusCode != 201 {
+		t.Fatalf("start = %d %s", resp.StatusCode, body)
+	}
+	_, body = c.do(http.MethodGet, "/v1/me/levels", nil)
+	state, ok := decode(t, body)["levels"].(map[string]any)[published[0].ID].(map[string]any)
+	if !ok {
+		t.Fatalf("the started level is missing: %s", body)
+	}
+	for _, k := range []string{"last_started_at", "plays", "completions", "last_completed_at", "best_time",
+		"best_score", "best_score_time", "best_wrong", "best_result_id", "best_at"} {
+		if _, ok := state[k]; !ok {
+			t.Errorf("level state is missing %q", k)
+		}
+	}
+	if state["plays"].(float64) != 1 {
+		t.Errorf("plays = %v, want 1", state["plays"])
+	}
+}

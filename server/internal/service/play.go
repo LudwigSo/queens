@@ -44,12 +44,15 @@ type StartGameResult struct {
 // validate the level, enforce the server-authoritative cooldown, record the
 // start, join the round, and issue a session.
 func (s *Service) StartGame(ctx context.Context, playerID, levelID string) (*StartGameResult, error) {
-	lv, ok := s.Level(levelID)
+	lv, ok, err := s.levelFor(ctx, levelID)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, domain.Err(404, domain.CodeLevelUnknown)
 	}
 	var out *StartGameResult
-	err := s.St.InTx(ctx, func(ctx context.Context, r store.Repos) error {
+	err = s.St.InTx(ctx, func(ctx context.Context, r store.Repos) error {
 		p, err := s.catchUp(ctx, r, playerID)
 		if err != nil {
 			return err
@@ -388,7 +391,10 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 		}
 	}
 
-	lv, ok := s.Level(levelID)
+	lv, ok, err := s.levelFor(ctx, levelID)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, domain.Err(404, domain.CodeLevelUnknown)
 	}
@@ -541,6 +547,20 @@ func (s *Service) submitInTx(ctx context.Context, r store.Repos, playerID string
 			return &SubmitResult{Body: []byte(stored.ResponseJSON), Replay: true, Decoded: decoded}, nil
 		}
 	} else if err := r.Results.Insert(ctx, rec); err != nil {
+		return nil, err
+	}
+	// The player's own level state counts every accepted game, verified or
+	// not: it is their progress, not a leaderboard. A session-backed start was
+	// already counted by RecordStart, and a forfeit being completed was counted
+	// when the forfeit arrived.
+	startedAt := p.StartedAt
+	if startedAt > now {
+		startedAt = now
+	}
+	if err := r.Levels.ApplyResult(ctx, playerID, levelID, domain.PlayerLevelResult{
+		ResultID: p.ResultID, StartedAt: startedAt, CountPlay: sess == nil && !replaceForfeit,
+		Completed: p.Completed, FinishedAt: finished, Elapsed: elapsed, Score: bd.Score, Wrong: p.WrongPlacements,
+	}); err != nil {
 		return nil, err
 	}
 

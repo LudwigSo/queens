@@ -11,9 +11,11 @@ extends RefCounted
 ##                 played offline on an empty tank, still to be paid back)
 ##   last_game     {level_id, difficulty, started_at} or {} - the last game *started*
 ##   current_game  marker of a running game (so a killed app yields a forfeit) or {}
-##   levels        level id -> {last_started_at, plays, completions, best_time (fastest),
-##                 best_score, best_score_time, best_wrong, best_result_id,
-##                 best_at (all of the highest-scoring run)}
+##   levels        level id -> {last_started_at, plays, completions,
+##                 last_completed_at, best_time (fastest), best_score,
+##                 best_score_time, best_wrong, best_result_id, best_at (all of
+##                 the highest-scoring run)}. With a server this is a cache: the
+##                 server holds the truth (apply_server_level_states).
 ##   results       finished games, newest last, capped
 ##   pending_results  results not yet accepted by the backend
 ##   settings      free-form
@@ -81,6 +83,7 @@ static func level_defaults() -> Dictionary:
 		"last_started_at": 0,
 		"plays": 0,
 		"completions": 0,
+		"last_completed_at": 0,
 		"best_score": 0,
 		"best_time": 0.0,
 		"best_score_time": 0.0,
@@ -386,6 +389,7 @@ func record_result(result: Dictionary, history_cap: int) -> Dictionary:
 		var level_id := str(result["level_id"])
 		outcome["best_time_improved"] = update_best_time(level_id, float(result["elapsed_seconds"]))
 		outcome["best_score_improved"] = update_best_score(level_id, result)
+		_touch_completed(level_id, int(result.get("finished_at", 0)))
 	var results: Array = data["results"]
 	results.append(result)
 	while results.size() > history_cap:
@@ -394,6 +398,50 @@ func record_result(result: Dictionary, history_cap: int) -> Dictionary:
 	data["current_game"] = {}
 	mark_changed()
 	return outcome
+
+
+func _touch_completed(level_id: String, finished_at: int) -> void:
+	var entry := level_entry(level_id)
+	entry["last_completed_at"] = maxi(int(entry["last_completed_at"]), finished_at)
+
+
+## Takes the server's level state as the truth, then replays on top what the
+## server cannot know yet: the results still queued in pending_results and a
+## game running right now. Server is {level id -> LevelState} (Backend).
+##
+## The replay mirrors how the server will count those results when they
+## arrive: a game without a session token was started offline, so its play is
+## not on the server yet; one with a token was counted at its start. A level
+## the server has no row for keeps its local entry: the server has no opinion
+## on it (progress from before the server, or from the offline backend).
+func apply_server_level_states(server: Dictionary) -> void:
+	var levels: Dictionary = data["levels"]
+	for id in server:
+		var entry := level_defaults()
+		var remote: Dictionary = server[id]
+		for key in entry:
+			if remote.has(key):
+				entry[key] = remote[key]
+		levels[str(id)] = entry
+	for r in data["pending_results"]:
+		var level_id := str(r.get("level_id", ""))
+		if not server.has(level_id):
+			continue
+		var entry := level_entry(level_id)
+		if str(r.get("session_token", "")) == "":
+			entry["plays"] = int(entry["plays"]) + 1
+			entry["last_started_at"] = maxi(int(entry["last_started_at"]), int(r.get("started_at", 0)))
+		if bool(r.get("completed", false)):
+			update_best_time(level_id, float(r.get("elapsed_seconds", 0.0)))
+			update_best_score(level_id, r)
+			_touch_completed(level_id, int(r.get("finished_at", 0)))
+	var running: Dictionary = data["current_game"]
+	var running_id := str(running.get("level_id", ""))
+	if server.has(running_id) and str(running.get("session_token", "")) == "":
+		var entry := level_entry(running_id)
+		entry["plays"] = int(entry["plays"]) + 1
+		entry["last_started_at"] = maxi(int(entry["last_started_at"]), int(running.get("started_at", 0)))
+	mark_changed()
 
 
 ## Keeps the highest-scoring completed game per level (ties: fewer wrong

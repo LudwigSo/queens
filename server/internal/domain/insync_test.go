@@ -18,6 +18,6 @@ func TestLeagueFileInSync(t *testing.T) {
 	}
 	strip := func(b []byte) []byte { return bytes.ReplaceAll(b, []byte("\r"), nil) }
 	if !bytes.Equal(strip(want), strip(LeagueConfigBytes())) {
-		t.Fatalf("server/internal/domain/league.json is stale.\nRun: go generate ./... (from server/)")
+		t.Fatalf("server/internal/domain/league.json is stale.\nRun: go run ./internal/levelset/cmd/copylevels (from server/)")
 	}
 }

@@ -1,5 +1,5 @@
 // Command copylevels refreshes the embedded copies of the two files the client
-// owns. Run it with `go generate ./...` after editing queens/levels/queens.json
+// owns. Run it from server/ with `go run ./internal/levelset/cmd/copylevels` after editing queens/levels/queens.json
 // or queens/shared/league.json; TestLevelFileInSync and TestLeagueFileInSync are
 // what force you to.
 package main

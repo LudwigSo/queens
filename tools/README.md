@@ -17,8 +17,10 @@ boards. Run them from the repository root.
 
 * The array order is the order in the game.
 * `id` is a random UUID that never changes. The game stores best times under
-  it, so levels can be inserted anywhere, reordered or removed without
-  breaking saved progress. Regenerating a file keeps the id of every board
+  it, so saved progress survives any change to the file. Once a level is
+  published to the server, though, it is immutable and stays published: the
+  server refuses an edited board, ignores a removed one, and keeps its own
+  order, so new levels belong at the end (`--append`). Regenerating a file keeps the id of every board
   that is already in it (matched up to rotation, mirroring and region
   renaming).
 * `regions` holds the region id of every cell, row-major; `solution` the
@@ -53,8 +55,10 @@ To add levels later without touching the existing ones:
 python tools/gen_boards.py queens/levels/queens.json --append --count 20 --seed 5000 --stars 1:1,2:1,3:1
 ```
 
-To insert a level between two others, move its object in the JSON array; ids
-and progress stay valid.
+To publish them without an app release, import the file into the production
+database: see "Adding levels" in `deploy/README.md`. Reordering the array only
+changes the order inside the bundled file; devices that downloaded the levels
+keep the server's order.
 
 ## Solver and difficulty rating
 

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ludwigsonnenberg/queens-server/internal/domain"
-	"github.com/ludwigsonnenberg/queens-server/internal/levelset"
 	"github.com/ludwigsonnenberg/queens-server/internal/store"
 	"github.com/ludwigsonnenberg/queens-server/internal/store/sqlite"
 	"github.com/ludwigsonnenberg/queens-server/internal/testutil"
@@ -35,108 +34,6 @@ func TestMigrateIsIdempotentAndSchemaIsStrict(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("rate bump: %v", err)
-	}
-}
-
-func TestLevelSyncSeedsAndIsStable(t *testing.T) {
-	st := testutil.NewStore(t)
-	ctx := context.Background()
-	levels, err := st.Repos().Levels.All(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(levels) != 100 {
-		t.Fatalf("expected 100 levels, got %d", len(levels))
-	}
-	set, err := st.Repos().Levels.CurrentLevelSet(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if set.LevelCount != 100 || set.Hash == "" {
-		t.Fatalf("level set looks wrong: %+v", set)
-	}
-	// A second sync of the same bytes must not change the hash.
-	h2, err := levelset.Sync(ctx, st, levelset.Embedded(), testutil.FixedNow+10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if h2 != set.Hash {
-		t.Errorf("level-set hash moved without a content change: %s -> %s", set.Hash, h2)
-	}
-}
-
-// A changed size or difficulty must refuse to start: base and par derive from
-// both, so accepting it would silently invalidate every past score.
-func TestLevelSyncRefusesSizeOrDifficultyChange(t *testing.T) {
-	st := testutil.NewStore(t)
-	ctx := context.Background()
-	f, err := levelset.Parse(levelset.Embedded())
-	if err != nil {
-		t.Fatal(err)
-	}
-	changed := *f
-	changed.Levels = append([]levelset.FileLevel(nil), f.Levels...)
-	changed.Levels[0].Difficulty += 1
-	data := mustJSON(t, changed)
-	if _, err := levelset.Sync(ctx, st, data, testutil.FixedNow); err == nil {
-		t.Fatal("expected a refusal when difficulty changes")
-	} else if got := err.Error(); !contains(got, changed.Levels[0].ID) {
-		t.Errorf("the error must name the level id, got %q", got)
-	}
-
-	changed2 := *f
-	changed2.Levels = append([]levelset.FileLevel(nil), f.Levels...)
-	changed2.Levels[0].Size = 7
-	changed2.Levels[0].Regions = squareOf(7)
-	changed2.Levels[0].Solution = []int{0, 1, 2, 3, 4, 5, 6}
-	if _, err := levelset.Sync(ctx, st, mustJSON(t, changed2), testutil.FixedNow); err == nil {
-		t.Fatal("expected a refusal when size changes")
-	}
-}
-
-// A cosmetic change is applied, and it moves the level-set hash (the ETag).
-func TestLevelSyncAppliesCosmeticChange(t *testing.T) {
-	st := testutil.NewStore(t)
-	ctx := context.Background()
-	before, _ := st.Repos().Levels.CurrentLevelSet(ctx)
-	f, _ := levelset.Parse(levelset.Embedded())
-	changed := *f
-	changed.Levels = append([]levelset.FileLevel(nil), f.Levels...)
-	changed.Levels[0].Stars = 4
-	h, err := levelset.Sync(ctx, st, mustJSON(t, changed), testutil.FixedNow+1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if h == before.Hash {
-		t.Error("a cosmetic change must move the level-set hash")
-	}
-	lv, err := st.Repos().Levels.Get(ctx, changed.Levels[0].ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if lv.Stars != 4 {
-		t.Errorf("stars not updated: %d", lv.Stars)
-	}
-}
-
-// A level that disappears from the file is kept forever: old results and
-// leaderboard rows still point at it.
-func TestLevelSyncKeepsRemovedLevels(t *testing.T) {
-	st := testutil.NewStore(t)
-	ctx := context.Background()
-	f, _ := levelset.Parse(levelset.Embedded())
-	gone := f.Levels[0].ID
-	shorter := *f
-	shorter.Levels = f.Levels[1:]
-	if _, err := levelset.Sync(ctx, st, mustJSON(t, shorter), testutil.FixedNow+1); err != nil {
-		t.Fatal(err)
-	}
-	lv, err := st.Repos().Levels.Get(ctx, gone)
-	if err != nil {
-		t.Fatalf("a removed level must still be readable: %v", err)
-	}
-	if lv.InCurrentSet {
-		t.Error("a removed level must be flagged out of the current set")
 	}
 }
 

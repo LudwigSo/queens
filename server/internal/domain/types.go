@@ -94,8 +94,12 @@ type Level struct {
 	ContentHash  string
 	ParOverride  *float64
 	InCurrentSet bool
-	CreatedAt    int64
-	UpdatedAt    int64
+	// Position is the order clients show the level in: 1, 2, ... in import
+	// order. 0 means never published (a level dropped from the file before
+	// imports became append-only); clients never see those.
+	Position  int
+	CreatedAt int64
+	UpdatedAt int64
 }
 
 // Par returns the level's par, preferring a server-side override. The client
@@ -116,11 +120,38 @@ type LevelSet struct {
 	ImportedAt int64
 }
 
+// PlayerLevel is one player's state on one level. It is the source of truth the
+// client's save.json `levels` entry mirrors (queens/scripts/save_data.gd).
+// last_started_at and plays are the cooldown anchor; the rest is derived from
+// every accepted result, verified or not, because it is the player's own
+// progress rather than a leaderboard.
 type PlayerLevel struct {
 	PlayerID      string
 	LevelID       string
 	LastStartedAt int64
 	Plays         int
+
+	Completions     int
+	LastCompletedAt int64
+	BestTime        float64 // fastest completed run; 0 = none
+	BestScore       int     // best run in (score DESC, wrong ASC, time ASC) order
+	BestScoreTime   float64
+	BestWrong       int
+	BestResultID    string
+	BestAt          int64
+}
+
+// PlayerLevelResult is what one accepted result contributes to PlayerLevel.
+type PlayerLevelResult struct {
+	ResultID  string
+	StartedAt int64
+	// CountPlay is true when no session counted the start: an offline game.
+	CountPlay  bool
+	Completed  bool
+	FinishedAt int64
+	Elapsed    float64
+	Score      int
+	Wrong      int
 }
 
 // CooldownRemaining mirrors queens/scripts/cooldown.gd: clamped into

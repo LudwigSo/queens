@@ -111,6 +111,44 @@ type LeaderboardOutput struct {
 	Body         service.LeaderboardView
 }
 
+type LevelCountInput struct{ AuthHeader }
+
+type LevelCountOutput struct {
+	Body struct {
+		Count      int   `json:"count" doc:"Published levels. Append-only: equal to the client's count means the same set."`
+		ServerTime int64 `json:"server_time"`
+	}
+}
+
+type LevelIDsInput struct{ AuthHeader }
+
+type LevelIDsOutput struct {
+	Body struct {
+		IDs []string `json:"ids" doc:"Every published level id, in game order."`
+	}
+}
+
+type LevelsInput struct {
+	AuthHeader
+	IDs []string `query:"ids" maxItems:"50" doc:"Comma-separated level ids, at most 50. Unknown ids are skipped."`
+}
+
+type LevelsOutput struct {
+	CacheControl string `header:"Cache-Control"`
+	Body         struct {
+		Levels []service.LevelView `json:"levels"`
+	}
+}
+
+type MyLevelsInput struct{ AuthHeader }
+
+type MyLevelsOutput struct {
+	CacheControl string `header:"Cache-Control"`
+	Body         struct {
+		Levels map[string]service.LevelState `json:"levels" doc:"level id -> my state on it; levels never started are absent."`
+	}
+}
+
 type LevelMetaInput struct {
 	AuthHeader
 	IfNoneMatch string `header:"If-None-Match"`
@@ -259,7 +297,7 @@ func (s *Server) register() {
 		out.Body.Profile = *prof
 		out.Body.LeagueConfig = json.RawMessage(domain.LeagueConfigBytes())
 		out.Body.ConfigHash = s.Svc.LeagueHash
-		out.Body.LevelSetHash = s.Svc.LevelSetHash
+		out.Body.LevelSetHash = meta.LevelSetHash
 		out.Body.CooldownSeconds = s.Cfg.CooldownSeconds
 		out.Body.LevelMeta = meta.Levels
 		out.Body.Standing = standing
@@ -417,6 +455,96 @@ func (s *Server) register() {
 		}
 		return &LevelMetaOutput{Status: http.StatusOK, ETag: etag,
 			CacheControl: "private, no-cache", Body: view}, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "level-count", Method: http.MethodGet, Path: "/v1/levels/count",
+		Summary: "How many levels are published",
+		Description: "Step one of the launch-time level sync. Levels are append-only and immutable, " +
+			"so a client whose count matches has the same set.",
+		Tags: []string{"levels"},
+	}, func(ctx context.Context, in *LevelCountInput) (*LevelCountOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.readsP, p.ID); err != nil {
+			return nil, err
+		}
+		n, err := s.Svc.LevelCount(ctx)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		out := &LevelCountOutput{}
+		out.Body.Count = n
+		out.Body.ServerTime = s.Svc.Clock.Now()
+		return out, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "level-ids", Method: http.MethodGet, Path: "/v1/levels/ids",
+		Summary: "Every published level id, in game order", Tags: []string{"levels"},
+	}, func(ctx context.Context, in *LevelIDsInput) (*LevelIDsOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.readsP, p.ID); err != nil {
+			return nil, err
+		}
+		ids, err := s.Svc.LevelIDs(ctx)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		out := &LevelIDsOutput{}
+		out.Body.IDs = ids
+		return out, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "get-levels", Method: http.MethodGet, Path: "/v1/levels",
+		Summary: "Download levels by id",
+		Description: "Full boards including the solution, which the client needs to mark wrong queens. " +
+			"Boards never change, so the response is cacheable for a day.",
+		Tags: []string{"levels"},
+	}, func(ctx context.Context, in *LevelsInput) (*LevelsOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.readsP, p.ID); err != nil {
+			return nil, err
+		}
+		levels, err := s.Svc.LevelsByID(ctx, in.IDs)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		out := &LevelsOutput{CacheControl: "private, max-age=86400"}
+		out.Body.Levels = levels
+		return out, nil
+	})
+
+	huma.Register(a, huma.Operation{
+		OperationID: "my-levels", Method: http.MethodGet, Path: "/v1/me/levels",
+		Summary: "My state on every level",
+		Description: "The source of truth for the client's per-level progress. Derived from every accepted " +
+			"result, verified or not; a client replays its unsent results on top.",
+		Tags: []string{"levels"},
+	}, func(ctx context.Context, in *MyLevelsInput) (*MyLevelsOutput, error) {
+		p, err := s.auth(ctx, in.Authorization)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.limit(s.Limits.readsP, p.ID); err != nil {
+			return nil, err
+		}
+		states, err := s.Svc.MyLevelStates(ctx, p.ID)
+		if err != nil {
+			return nil, errorOf(err)
+		}
+		out := &MyLevelsOutput{CacheControl: "private, no-store"}
+		out.Body.Levels = states
+		return out, nil
 	})
 
 	huma.Register(a, huma.Operation{

@@ -35,6 +35,8 @@ var result_history_cap: int = 500
 var save_path: String = "user://save.json"
 var legacy_cfg_path: String = "user://progress.cfg"
 var backend_path: String = "user://backend_local.json"
+## Levels downloaded from the server since the bundled file (LevelSync).
+var level_cache_path: String = "user://levels_cache.json"
 
 ## League (see scripts/league_rules.gd). A ranked tier plays in rounds of
 ## `round_days` days; the round score is the sum of the best `round_best_n`
