@@ -59,7 +59,7 @@ var league: Dictionary = LeagueConfigFile.load_default()
 ## Release builds get SERVER_URL_RELEASE, everything else (the editor, the
 ## headless test suite, debug APKs) stays offline, so a test run can never
 ## reach a real server. QUEENS_SERVER_URL overrides both on desktop.
-const SERVER_URL_RELEASE := ""
+const SERVER_URL_RELEASE := "https://www.ludwigso.de/queens/api"
 const SERVER_URL_DEBUG := ""
 var server_url: String = _default_server_url()
 

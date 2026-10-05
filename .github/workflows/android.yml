@@ -1,9 +1,28 @@
 name: Android APK
 
+# Two callers:
+#   * push to main / manual -- build and sign an APK as a CI artifact only.
+#   * the Release workflow  -- the same build, published as a GitHub release.
+# The version is an input so that the release owns the numbering; a CI build
+# gets an obviously-not-a-release 0.0.<run> instead.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Marketing version, e.g. 1.0.9
+        type: string
+        required: true
+      version_code:
+        description: Android versionCode; must only ever increase
+        type: string
+        required: true
+      publish:
+        description: Create the GitHub release
+        type: boolean
+        default: false
 
 env:
   GODOT_VERSION: 4.7.1
@@ -14,6 +33,9 @@ jobs:
     timeout-minutes: 40
     permissions:
       contents: write
+    env:
+      VERSION: ${{ inputs.version || format('0.0.{0}', github.run_number) }}
+      VERSION_CODE: ${{ inputs.version_code || github.run_number }}
     steps:
       - uses: actions/checkout@v5
 
@@ -68,18 +90,21 @@ jobs:
           godot --headless --import
           godot --headless --script tests/run_tests.gd
 
-      - name: Set version from run number
+      - name: Stamp the version
         working-directory: queens
         run: |
-          sed -i "s|^version/code=.*|version/code=${{ github.run_number }}|" export_presets.cfg
-          sed -i "s|^version/name=.*|version/name=\"1.0.${{ github.run_number }}\"|" export_presets.cfg
+          sed -i "s|^version/code=.*|version/code=$VERSION_CODE|" export_presets.cfg
+          sed -i "s|^version/name=.*|version/name=\"$VERSION\"|" export_presets.cfg
           # The build number reaches the server with every result, so a bug can
           # be traced to the build that produced it.
-          sed -i "s|^var client_version: String = .*|var client_version: String = \"1.0.${{ github.run_number }}\"|" scripts/config.gd
-          # Optional: point a build at a server without a commit.
+          sed -i "s|^var client_version: String = .*|var client_version: String = \"$VERSION\"|" scripts/config.gd
+          # The production URL is committed in config.gd; this only overrides
+          # it, so a build can be pointed at a staging server without a commit.
           if [ -n "${{ vars.QUEENS_SERVER_URL }}" ]; then
             sed -i "s|^const SERVER_URL_RELEASE := .*|const SERVER_URL_RELEASE := \"${{ vars.QUEENS_SERVER_URL }}\"|" scripts/config.gd
           fi
+          grep -E '^(version/code|version/name)=' export_presets.cfg
+          grep -E '^(var client_version|const SERVER_URL_RELEASE)' scripts/config.gd
 
       - name: Export signed APK
         working-directory: queens
@@ -89,10 +114,16 @@ jobs:
           godot --headless --import
           godot --headless --install-android-build-template --export-release Android build/queens.apk
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: queens-apk-${{ env.VERSION }}
+          path: queens/build/queens.apk
+
       - name: Publish release
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.0.${{ github.run_number }} queens/build/queens.apk \
-            --title "Queens 1.0.${{ github.run_number }}" \
-            --notes "Automated build from ${{ github.sha }}"
+          gh release create "v$VERSION" queens/build/queens.apk \
+            --title "Queens $VERSION" \
+            --notes "Automated release from ${{ github.sha }}"

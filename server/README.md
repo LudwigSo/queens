@@ -70,7 +70,7 @@ Environment variables only.
 | `QUEENS_TRUST_PROXY` | `false` | Honour `X-Forwarded-For`. Only behind a proxy you control, or every rate limit is spoofable with a header. |
 | `QUEENS_COOLDOWN_SECONDS` | `604800` | |
 | `QUEENS_SESSION_TTL` | `21600` | Freshness only. A session is accepted for 30 days. |
-| `QUEENS_NO_SESSION_GRACE_UNTIL` | `0` | Unix time before which a result with no session is not flagged. Set it at rollout so the queue built up by pre-server clients does not flag honest players. |
+| `QUEENS_NO_SESSION_GRACE_UNTIL` | `0` | Unix time before which a result with no session is not flagged. Production sets it in the future, i.e. off: offline play is supported, and at weight 8 against a threshold of 15 the second offline game would shadow-exclude an honest player. See `../deploy/README.md`. |
 | `QUEENS_BACKUP_DIR` | unset | Enables the nightly backup |
 | `QUEENS_BACKUP_HOUR_UTC` | `3` | |
 
@@ -88,6 +88,18 @@ every score ever recorded on that level. Give the changed board a new id
 instead. Deploy the server before shipping a client with new levels; an old
 server answers `ERR_LEVEL_UNKNOWN` and the client falls back to offline play for
 that level rather than blocking the game.
+
+## Deployment
+
+One manually triggered pipeline, described in `../deploy/README.md`: merge
+`main` into `release` and the server goes to Uberspace at
+`https://www.ludwigso.de/queens/api` before the APK that was built against it
+is published.
+
+The binary is mounted behind a path that the reverse proxy strips, so there is
+no base-path option here and the server is unaware of the prefix. It is a
+single instance on purpose: the rate limiters are in-process and the write pool
+holds one connection.
 
 ## Tests
 

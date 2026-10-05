@@ -1,5 +1,5 @@
 // Package sqlite is the SQLite implementation of store.Store, on the pure-Go
-// modernc.org/sqlite driver (no cgo, so GOOS=linux GOARCH=arm64 go build just
+// modernc.org/sqlite driver (no cgo, so GOOS=linux GOARCH=amd64 go build just
 // works from a Windows dev box).
 package sqlite
 

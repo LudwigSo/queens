@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,19 +48,40 @@ func accessLog(next http.Handler) http.Handler {
 	})
 }
 
-// clientIP honours X-Forwarded-For only behind a trusted proxy. Without that
-// check every limit would be spoofable with a header.
+// clientIP resolves the address the rate limiters key on.
+//
+// Behind a trusted proxy this reads the RIGHT-most X-Forwarded-For element,
+// not the left-most. A reverse proxy appends the peer it saw to whatever the
+// client sent, so the left-most element is whatever the caller put there:
+// keying on it would let anyone on the internet bypass the registration limit
+// with a rotating header, lock a victim's address out of registering, and
+// allocate a limiter bucket per junk value until the process runs out of
+// memory. The right-most element is the one the proxy itself wrote, and with
+// exactly one hop in front of us that is the real peer.
+//
+// The result must parse as an IP. Anything else falls back to RemoteAddr,
+// which bounds the key space to real addresses.
 func clientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if v := r.Header.Get("X-Forwarded-For"); v != "" {
-			for i := 0; i < len(v); i++ {
-				if v[i] == ',' {
-					return trimSpace(v[:i])
-				}
-			}
-			return trimSpace(v)
-		}
+	peer := remoteHost(r)
+	if !trustProxy {
+		return peer
 	}
+	v := r.Header.Get("X-Forwarded-For")
+	if v == "" {
+		return peer
+	}
+	last := v
+	if i := strings.LastIndexByte(v, ','); i >= 0 {
+		last = v[i+1:]
+	}
+	last = trimSpace(last)
+	if net.ParseIP(last) == nil {
+		return peer
+	}
+	return last
+}
+
+func remoteHost(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr

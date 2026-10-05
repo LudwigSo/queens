@@ -49,16 +49,18 @@ jobs:
           go run ./cmd/queensd openapi -o "$RUNNER_TEMP/openapi.yaml"
           diff -u openapi.yaml "$RUNNER_TEMP/openapi.yaml"
 
+      # Uberspace is x86_64; the same line the deploy workflow runs, here so a
+      # break shows up on main rather than in the middle of a release.
       - name: Cross-compile for the target
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
             -ldflags="-s -w -X main.version=${{ github.sha }}" \
-            -o dist/queensd-linux-arm64 ./cmd/queensd
+            -o dist/queensd-linux-amd64 ./cmd/queensd
 
       - uses: actions/upload-artifact@v4
         with:
-          name: queensd-linux-arm64
-          path: server/dist/queensd-linux-arm64
+          name: queensd-linux-amd64
+          path: server/dist/queensd-linux-amd64
 
   fixtures:
     name: Fixtures and client suite

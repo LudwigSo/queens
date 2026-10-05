@@ -896,19 +896,34 @@ and write down:
 - the client's local `friend_code_for()` becomes dead once codes come from the
   server — decide whether to delete it or keep it as an offline placeholder
 
-### OPEN-4 (blocking before launch, not before coding): no hosting decision
+### OPEN-4 (resolved): hosting
 
-"Single binary, no Docker" is decided; **where it runs is not.** Nothing in either
-pass covers:
-- **TLS.** Bearer tokens and nicknames go over the wire. Caddy or nginx in front,
-  or `autocert` in-process? A reverse proxy also changes the `X-Forwarded-For`
-  trust decision in §7.4.
-- a domain name, and how `GameConfig.server_url` is configured per build
-  (debug → localhost, release → production) given the CI `sed`-patches
-  `version/code` already
-- systemd unit, volume/backup location, restore drill
-- what happens when the server is down: the client must degrade to offline, which
-  §8.7 covers for `start_game` but not for the league and leaderboard screens
+Uberspace 7, the shared account that already serves `www.ludwigso.de`. The
+pipeline and the runbook are in `deploy/`; what was undecided here resolved as:
+
+- **TLS** is Uberspace's. Their frontend terminates it and proxies to a local
+  port, so no Caddy, no nginx, no `autocert`. That settles §7.4 the other way
+  too: `QUEENS_TRUST_PROXY=true`, and `clientIP` takes the **right-most**
+  `X-Forwarded-For` element, because the proxy appends the peer it saw to
+  whatever the caller sent and the left-most element is therefore
+  attacker-chosen. chi's `RealIP` is gone for the same reason.
+- **The path.** `uberspace web backend set ... --remove-prefix` strips
+  `/queens/api` before forwarding, so the server keeps its own `/v1`,
+  `/healthz` and `/readyz` and needs no base-path option. `/docs` and
+  `/openapi` do not survive the prefix; nothing uses them.
+- **`GameConfig.server_url`** is committed in `config.gd`;
+  `vars.QUEENS_SERVER_URL` still overrides it for a staging build.
+- **Service, volume, backups, restore.** supervisord rather than systemd (a
+  shared host has no systemd for users); `~/queens/queens.db`, nightly
+  `VACUUM INTO` copies plus a pre-deploy snapshot in `~/queens/backups`, and a
+  restore drill in `deploy/README.md`. Rollback across a migration is the one
+  sharp edge: forward-only migrations mean the old binary starts happily
+  against a newer schema, so that case is a restore, not a symlink swap.
+- **Release ordering** is enforced by the pipeline: the server deploys and
+  smoke-tests before the APK is published.
+
+Still open, and not a hosting question: what the client shows when the server
+is down. §8.7 covers `start_game`; the league and leaderboard screens do not.
 
 ### OPEN-5: the OpenAPI spec itself does not exist
 

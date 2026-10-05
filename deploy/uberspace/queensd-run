@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Launcher for the supervisord service. The environment lives in a 0600 file
+# rather than the ini because supervisord runs the whole ini through Python
+# %-interpolation and splits values on commas, which silently corrupts a
+# base64 pepper, and because `supervisorctl` would print it back.
+#
+# The last line MUST be an exec. Without it supervisord's child is this shell,
+# SIGTERM is never forwarded, and the SIGKILL at stopwaitsecs leaves an orphaned
+# queensd holding the port and the single SQLite write connection.
+set -euo pipefail
+set -a
+# shellcheck disable=SC1091
+. "$HOME/etc/queensd.env"
+set +a
+exec "$HOME/bin/queensd" serve
