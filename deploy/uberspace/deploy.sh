@@ -42,13 +42,28 @@ chmod 700 "$HOME/queens" "$BACKUPS"
 [ -f "$STAGE/queensd" ] || die "no staged binary at $STAGE/queensd"
 
 # The port is defined once in bootstrap.sh; everything else asserts against it.
+#
+# Finding the CLI matters: over `ssh host bash -s` the shell is non-interactive
+# with a reduced PATH, so a bare `command -v` can come up empty on the very
+# host this check exists for -- and the one guard against a routing
+# misconfiguration would then switch itself off without failing anything.
+uberspace_cli=""
 if command -v uberspace >/dev/null 2>&1; then
-  if ! uberspace web backend list | grep -F "$QUEENS_BACKEND_PATH" | grep -q ":$QUEENS_PORT"; then
-    uberspace web backend list || true
+  uberspace_cli="uberspace"
+elif [ -x /usr/local/bin/uberspace ]; then
+  uberspace_cli=/usr/local/bin/uberspace
+fi
+
+if [ -n "$uberspace_cli" ]; then
+  if ! "$uberspace_cli" web backend list | grep -F "$QUEENS_BACKEND_PATH" | grep -q ":$QUEENS_PORT"; then
+    "$uberspace_cli" web backend list || true
     die "no web backend for $QUEENS_BACKEND_PATH on port $QUEENS_PORT. Run deploy/uberspace/bootstrap.sh first."
   fi
+  echo "ok: $QUEENS_BACKEND_PATH is routed to port $QUEENS_PORT"
+elif [ -d /var/www/virtual ] || [ -n "${UBERSPACE_USER:-}" ]; then
+  die "this looks like an Uberspace host but the uberspace CLI is not on PATH; refusing to skip the web-backend check"
 else
-  echo "note: no uberspace CLI here, skipping the web-backend check"
+  echo "note: not an Uberspace host, skipping the web-backend check"
 fi
 
 # ---------------------------------------------------------------- stage
