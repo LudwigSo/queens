@@ -3,14 +3,15 @@ extends Node
 ##
 ## Streams live in assets/audio/<name>.wav (or .ogg) and are loaded lazily; a
 ## missing file is a silent no-op, so headless tests and unfinished asset sets
-## never error. Buses: Master / Music / SFX (default_bus_layout.tres).
+## never error. Buses: Master / Music / SFX (default_bus_layout.tres); the two
+## volume settings drive the Music and SFX bus volumes.
 
 const SFX_DIR := "res://assets/audio/"
 const POOL_SIZE := 8
 const MUSIC_DB := -12.0
 
-var sfx_enabled: bool = true
-var music_enabled: bool = true
+var sfx_volume: float = 0.5
+var music_volume: float = 0.0
 var haptics_enabled: bool = true
 
 var _pool: Array[AudioStreamPlayer] = []
@@ -32,17 +33,28 @@ func _ready() -> void:
 	add_child(_music)
 
 
-## Applies persisted settings ({sfx, music, haptics}).
+## Applies persisted settings ({sfx_volume, music_volume, haptics}).
 func apply_settings(settings: Dictionary) -> void:
-	sfx_enabled = bool(settings.get("sfx", true))
-	music_enabled = bool(settings.get("music", true))
+	sfx_volume = clampf(float(settings.get("sfx_volume", 0.5)), 0.0, 1.0)
+	music_volume = clampf(float(settings.get("music_volume", 0.0)), 0.0, 1.0)
 	haptics_enabled = bool(settings.get("haptics", true))
+	_set_bus_volume("SFX", sfx_volume)
+	_set_bus_volume("Music", music_volume)
 	if _music == null:
 		return
-	if not music_enabled:
+	if music_volume <= 0.0:
 		stop_music()
 	elif _music.stream != null and not _music.playing:
 		_music.play()
+
+
+func _set_bus_volume(bus: String, volume: float) -> void:
+	var idx := AudioServer.get_bus_index(bus)
+	if idx < 0:
+		return
+	AudioServer.set_bus_mute(idx, volume <= 0.0)
+	if volume > 0.0:
+		AudioServer.set_bus_volume_linear(idx, volume)
 
 
 func _stream(name: StringName) -> AudioStream:
@@ -60,7 +72,7 @@ func _stream(name: StringName) -> AudioStream:
 
 ## Plays a one-shot effect with slight pitch variation.
 func play(name: StringName, pitch_jitter: float = 0.05, db: float = 0.0, pitch: float = 1.0) -> void:
-	if not sfx_enabled or _pool.is_empty():
+	if sfx_volume <= 0.0 or _pool.is_empty():
 		return
 	var stream := _stream(name)
 	if stream == null:
@@ -79,7 +91,7 @@ func play_music(name: StringName = &"music_loop") -> void:
 		return
 	if _music.stream != stream:
 		_music.stream = stream
-	if music_enabled and not _music.playing:
+	if music_volume > 0.0 and not _music.playing:
 		_music.volume_db = MUSIC_DB
 		_music.play()
 

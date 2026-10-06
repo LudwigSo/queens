@@ -182,6 +182,10 @@ func _write_misc_svgs() -> void:
 	_write(UI_DIR + "toggle_off.svg", """<svg xmlns="http://www.w3.org/2000/svg" width="72" height="40" viewBox="0 0 72 40">
 <rect x="0" y="0" width="72" height="40" rx="20" fill="%s"/><circle cx="20" cy="20" r="15" fill="#fff"/></svg>
 """ % _hex(Ui.OUTLINE))
+	# Slider knob for HSlider (settings volumes).
+	_write(UI_DIR + "slider_grabber.svg", """<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+<circle cx="20" cy="20" r="16" fill="#fff" stroke="%s" stroke-width="4"/></svg>
+""" % _hex(Ui.PRIMARY))
 	# A soft radial glow used behind hero content.
 	_write(UI_DIR + "glow.svg", """<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
 <defs><radialGradient id="r"><stop offset="0" stop-color="%s" stop-opacity="0.55"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient></defs>
@@ -401,3 +405,15 @@ func _build_inputs(theme: Theme) -> void:
 	theme.set_stylebox("fill", "ProgressBar", _flat(Ui.PRIMARY, Ui.RADIUS_PILL))
 	theme.set_font_size("font_size", "ProgressBar", Ui.FONT_CAPTION)
 	theme.set_color("font_color", "ProgressBar", Ui.INK)
+
+	# HSlider (settings volumes): a pill track, filled in primary up to the knob.
+	theme.set_stylebox("slider", "HSlider", _margins(_flat(Ui.OUTLINE, Ui.RADIUS_PILL), 0, 5, 0, 5))
+	theme.set_stylebox("grabber_area", "HSlider", _margins(_flat(Ui.PRIMARY, Ui.RADIUS_PILL), 0, 5, 0, 5))
+	theme.set_stylebox("grabber_area_highlight", "HSlider", _margins(_flat(Ui.PRIMARY, Ui.RADIUS_PILL), 0, 5, 0, 5))
+	if ResourceLoader.exists(UI_DIR + "slider_grabber.svg", "Texture2D"):
+		var knob: Texture2D = load(UI_DIR + "slider_grabber.svg")
+		theme.set_icon("grabber", "HSlider", knob)
+		theme.set_icon("grabber_highlight", "HSlider", knob)
+		theme.set_icon("grabber_disabled", "HSlider", knob)
+	else:
+		_missing_textures = true
