@@ -140,6 +140,20 @@ static func level_cards(levels: Array, save: SaveData, catalog: LevelCatalog, no
 	return cards
 
 
+## The overview's filter: cards of one board size (0 = any) whose level number
+## starts with the typed digits. Cards keep their game order, so "12" lists
+## 12 first, then 120-129, 1200...
+static func filter_level_cards(cards: Array, size_filter: int, query: String) -> Array:
+	var shown: Array = []
+	for c in cards:
+		if size_filter != 0 and int(c["size"]) != size_filter:
+			continue
+		if query != "" and not str(int(c["level_no"])).begins_with(query):
+			continue
+		shown.append(c)
+	return shown
+
+
 static func level_detail(lv: Dictionary, board_data: Dictionary, scope: String, save: SaveData, catalog: LevelCatalog, now: int, cooldown_seconds: int) -> Dictionary:
 	var id := str(lv["id"])
 	var entries: Array = []

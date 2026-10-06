@@ -80,10 +80,7 @@ func show_league() -> void:
 ## {locked, text} for the card of the given level index (display order).
 func level_card(index: int) -> Dictionary:
 	var id: String = str(main.levels[index]["id"])
-	var card = main.level_select.card_for(id)
-	if card == null:
-		return {}
-	return {"locked": card.locked, "text": card.text_summary()}
+	return main.level_select.card_summary(id)
 
 
 func scroll_levels_to(index: int) -> void:

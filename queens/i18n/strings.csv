@@ -144,6 +144,8 @@ LEVELS_TITLE,All levels,Alle Level
 LEVELS_FILTER_ALL,All,Alle
 LEVELS_CARD_META,%s · diff %d,%s · Schwierigkeit %d
 LEVELS_NOT_PLAYED,Not played yet,Noch nicht gespielt
+LEVELS_SEARCH_PLACEHOLDER,Search level number,Levelnummer suchen
+LEVELS_NO_MATCH,No level with that number,Kein Level mit dieser Nummer
 DETAIL_BEST_SCORE,Best %s · %s,Bester %s · %s
 DETAIL_BEST_TIME,Best %s,Beste %s
 DETAIL_META,Difficulty %d · target %s · %d players,Schwierigkeit %d · Ziel %s · %d Spieler
