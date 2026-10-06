@@ -479,6 +479,8 @@ func _play_step(step: int) -> void:
 
 func _show_level_select(back: bool = false) -> void:
 	_pause_game(false)
+	if not back:
+		level_select.reset_search()
 	level_select.refresh(Views.level_cards(levels, App.save, App.catalog, App.now(), App.config.cooldown_seconds))
 	if back:
 		router.go_back_to("levels")
