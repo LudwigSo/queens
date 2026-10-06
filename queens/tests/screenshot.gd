@@ -206,6 +206,14 @@ func _ready() -> void:
 	await _frames(2)
 	print("settings screen = %s" % main.debug.screen())
 	_save(out_dir + "15_settings.png")
+	# A long toast: it has to wrap at the screen width, not one glyph per line.
+	# Instant motion would hide it on the next frame, so it runs in real time here.
+	Motion.instant = false
+	main.toast.show_message(Loc.t("TOAST_OFFLINE"), "success")
+	await get_tree().create_timer(0.6).timeout
+	_save(out_dir + "15b_toast.png")
+	await get_tree().create_timer(2.4).timeout
+	Motion.instant = true
 	main.debug.open_tutorial(2)
 	await _frames(2)
 	print("tutorial step = %d, screen = %s" % [main.debug.tutorial_step(), main.debug.screen()])

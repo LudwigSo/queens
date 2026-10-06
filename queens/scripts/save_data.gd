@@ -64,12 +64,13 @@ static func auth_defaults() -> Dictionary:
 
 
 ## Player settings, all with a default so screens never check for keys.
-## `language` is "" (follow the device language), "en" or "de".
+## `language` is "" (follow the device language), "en" or "de". The volumes
+## are linear, 0..1.
 static func settings_defaults() -> Dictionary:
 	return {
 		"language": "",
-		"sfx": true,
-		"music": true,
+		"sfx_volume": 0.5,
+		"music_volume": 0.0,
 		"haptics": true,
 		"reduced_motion": false,
 		"mistake_alerts": true,
@@ -176,6 +177,13 @@ static func migrate(dict: Dictionary, cfg: GameConfig) -> Dictionary:
 	# Fill missing settings and per-level fields so callers can index without checks.
 	if not dict.get("settings") is Dictionary:
 		dict["settings"] = {}
+	# The sound on/off toggles became volumes: a muted player stays muted, and
+	# music starts at 0 for everyone.
+	var st: Dictionary = dict["settings"]
+	if st.has("sfx") and not bool(st["sfx"]) and not st.has("sfx_volume"):
+		st["sfx_volume"] = 0.0
+	st.erase("sfx")
+	st.erase("music")
 	for key in settings_defaults():
 		if not dict["settings"].has(key):
 			dict["settings"][key] = settings_defaults()[key]

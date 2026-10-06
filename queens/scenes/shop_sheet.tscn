@@ -117,12 +117,6 @@ theme_type_variation = &"ButtonGold"
 text = "SHOP_UNLIMITED"
 icon = ExtResource("4_inf")
 
-[node name="RestoreButton" type="Button" parent="Panel/VBox"]
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
-theme_type_variation = &"ButtonGhostMuted"
-text = "SHOP_RESTORE"
-
 [node name="StatusLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"LabelCaption"
