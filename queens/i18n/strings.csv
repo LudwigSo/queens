@@ -129,15 +129,11 @@ SHOP_BLOCKED,You need 1 energy to play. Watch an ad or go unlimited.,Du brauchst
 SHOP_WATCH_AD,Watch an ad · +%d,Werbung ansehen · +%d
 SHOP_NO_AD,No ad right now,Gerade keine Werbung
 SHOP_UNLIMITED,Unlimited · %s,Unbegrenzt · %s
-SHOP_RESTORE,Restore purchase,Kauf wiederherstellen
 SHOP_STATUS_LOADING_AD,Loading ad…,Werbung wird geladen…
 SHOP_STATUS_CONTACTING,Contacting the store…,Verbinde mit dem Store…
-SHOP_STATUS_RESTORING,Restoring…,Wiederherstellen…
 SHOP_STATUS_THANKS,Thanks! Energy added.,Danke! Energie gutgeschrieben.
 SHOP_STATUS_NO_REWARD,No reward this time.,Diesmal ohne Belohnung.
 SHOP_STATUS_UNLIMITED,Unlimited energy unlocked.,Unbegrenzte Energie freigeschaltet.
-SHOP_STATUS_RESTORED,Purchase restored.,Kauf wiederhergestellt.
-SHOP_STATUS_NOTHING,Nothing to restore.,Nichts wiederherzustellen.
 SHOP_AD_PLAYING,Ad playing…,Werbung läuft…
 SHOP_AD_PLAYING_FAKE,Fake ad playing… %d,Test-Werbung läuft… %d
 SHOP_DEBT,Offline credit to pay back: %d energy. Each ad pays back up to %d and still leaves you %d games.,Offline-Schulden: %d Energie. Jede Werbung zahlt bis zu %d zurück und lässt dir trotzdem %d Spiele.
@@ -263,7 +259,6 @@ SETTINGS_HOW_TO_PLAY,How to play,So wird gespielt
 SETTINGS_PROFILE_HEADING,PROFILE,PROFIL
 SETTINGS_NAME_PLACEHOLDER,Your name,Dein Name
 SETTINGS_NAME_SAVE,Save,Speichern
-SETTINGS_RESTORE,Restore purchases,Käufe wiederherstellen
 SETTINGS_ABOUT_HEADING,ABOUT,ÜBER
 SETTINGS_FONTS,Fonts: Fredoka and Nunito (SIL Open Font License).,Schriften: Fredoka und Nunito (SIL Open Font License).
 #,--- tutorial ---,

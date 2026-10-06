@@ -1551,22 +1551,26 @@ func _test_settings() -> void:
 	var cfg := GameConfig.new()
 	var fresh := SaveData.new()
 	fresh.data = SaveData.defaults(cfg)
-	_check(fresh.setting("sfx") == true and fresh.setting("tutorial_done") == false and fresh.setting("mistake_alerts") == true, "fresh save has the default settings")
+	_check(fresh.setting("sfx_volume") == 0.5 and fresh.setting("music_volume") == 0.0 and fresh.setting("tutorial_done") == false and fresh.setting("mistake_alerts") == true, "fresh save has the default settings")
 	_check(fresh.setting("language") == "", "a fresh save follows the device language")
-	fresh.set_setting("music", false)
-	_check(fresh.setting("music") == false and fresh.settings()["music"] == false, "a changed setting is read back")
-	var old := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3, "unlimited": false, "purchase_token": "", "ads_watched": 0}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": [], "settings": {"sfx": false}}
+	fresh.set_setting("music_volume", 0.75)
+	_check(fresh.setting("music_volume") == 0.75 and fresh.settings()["music_volume"] == 0.75, "a changed setting is read back")
+	var old := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3, "unlimited": false, "purchase_token": "", "ads_watched": 0}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": [], "settings": {"sfx": false, "music": true, "haptics": false}}
 	var migrated := SaveData.migrate(old, cfg)
-	_check(migrated["settings"]["sfx"] == false and migrated["settings"]["haptics"] == true and migrated["settings"]["tutorial_done"] == false, "migration keeps stored settings and fills the missing ones")
+	_check(migrated["settings"]["haptics"] == false and migrated["settings"]["tutorial_done"] == false, "migration keeps stored settings and fills the missing ones")
+	_check(migrated["settings"]["sfx_volume"] == 0.0 and migrated["settings"]["music_volume"] == 0.0, "the old sound toggles become volumes: muted effects stay muted, music starts at 0")
+	_check(not migrated["settings"].has("sfx") and not migrated["settings"].has("music"), "migration drops the old sound toggles")
+	var unmuted := {"version": 0, "settings": {"sfx": true, "music": true}}
+	_check(SaveData.migrate(unmuted, cfg)["settings"]["sfx_volume"] == 0.5, "effects that were on get the default volume")
 	_check(migrated["settings"]["language"] == "", "a save from before the language setting follows the device language")
 	var missing := {"version": 1, "player": {"id": "p", "nickname": "n", "created_at": 1}, "energy": {"amount": 3}, "last_game": {}, "current_game": {}, "levels": {}, "results": [], "pending_results": []}
-	_check(SaveData.migrate(missing, cfg)["settings"]["sfx"] == true, "a save without a settings block gets all defaults")
+	_check(SaveData.migrate(missing, cfg)["settings"]["sfx_volume"] == 0.5, "a save without a settings block gets all defaults")
 	var tmp := "user://test_settings_save.json"
 	fresh.path = tmp
 	fresh.set_setting("reduced_motion", true)
 	fresh.save_to()
 	var back := SaveData.migrate(SaveData.read_json(tmp), cfg)
-	_check(back["settings"]["reduced_motion"] == true and back["settings"]["music"] == false, "settings survive a save/load roundtrip")
+	_check(back["settings"]["reduced_motion"] == true and back["settings"]["music_volume"] == 0.75, "settings survive a save/load roundtrip")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
 
 

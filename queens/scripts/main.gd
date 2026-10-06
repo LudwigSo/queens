@@ -67,14 +67,12 @@ func _ready() -> void:
 	settings_screen.back_requested.connect(_on_settings_back)
 	settings_screen.setting_changed.connect(_on_setting_changed)
 	settings_screen.rename_requested.connect(_on_rename)
-	settings_screen.restore_requested.connect(_on_restore_purchase)
 	settings_screen.language_selected.connect(_on_language_selected)
 	tutorial.finished.connect(_on_tutorial_finished)
 	pause_menu.settings_requested.connect(_show_settings)
 	pause_menu.set_settings_available(true)
 	energy_dialog.watch_ad_pressed.connect(_on_watch_ad)
 	energy_dialog.buy_pressed.connect(_on_buy_unlimited)
-	energy_dialog.restore_pressed.connect(_on_restore_purchase)
 	energy_dialog.closed.connect(_on_energy_dialog_closed)
 	App.energy.changed.connect(_refresh_energy)
 	App.ads.availability_changed.connect(func(_ready: bool) -> void: _refresh_energy())
@@ -93,7 +91,6 @@ func _ready() -> void:
 	App.purchases.purchase_completed.connect(func(_id: String, _token: String) -> void:
 		energy_dialog.set_status(Loc.t("SHOP_STATUS_UNLIMITED"))
 		toast.show_message(Loc.t("TOAST_UNLIMITED"), "success"))
-	App.purchases.restore_completed.connect(func(owned: Array) -> void: energy_dialog.set_status(Loc.t("SHOP_STATUS_RESTORED") if not owned.is_empty() else Loc.t("SHOP_STATUS_NOTHING")))
 	level_select.detail_requested.connect(_show_level_detail)
 	level_select.back_requested.connect(_show_home.bind(true))
 	level_select.set_back_visible(true)
@@ -390,18 +387,12 @@ func _on_buy_unlimited() -> void:
 	App.purchases.purchase(App.config.unlimited_product_id)
 
 
-func _on_restore_purchase() -> void:
-	energy_dialog.set_status(Loc.t("SHOP_STATUS_RESTORING"))
-	App.purchases.restore()
-
-
 # --- settings and tutorial ------------------------------------------------------
 
 func _settings_view() -> Dictionary:
 	var view := App.save.settings()
 	view["language_effective"] = Loc.resolve(str(view.get("language", "")), OS.get_locale_language())
 	view["nickname"] = App.save.nickname()
-	view["purchases_available"] = App.purchases.is_available()
 	view["version"] = App.config.client_version
 	return view
 
@@ -431,7 +422,7 @@ func _on_language_selected(code: String) -> void:
 	settings_screen.refresh(_settings_view())
 
 
-func _on_setting_changed(key: String, value: bool) -> void:
+func _on_setting_changed(key: String, value: Variant) -> void:
 	App.save.set_setting(key, value)
 	App.apply_settings()
 	board.mistake_alerts = bool(App.save.setting("mistake_alerts"))

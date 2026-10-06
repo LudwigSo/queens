@@ -1,11 +1,10 @@
 extends Control
-## Energy sheet: current amount, watch-an-ad refill, the unlimited purchase
-## and restore. Slides up from the bottom; opened from the Home energy pill
+## Energy sheet: current amount, watch-an-ad refill and the unlimited
+## purchase. Slides up from the bottom; opened from the Home energy pill
 ## or when a game start is blocked by empty energy (then with a banner).
 
 signal watch_ad_pressed
 signal buy_pressed
-signal restore_pressed
 signal closed
 
 @onready var dim: ColorRect = $Dim
@@ -16,7 +15,6 @@ signal closed
 @onready var hint_label: Label = $Panel/VBox/HintBanner/HintLabel
 @onready var watch_ad_button: Button = $Panel/VBox/WatchAdButton
 @onready var buy_button: Button = $Panel/VBox/BuyButton
-@onready var restore_button: Button = $Panel/VBox/RestoreButton
 @onready var status_label: Label = $Panel/VBox/StatusLabel
 @onready var close_button: Button = $Panel/VBox/TopRow/CloseButton
 
@@ -27,7 +25,6 @@ var _last_amount: int = -1
 func _ready() -> void:
 	watch_ad_button.pressed.connect(watch_ad_pressed.emit)
 	buy_button.pressed.connect(buy_pressed.emit)
-	restore_button.pressed.connect(restore_pressed.emit)
 	close_button.pressed.connect(close)
 	dim.gui_input.connect(_on_dim_input)
 
@@ -67,7 +64,6 @@ func set_state(state: Dictionary) -> void:
 	buy_button.visible = not unlimited
 	buy_button.disabled = not state.get("purchases_available", false)
 	buy_button.text = Loc.f("SHOP_UNLIMITED", [str(state.get("price_text", ""))])
-	restore_button.visible = not unlimited and state.get("purchases_available", false)
 
 
 func set_status(text: String) -> void:
