@@ -35,6 +35,7 @@ func _initialize() -> void:
 	_test_hint_finder()
 	_test_board_view()
 	_test_views()
+	_test_level_select()
 	_test_tutorial()
 	_test_streak()
 	_test_settings()
@@ -1444,6 +1445,96 @@ func _test_tutorial() -> void:
 	Motion.instant = false
 
 
+## The overview with far more levels than the game ships: only on-screen rows
+## exist as nodes, the search narrows and opens, and a drag is never a tap.
+func _test_level_select() -> void:
+	Motion.instant = true
+	var ls: Control = load("res://scenes/level_select.tscn").instantiate()
+	root.add_child(ls)
+	ls.notification(Node.NOTIFICATION_READY)  # see _test_tutorial
+	var cards: Array = []
+	for i in 2000:
+		cards.append({"id": "lv%d" % (i + 1), "level_no": i + 1, "size": 6 + i % 5, "difficulty": i, "stars": 1 + i % 4,
+			"regions": [], "locked": i == 1499, "lock_text": "2h 4m" if i == 1499 else "", "best_text": "", "played": i % 3 == 0})
+	var opened: Array = []
+	ls.detail_requested.connect(func(id: String) -> void: opened.append(id))
+	ls.refresh(cards)
+	var grid: VirtualGrid = ls.grid
+	_check(is_equal_approx(grid.custom_minimum_size.y, 500 * grid.pitch() - grid.gap), "the grid is as tall as 500 rows of four")
+	grid.size = Vector2(656, grid.custom_minimum_size.y)
+	grid.layout_window(0.0, 900.0)
+	var built := grid.get_child_count()
+	_check(built >= 24 and built < 60, "only the rows on screen are built (%d nodes for 2000 levels)" % built)
+	var top: LevelCard = grid.node_for_index(0)
+	_check(top != null and top.level_id == "lv1" and top._number.text == "1" and top._played.visible, "the first tile shows level 1, played")
+	@warning_ignore("integer_division")
+	var far_top := float(1499 / 4) * grid.pitch()  # row of level 1500
+	grid.layout_window(far_top, 900.0)
+	var far: LevelCard = grid.node_for_index(1499)
+	_check(far != null and far.level_id == "lv1500" and far.locked and far._lock_row.visible and not far._stars.visible, "scrolled far down, a recycled tile shows level 1500 locked")
+	var mid_list := grid.get_child_count()
+	_check(mid_list < 60, "mid-list the pool holds the visible rows plus slack (%d)" % mid_list)
+	grid.layout_window(200.0 * grid.pitch() + 37.0, 900.0)
+	_check(grid.get_child_count() == mid_list and grid.node_for_index(800) != null, "scrolling on reuses the pool instead of growing it")
+	grid.layout_window(far_top, 900.0)
+	_check(grid.node_for_index(0) == null, "rows scrolled away are released")
+	_check(ls.card_summary("lv1500") == {"locked": true, "text": "Level 1500 10×10 · diff 1499 2h 4m"}, "card summaries come from the data, on screen or not")
+
+	# A drag that starts on a tile ends on it too (the list moves under the
+	# finger); it must not open the level. A tap does.
+	var tile: LevelCard = grid.node_for_index(1496)
+	tile._gui_input(_mouse_button(Vector2(100, 400), true))
+	tile._gui_input(_mouse_motion(Vector2(100, 460)))
+	tile._gui_input(_mouse_button(Vector2(100, 460), false))
+	tile.pressed.emit()
+	_check(opened.is_empty(), "a drag over a tile opens nothing")
+	tile._gui_input(_mouse_button(Vector2(100, 400), true))
+	tile._gui_input(_mouse_motion(Vector2(104, 410)))
+	tile._gui_input(_mouse_button(Vector2(104, 410), false))
+	tile.pressed.emit()
+	_check(opened == ["lv1497"], "a tap with a little wobble opens the level")
+
+	# Search: live prefix filter, digits only, Enter opens the exact level.
+	opened.clear()
+	ls._on_search_changed("15")
+	_check(ls._shown.size() == 111 and int(ls._shown[0]["level_no"]) == 15, "searching 15 lists 15, 150-159 and 1500-1599 (%d)" % ls._shown.size())
+	ls.search.text = "1x5"
+	ls._on_search_changed("1x5")
+	_check(ls.search.text == "15" and ls._shown.size() == 111, "the search keeps digits only")
+	ls._on_filter("6")
+	_check(ls._shown.all(func(c: Dictionary) -> bool: return c["size"] == 6 and str(c["level_no"]).begins_with("15")), "search and size filter combine")
+	ls._on_search_submitted("15")
+	_check(opened == ["lv15"], "Enter opens the typed level even when the size filter hides it")
+	opened.clear()
+	ls._on_search_changed("9999")
+	_check(ls._shown.is_empty() and ls.empty_label.visible and not ls.scroll.visible, "no match shows the empty note")
+	ls._on_search_submitted("9999")
+	_check(opened.is_empty(), "Enter on an unknown number opens nothing")
+	ls.reset_search()
+	ls._on_filter("0")
+	_check(ls._shown.size() == 2000 and not ls.empty_label.visible, "clearing the search and the filter shows everything again")
+	root.remove_child(ls)
+	ls.free()
+	Motion.instant = false
+
+
+func _mouse_button(at: Vector2, down: bool) -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = down
+	e.global_position = at
+	e.position = at
+	return e
+
+
+func _mouse_motion(at: Vector2) -> InputEventMouseMotion:
+	var e := InputEventMouseMotion.new()
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	e.global_position = at
+	e.position = at
+	return e
+
+
 func _test_streak() -> void:
 	var cfg := GameConfig.new()
 	var save := SaveData.new()
@@ -1496,6 +1587,25 @@ func _test_views() -> void:
 	_check(not card["locked"] and card["best_text"] == "Best 120 pts · flawless", "an unlocked played level shows its best")
 	var other := Views.level_card(levels[0], save, catalog, now, cfg.cooldown_seconds)
 	_check(not other["locked"] and other["best_text"] == "" and not other["played"], "an untouched level is open and blank")
+	# The overview's search matches the start of the level number, in game order.
+	var all_cards := Views.level_cards(levels, save, catalog, now, cfg.cooldown_seconds)
+	_check(Views.filter_level_cards(all_cards, 0, "").size() == levels.size(), "no filter and no search shows every level")
+	var ones: Array = []
+	for c in Views.filter_level_cards(all_cards, 0, "1"):
+		ones.append(c["level_no"])
+	var expected_ones: Array = []
+	for n in range(1, levels.size() + 1):
+		if str(n).begins_with("1"):
+			expected_ones.append(n)
+	_check(ones == expected_ones and ones[0] == 1, "searching 1 lists 1, 10-19, 100... in order (got %s)" % [ones])
+	var sevens := Views.filter_level_cards(all_cards, 7, "")
+	var seven_count := 0
+	for l in levels:
+		if int(l["size"]) == 7:
+			seven_count += 1
+	_check(sevens.size() == seven_count and sevens.all(func(c: Dictionary) -> bool: return c["size"] == 7), "the size filter keeps only that size")
+	var other_size := 6 if int(all_cards[56]["size"]) != 6 else 7
+	_check(Views.filter_level_cards(all_cards, other_size, "57").all(func(c: Dictionary) -> bool: return c["level_no"] != 57), "search and size filter combine")
 	var board_data := {"entries": [{"rank": 1, "nickname": "Ada", "score": 150, "time_seconds": 65.0, "wrong_placements": 0, "is_me": false, "is_friend": true}], "my_entry": {"score": 120, "time_seconds": 61.0, "wrong_placements": 0}, "my_rank": 2, "total_players": 7, "par_seconds": 80.0}
 	var detail := Views.level_detail(lv, board_data, "friends", save, catalog, now + 60, cfg.cooldown_seconds)
 	_check(detail["entries"][0]["time_text"] == "1:05" and detail["mine"]["rank"] == 2 and detail["players"] == 7 and detail["par_text"] == "1:20" and detail["lock_text"] == "6d 23h" and detail["scope"] == "friends", "level detail view")

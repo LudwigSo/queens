@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/level_select.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="2_segmented"]
 [ext_resource type="Script" path="res://scripts/ui/skeleton.gd" id="3_skeleton"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/chevron_left.svg" id="4_back"]
+[ext_resource type="Script" path="res://scripts/ui/virtual_grid.gd" id="5_vgrid"]
+[ext_resource type="PackedScene" path="res://scenes/ui/level_card.tscn" id="6_card"]
 
 [node name="LevelSelect" type="Control"]
 layout_mode = 3
@@ -50,6 +52,14 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
 
+[node name="Search" type="LineEdit" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+placeholder_text = "LEVELS_SEARCH_PLACEHOLDER"
+max_length = 6
+clear_button_enabled = true
+virtual_keyboard_type = 2
+
 [node name="Filter" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
@@ -60,17 +70,24 @@ layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Grid" type="GridContainer" parent="Margin/VBox/Scroll"]
+[node name="Grid" type="Control" parent="Margin/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 16
-columns = 2
+script = ExtResource("5_vgrid")
+item_scene = ExtResource("6_card")
+
+[node name="Empty" type="Label" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"LabelMuted"
+text = "LEVELS_NO_MATCH"
+horizontal_alignment = 1
 
 [node name="Skeleton" type="Control" parent="Margin/VBox"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("3_skeleton")
-rows = 4
-row_height = 230.0
+rows = 6
+row_height = 150.0

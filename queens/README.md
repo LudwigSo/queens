@@ -9,7 +9,7 @@ The home screen offers three cards: **Easier**, **Same** and **Harder**.
 Each previews the level it would start, picked so its solver difficulty is
 stepped relative to the last game you started, finished or not (see
 `scripts/level_picker.gd`). The full level list is under *All levels*, with
-a size filter and a leaderboard per level. A level you started stays locked
+a search by level number, a size filter and a leaderboard per level. A level you started stays locked
 for seven days (`cooldown_seconds` in `scripts/config.gd`), so a time cannot
 be improved by replaying a solution you remember. Giving up counts as a
 played game. A first run starts with an interactive tutorial (replayable

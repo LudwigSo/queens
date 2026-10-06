@@ -134,13 +134,22 @@ static func make_pressable(b: BaseButton) -> void:
 	b.set_meta("_pressable", true)
 	b.button_down.connect(func() -> void:
 		Sfx.play(&"button", 0.04, -4.0)
-		b.pivot_offset = b.size * 0.5
-		var t := _own(b, "_motion_press")
-		t.tween_property(b, "scale", Vector2(0.96, 0.96), dm(FAST)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT))
-	b.button_up.connect(func() -> void:
-		b.pivot_offset = b.size * 0.5
-		var t := _own(b, "_motion_press")
-		t.tween_property(b, "scale", Vector2.ONE, dm(BASE)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
+		press_in(b))
+	b.button_up.connect(press_out.bind(b))
+
+
+## The two halves of `make_pressable`'s scale, for controls that decide
+## themselves when a touch counts as a press (see LevelCard).
+static func press_in(c: Control) -> void:
+	c.pivot_offset = c.size * 0.5
+	var t := _own(c, "_motion_press")
+	t.tween_property(c, "scale", Vector2(0.96, 0.96), dm(FAST)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+static func press_out(c: Control) -> void:
+	c.pivot_offset = c.size * 0.5
+	var t := _own(c, "_motion_press")
+	t.tween_property(c, "scale", Vector2.ONE, dm(BASE)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Applies `make_pressable` to every button below `root`.
