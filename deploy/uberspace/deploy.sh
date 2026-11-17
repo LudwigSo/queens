@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Swaps a staged queensd build into service on an Uberspace host.
+# Swaps a staged queensd build into service on an Uberspace 8 host.
 #
 # Piped over ssh by .github/workflows/deploy-server.yml, which has already
 # uploaded ~/releases/<sha>.incoming/queensd and the files next to this one.
@@ -11,7 +11,7 @@
 #   QUEENS_PORT                    the port the web backend points at
 #   QUEENS_TOKEN_PEPPER            generated once, never rotated
 #   QUEENS_NO_SESSION_GRACE_UNTIL  see deploy/README.md
-#   QUEENS_BACKEND_PATH            e.g. www.ludwigso.de/queens/api
+#   QUEENS_BACKEND_PATH            the web backend, e.g. /queens
 set -euo pipefail
 
 : "${RELEASE_SHA:?RELEASE_SHA is required}"
@@ -23,23 +23,36 @@ set -euo pipefail
 STAGE="$HOME/releases/$RELEASE_SHA.incoming"
 TARGET="$HOME/releases/$RELEASE_SHA"
 LINK="$HOME/bin/queensd"
-WRAPPER="$HOME/bin/queensd-run"
 ENVFILE="$HOME/etc/queensd.env"
-INI="$HOME/etc/services.d/queensd.ini"
+SERVICE=queensd.service
+UNIT="$HOME/.config/systemd/user/$SERVICE"
 DB="$HOME/queens/queens.db"
 BACKUPS="$HOME/queens/backups"
-LOG="$HOME/logs/queensd.log"
 KEEP_RELEASES=5
 
 say() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
 
+# The service logs to the journal. Everything since a given epoch, as plain
+# message lines (queensd's own JSON), for the checks below.
+journal_since() {
+  journalctl --user --unit "$SERVICE" --since "@$1" --output cat --no-pager 2>/dev/null || true
+}
+
 # ---------------------------------------------------------------- preconditions
 
 say "Checking the host"
-mkdir -p "$HOME/bin" "$HOME/etc/services.d" "$HOME/logs" "$HOME/queens" "$BACKUPS" "$HOME/releases"
+mkdir -p "$HOME/bin" "$HOME/etc" "$HOME/.config/systemd/user" "$HOME/queens" "$BACKUPS" "$HOME/releases"
 chmod 700 "$HOME/queens" "$BACKUPS"
 [ -f "$STAGE/queensd" ] || die "no staged binary at $STAGE/queensd"
+
+# systemctl --user needs the user's systemd instance, which Uberspace starts at
+# boot. Over `ssh host bash -s` XDG_RUNTIME_DIR can be unset, and then every
+# systemctl call below fails with a bus error rather than doing anything.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+systemctl --user is-system-running >/dev/null 2>&1 \
+  || [ "$(systemctl --user is-system-running 2>/dev/null)" = degraded ] \
+  || die "cannot reach the systemd user instance (XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR)"
 
 # The port is defined once in bootstrap.sh; everything else asserts against it.
 #
@@ -52,16 +65,18 @@ if command -v uberspace >/dev/null 2>&1; then
   uberspace_cli="uberspace"
 elif [ -x /usr/local/bin/uberspace ]; then
   uberspace_cli=/usr/local/bin/uberspace
+elif [ -x /usr/bin/uberspace ]; then
+  uberspace_cli=/usr/bin/uberspace
 fi
 
 if [ -n "$uberspace_cli" ]; then
-  if ! "$uberspace_cli" web backend list | grep -F "$QUEENS_BACKEND_PATH" | grep -q ":$QUEENS_PORT"; then
+  if ! "$uberspace_cli" web backend list | grep -F -- "$QUEENS_BACKEND_PATH" | grep -qw -- "$QUEENS_PORT"; then
     "$uberspace_cli" web backend list || true
     die "no web backend for $QUEENS_BACKEND_PATH on port $QUEENS_PORT. Run deploy/uberspace/bootstrap.sh first."
   fi
   echo "ok: $QUEENS_BACKEND_PATH is routed to port $QUEENS_PORT"
-elif [ -d /var/www/virtual ] || [ -n "${UBERSPACE_USER:-}" ]; then
-  die "this looks like an Uberspace host but the uberspace CLI is not on PATH; refusing to skip the web-backend check"
+elif hostname -f 2>/dev/null | grep -q '\.uberspace\.de$'; then
+  die "this is an Uberspace host but the uberspace CLI is not on PATH; refusing to skip the web-backend check"
 else
   echo "note: not an Uberspace host, skipping the web-backend check"
 fi
@@ -78,8 +93,8 @@ rm -rf "$TARGET"
 mv "$STAGE" "$TARGET"
 echo "ok: $TARGET/queensd reports $staged_version"
 
-install -m 700 "$TARGET/queensd-run" "$WRAPPER"
-
+# QUEENS_ADDR has no host part on purpose: Uberspace 8 forwards to the port on
+# the host's public address, and a server bound to 127.0.0.1 is never reached.
 umask 077
 cat > "$ENVFILE" <<EOF
 # Written by deploy.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ). Do not edit by hand:
@@ -142,38 +157,27 @@ if [ -e "$LINK" ]; then
   prev_dir="$(dirname "$(readlink -f "$LINK")")"
 fi
 
-install -m 644 "$TARGET/queensd.ini" "$INI.new"
-ini_changed=0
-if ! cmp -s "$INI.new" "$INI" 2>/dev/null; then ini_changed=1; fi
-mv -f "$INI.new" "$INI"
+install -m 644 "$TARGET/queensd.service" "$UNIT"
+systemctl --user daemon-reload
+systemctl --user enable "$SERVICE" >/dev/null 2>&1
 
 say "Swapping the symlink to $RELEASE_SHA"
 ln -sfn "$TARGET/queensd" "$LINK.tmp"
 mv -T "$LINK.tmp" "$LINK"
 
-supervisorctl reread >/dev/null
-# `update` adds a new program and restarts a changed one by itself. Restarting
-# again in that case would be a second downtime window for nothing.
-if [ "$ini_changed" = 1 ]; then
-  echo "the service definition changed; supervisorctl update will apply it"
-  supervisorctl update
-else
-  supervisorctl update >/dev/null
-  supervisorctl restart queensd
-fi
-# Safety net for the cases update does not cover: a program left STOPPED or
-# FATAL by an earlier failure, where neither branch above would start it.
-if ! supervisorctl status queensd | grep -q RUNNING; then
-  echo "not running after update; starting it"
-  supervisorctl start queensd || true
-fi
+# A unit that hit its start limit in an earlier failure refuses to start until
+# the counter is cleared, and would make this restart fail for no new reason.
+systemctl --user reset-failed "$SERVICE" 2>/dev/null || true
+# One second back, so the startup line cannot fall before the --since bound.
+started_at=$(( $(date +%s) - 1 ))
+systemctl --user restart "$SERVICE"
 
 # ---------------------------------------------------------------- verify
 
 rollback() {
   echo
   echo "---- last 200 log lines ----"
-  tail -200 "$LOG" 2>/dev/null || true
+  journalctl --user --unit "$SERVICE" --lines 200 --output cat --no-pager 2>/dev/null || true
   echo "----------------------------"
 
   # This comes first, and unconditionally: when migrations have been applied
@@ -204,7 +208,8 @@ EOF
   say "Rolling back to $prev_dir"
   ln -sfn "$prev_dir/queensd" "$LINK.tmp"
   mv -T "$LINK.tmp" "$LINK"
-  supervisorctl restart queensd || true
+  systemctl --user reset-failed "$SERVICE" 2>/dev/null || true
+  systemctl --user restart "$SERVICE" || true
   die "deploy failed; rolled back to the previous release"
 }
 
@@ -222,12 +227,12 @@ done
 # /healthz is a constant, so it cannot tell a real deploy from a no-op. The
 # startup line can: main.go logs "starting" with the linker-injected version.
 say "Confirming the serving build"
-if ! tail -200 "$LOG" | grep -q "\"version\":\"$RELEASE_SHA\""; then
+if ! journal_since "$started_at" | grep -q "\"version\":\"$RELEASE_SHA\""; then
   echo "the startup line does not mention $RELEASE_SHA"
   rollback
 fi
 # Informational only; never fail the deploy over a log format change.
-tail -200 "$LOG" | grep '"msg":"starting"' | tail -1 || true
+journal_since "$started_at" | grep '"msg":"starting"' | tail -1 || true
 
 # ---------------------------------------------------------------- prune
 
@@ -260,7 +265,6 @@ done
 old_snaps="$(ls -1t "$BACKUPS"/pre-*.db 2>/dev/null | tail -n +6)"
 [ -n "$old_snaps" ] && rm -f $old_snaps
 
-set -e
-
 say "Deployed $RELEASE_SHA"
-supervisorctl status queensd
+systemctl --user --no-pager --lines 0 status "$SERVICE"
+set -e
