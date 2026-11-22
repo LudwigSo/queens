@@ -1,7 +1,8 @@
 name: Deploy server
 
-# Called by the Release workflow, and runnable on its own for a server-only
-# fix that does not need a new APK.
+# Called by the Release workflow, and runnable on its own to re-deploy without
+# a new APK. The production environment accepts the `release` branch only, so
+# a manual run must be started on `release`; any other branch is rejected.
 on:
   workflow_call:
   workflow_dispatch:

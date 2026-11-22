@@ -16,14 +16,17 @@ level it has not imported, and `levelset.Sync` refuses to boot on a board whose
 `size` or `difficulty` changed, so **the server always goes out before the
 client that was built against it.** If the deploy fails, no APK is published.
 
-A server-only change does not need a release: run **Deploy server** from the
-Actions tab.
+The `production` environment accepts deploys from the `release` branch only,
+so production always runs what `release` says. **Deploy server**, started from
+the Actions tab with the branch set to `release`, re-deploys that without
+building an APK: after a fix on the host, or when a Release run failed in its
+server job. Run from any other branch, it is rejected before it starts.
 
 | Workflow | Trigger | Does |
 | --- | --- | --- |
 | `server.yml` | push to `main`, PRs touching the server | Go vet/build/test, OpenAPI drift, parity fixtures, client suite |
 | `android.yml` | push to `main` | Builds and signs an APK as a CI artifact. No release. |
-| `deploy-server.yml` | manual, or called by Release | Deploys `queensd` to Uberspace |
+| `deploy-server.yml` | manual on `release`, or called by Release | Deploys `queensd` to Uberspace |
 | `release.yml` | push to `release` | The whole thing, above |
 
 Later additions — a Play Store upload, for one — hang off `release.yml` as
@@ -31,8 +34,9 @@ another job with `needs: android`.
 
 ## The production host
 
-An Uberspace 8 account, `ludwigso`, which also runs job-agent. The API is
-mounted on the account's own domain at `https://ludwigso.uber.space/queens`.
+The Uberspace 8 account `ludwigso` on `kari.uberspace.de`, which also runs
+job-agent at `/`. The API is mounted on the account's own domain at
+`https://ludwigso.uber.space/queens`.
 
 ```
 ~/bin/queensd                              -> symlink into the current release
@@ -61,17 +65,17 @@ production — the Godot client only ever calls `/v1`.
 
 ## First-time setup
 
-1. `ssh ludwigso@<host>.uberspace.de 'bash -s' < deploy/uberspace/bootstrap.sh`
+1. `ssh ludwigso@kari.uberspace.de 'bash -s' < deploy/uberspace/bootstrap.sh`
    — checks the account, creates the layout and registers the web backend.
 2. On the host, `uberspace ssh key add --wait "<the CI public key>"`.
 3. In the `production` environment in GitHub, fill in:
 
 | Name | Kind | Value |
 | --- | --- | --- |
-| `UBERSPACE_SSH_HOST` | secret | `<host>.uberspace.de` |
+| `UBERSPACE_SSH_HOST` | secret | `kari.uberspace.de` |
 | `UBERSPACE_SSH_USER` | secret | `ludwigso` |
 | `UBERSPACE_SSH_KEY` | secret | a deploy-only ed25519 private key |
-| `UBERSPACE_SSH_KNOWN_HOSTS` | secret | `ssh-keyscan <host>.uberspace.de` |
+| `UBERSPACE_SSH_KNOWN_HOSTS` | secret | `ssh-keyscan kari.uberspace.de` |
 | `QUEENS_TOKEN_PEPPER` | secret | `openssl rand -base64 32`, **once** |
 | `QUEENS_PORT` | variable | `8721` (the default if unset) |
 | `QUEENS_BACKEND_PATH` | variable | `/queens` (the default if unset) |
@@ -82,68 +86,17 @@ production — the Godot client only ever calls `/v1`.
    `android.yml`, which writes it into the APK over `SERVER_URL_RELEASE` in
    `queens/scripts/config.gd`. Leave it unset or keep it equal to that constant.
 
-4. Run **Deploy server** once. The first run creates the database, applies the
-   migrations and imports the levels.
-5. Verify, then cut a release.
+4. To start from existing data, put the database at `~/queens/queens.db`
+   now, while nothing runs there (see *Replacing the database*). Otherwise the
+   first deploy creates an empty one.
+5. Merge `main` into `release` and push. The first deploy applies the
+   migrations and imports the levels, then the APK goes out.
 
 **The pepper is generated once and never rotated.** It signs session tokens. A
 new pepper invalidates every outstanding session, and the client clears its
 credential on a 401 — so every player silently re-registers as a brand new
-account and loses their history. When moving hosts, the database and the pepper
-travel together.
-
-## Moving from the Uberspace 7 host
-
-The API used to run on the Uberspace 7 account behind `www.ludwigso.de` at
-`https://www.ludwigso.de/queens/api`, under supervisord. Moving it is a one-off:
-
-1. **Set up the new host** as in *First-time setup*. Change only the four
-   `UBERSPACE_SSH_*` secrets and delete the variables `QUEENS_BACKEND_PATH` and
-   `QUEENS_SERVER_URL` if they still hold the old values. Keep
-   `QUEENS_TOKEN_PEPPER` as it is.
-2. **Deploy server** onto the empty host. It creates an empty database; the
-   smoke test proves the new route.
-3. **Copy the database.** Stop the old service first, so that nothing is written
-   after the copy:
-
-   ```bash
-   # old host
-   supervisorctl stop queensd
-   set -a; . ~/etc/queensd.env; set +a
-   ~/bin/queensd backup -o ~/queens/migrate.db
-   ```
-
-   ```bash
-   # from your own machine, through it
-   scp <old-user>@encke.uberspace.de:queens/migrate.db .
-   scp migrate.db ludwigso@<host>.uberspace.de:queens/migrate.db
-   ```
-
-   ```bash
-   # new host
-   systemctl --user stop queensd
-   mv ~/queens/migrate.db ~/queens/queens.db
-   rm -f ~/queens/queens.db-wal ~/queens/queens.db-shm
-   chmod 600 ~/queens/queens.db
-   systemctl --user start queensd && curl -fsS http://127.0.0.1:8721/readyz
-   set -a; . ~/etc/queensd.env; set +a; ~/bin/queensd admin players --limit 5
-   ```
-
-   The start applies any migration the copy lacks and re-imports the levels.
-4. **Cut a release.** Only the new APK knows the new URL; testers have to
-   install it.
-5. **Retire the old service, but leave its web backend in place.** With the
-   backend registered and `queensd` stopped, an old APK gets a 502, which it
-   retries, and keeps its queued offline results. Remove the backend and the
-   request falls through to the webserver, whose 403 the client treats as
-   permanent: it **silently discards every queued offline result**. Delete the
-   backend only once nobody runs the old APK.
-
-   ```bash
-   # old host
-   supervisorctl stop queensd
-   rm ~/etc/services.d/queensd.ini && supervisorctl reread && supervisorctl update
-   ```
+account and loses their history. The database and the pepper belong together:
+a copy of the database is only usable with the pepper it was written under.
 
 ## QUEENS_NO_SESSION_GRACE_UNTIL
 
@@ -197,7 +150,7 @@ online), and the running server serves them from its next level request on.
 ```bash
 # On your machine: generate new boards after the existing ones.
 python tools/gen_boards.py queens/levels/queens.json --append --count 20 --seed 5000
-scp queens/levels/queens.json <host>:~/queens/levels-import.json
+scp queens/levels/queens.json ludwigso@kari.uberspace.de:~/queens/levels-import.json
 
 # On the host: check, then publish.
 set -a; . ~/etc/queensd.env; set +a
@@ -259,6 +212,18 @@ not a backup to rely on; these are.
 **Keep this rare: new migrations should be additive and defaulted** — a new
 table, or a nullable column, or one with a DEFAULT — so that binary N-1 keeps
 working against schema N and the cheap rollback stays correct.
+
+### Replacing the database
+
+Whether restoring a backup or bringing data from elsewhere, only ever swap the
+file with `queensd` stopped and its `queens.db-wal` and `queens.db-shm`
+removed, as above. A running server keeps its WAL next to the file, and SQLite
+replays it on top of whatever `queens.db` now holds: a copy written over a
+running server reads as an empty database. Check a copy before starting on it:
+
+```bash
+sqlite3 -readonly ~/queens/queens.db "PRAGMA integrity_check; SELECT count(*) FROM players;"
+```
 
 ### Restore drill
 
@@ -335,9 +300,8 @@ To move the API to a domain of your own later, add it with
 `uberspace web domain add`, set **both** the A and the AAAA record that
 `uberspace web domain show` prints, and set `QUEENS_BACKEND_PATH` to
 `<domain>/` before running `bootstrap.sh`, which then checks both families.
-The first release under Uberspace 7 failed exactly there: an `AAAA` pointing at
-the host and an `A` still on the registrar's parking address, which works from
-any IPv6 browser and fails every deploy.
+A correct `AAAA` with a wrong `A` works from any IPv6 browser and fails every
+deploy, because the runners reach the host over IPv4 only.
 
 ## What is deliberately not automated
 
