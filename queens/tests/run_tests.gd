@@ -1471,6 +1471,26 @@ func _test_level_select() -> void:
 	_check(built >= 24 and built < 60, "only the rows on screen are built (%d nodes for 2000 levels)" % built)
 	var top: LevelCard = grid.node_for_index(0)
 	_check(top != null and top.level_id == "lv1" and top._number.text == "1" and top._played.visible, "the first tile shows level 1, played")
+	# Drags must reach the scroll container: content that would swallow the
+	# touch (STOP) is switched to PASS, but not sliders or text fields. The
+	# live hookup runs on entering the tree, which views built here never do.
+	for scene in ["level_select", "league_screen", "level_detail", "settings_screen"]:
+		var view: Control = load("res://scenes/%s.tscn" % scene).instantiate()
+		_check(view.get_node("Margin/VBox/Scroll") is TouchScroll, "%s scrolls by dragging its content" % scene)
+		view.free()
+	var box := VBoxContainer.new()
+	var panel := PanelContainer.new()
+	var button := Button.new()
+	var slider := HSlider.new()
+	var edit := LineEdit.new()
+	box.add_child(panel)
+	panel.add_child(button)
+	box.add_child(slider)
+	box.add_child(edit)
+	TouchScroll.let_drags_through(box)
+	_check(panel.mouse_filter == Control.MOUSE_FILTER_PASS and button.mouse_filter == Control.MOUSE_FILTER_PASS, "panels and buttons let a drag through to the list")
+	_check(slider.mouse_filter == Control.MOUSE_FILTER_STOP and edit.mouse_filter == Control.MOUSE_FILTER_STOP, "sliders and text fields keep their own drags")
+	box.free()
 	@warning_ignore("integer_division")
 	var far_top := float(1499 / 4) * grid.pitch()  # row of level 1500
 	grid.layout_window(far_top, 900.0)

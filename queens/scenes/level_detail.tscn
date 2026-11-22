@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/level_detail.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/board_thumb.gd" id="2_thumb"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="4_segmented"]
 [ext_resource type="Script" path="res://scripts/ui/skeleton.gd" id="5_skeleton"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/chevron_left.svg" id="6_back"]
+[ext_resource type="Script" path="res://scripts/ui/touch_scroll.gd" id="99_touch_scroll"]
 
 [node name="LevelDetail" type="Control"]
 visible = false
@@ -123,6 +124,7 @@ text = "DETAIL_TAB_FLAWLESS"
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+script = ExtResource("99_touch_scroll")
 
 [node name="List" type="VBoxContainer" parent="Margin/VBox/Scroll"]
 layout_mode = 2
