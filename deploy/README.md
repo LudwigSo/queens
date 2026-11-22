@@ -131,6 +131,27 @@ first would get a 401 for its token and register itself again as a new player.
    It should print `ok` and the number of players. `pre-move.db` stays as the
    copy to go back to: the first deploy has no running build to take its usual
    `pre-<sha>.db` snapshot with.
+
+   **If a deploy already ran on the new host**, `queensd` is serving an empty
+   database there. Never copy over it while it runs: its `queens.db-wal` stays
+   behind and SQLite replays it on top of the copy, which then reads as an
+   empty database (`ok` and `0` above). Put the copy in place with the service
+   stopped and the WAL files gone:
+
+   ```bash
+   ssh ludwigso@kari.uberspace.de 'bash -s' <<'EOF'
+   set -e
+   systemctl --user stop queensd
+   rm -f ~/queens/queens.db ~/queens/queens.db-wal ~/queens/queens.db-shm
+   cp ~/queens/backups/pre-move.db ~/queens/queens.db
+   chmod 600 ~/queens/queens.db
+   systemctl --user start queensd
+   sleep 5
+   curl -fsS http://127.0.0.1:8721/readyz; echo
+   set -a; . ~/etc/queensd.env; set +a
+   ~/bin/queensd admin players --limit 5
+   EOF
+   ```
 3. **Merge `main` into `release` and push.** The server job deploys onto the
    copied database, and its first start applies the migrations the old server
    never had and imports the levels. Then the APK with the new URL is
