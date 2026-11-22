@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    name: Uberspace
+    name: Uberspace 8
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # Holds the deploy secrets, and gives the deploy somewhere to hang a
@@ -22,8 +22,8 @@ jobs:
       cancel-in-progress: false
     env:
       QUEENS_PORT: ${{ vars.QUEENS_PORT || '8721' }}
-      QUEENS_BACKEND_PATH: ${{ vars.QUEENS_BACKEND_PATH || 'www.ludwigso.de/queens/api' }}
-      API_BASE: ${{ vars.QUEENS_SERVER_URL || 'https://www.ludwigso.de/queens/api' }}
+      QUEENS_BACKEND_PATH: ${{ vars.QUEENS_BACKEND_PATH || '/queens' }}
+      API_BASE: ${{ vars.QUEENS_SERVER_URL || 'https://ludwigso.uber.space/queens' }}
       # Suppresses the weight-8 no_session anti-cheat signal for results
       # finished before this instant. Deliberately in the future -- offline
       # play is supported, and the signal would shadow-exclude honest players.
@@ -75,8 +75,7 @@ jobs:
           ssh -i ~/.ssh/id_deploy "$USER_NAME@$HOST" "rm -rf '$stage' && mkdir -p '$stage'"
           scp -i ~/.ssh/id_deploy \
             server/dist/queensd \
-            deploy/uberspace/queensd-run \
-            deploy/uberspace/queensd.ini \
+            deploy/uberspace/queensd.service \
             "$USER_NAME@$HOST:$stage/"
 
       - name: Deploy

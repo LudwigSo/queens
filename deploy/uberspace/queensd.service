@@ -1,0 +1,32 @@
+# systemd user unit for queensd on Uberspace 8. deploy.sh installs it as
+# ~/.config/systemd/user/queensd.service; nothing else needs templating, since
+# %h expands to the home directory. The port is not here on purpose: it lives
+# once in ~/etc/queensd.env.
+[Unit]
+Description=Queens API (queensd)
+# Boot applies migrations and re-imports the level set before it binds, and
+# queensd exits 1 on a configuration error. Three failed starts within a minute
+# stop the retries, so a bad pepper fails loudly instead of looping for ever,
+# while a crash hours later is still restarted.
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+WorkingDirectory=%h/queens
+# A file rather than Environment= lines, because the pepper must never appear
+# in a unit that `systemctl --user cat` prints back. systemd reads values
+# verbatim, so a base64 pepper with + / = needs no quoting.
+EnvironmentFile=%h/etc/queensd.env
+ExecStart=%h/bin/queensd serve
+Restart=on-failure
+RestartSec=5
+# serve() gives http.Shutdown 15s and only then checkpoints the WAL. Give it
+# the whole 30s before systemd escalates to SIGKILL.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+# Everything, including one access-log line per request, goes to stderr and
+# from there to the journal: journalctl --user -u queensd
+
+[Install]
+WantedBy=default.target
