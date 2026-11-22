@@ -16,14 +16,17 @@ level it has not imported, and `levelset.Sync` refuses to boot on a board whose
 `size` or `difficulty` changed, so **the server always goes out before the
 client that was built against it.** If the deploy fails, no APK is published.
 
-A server-only change does not need a release: run **Deploy server** from the
-Actions tab.
+The `production` environment accepts deploys from the `release` branch only,
+so production always runs what `release` says. **Deploy server**, started from
+the Actions tab with the branch set to `release`, re-deploys that without
+building an APK: after a fix on the host, or when a Release run failed in its
+server job. Run from any other branch, it is rejected before it starts.
 
 | Workflow | Trigger | Does |
 | --- | --- | --- |
 | `server.yml` | push to `main`, PRs touching the server | Go vet/build/test, OpenAPI drift, parity fixtures, client suite |
 | `android.yml` | push to `main` | Builds and signs an APK as a CI artifact. No release. |
-| `deploy-server.yml` | manual, or called by Release | Deploys `queensd` to Uberspace |
+| `deploy-server.yml` | manual on `release`, or called by Release | Deploys `queensd` to Uberspace |
 | `release.yml` | push to `release` | The whole thing, above |
 
 Later additions — a Play Store upload, for one — hang off `release.yml` as
@@ -82,9 +85,9 @@ production — the Godot client only ever calls `/v1`.
    `android.yml`, which writes it into the APK over `SERVER_URL_RELEASE` in
    `queens/scripts/config.gd`. Leave it unset or keep it equal to that constant.
 
-4. Run **Deploy server** once. The first run creates the database, applies the
-   migrations and imports the levels.
-5. Verify, then cut a release.
+4. Merge `main` into `release` and push. The first deploy creates the
+   database, applies the migrations and imports the levels, then the APK goes
+   out.
 
 **The pepper is generated once and never rotated.** It signs session tokens. A
 new pepper invalidates every outstanding session, and the client clears its
@@ -95,44 +98,44 @@ travel together.
 ## Moving from the Uberspace 7 host
 
 The API used to run on the Uberspace 7 account behind `www.ludwigso.de` at
-`https://www.ludwigso.de/queens/api`, under supervisord. Moving it is a one-off:
+`https://www.ludwigso.de/queens/api`, under supervisord. Moving it is a one-off,
+and the order matters: **the data goes over before the first deploy.**
+`auth_tokens` lives in the database, so an app that reached an empty server
+first would get a 401 for its token and register itself again as a new player.
 
-1. **Set up the new host** as in *First-time setup*. Change only the four
-   `UBERSPACE_SSH_*` secrets and delete the variables `QUEENS_BACKEND_PATH` and
-   `QUEENS_SERVER_URL` if they still hold the old values. Keep
-   `QUEENS_TOKEN_PEPPER` as it is.
-2. **Deploy server** onto the empty host. It creates an empty database; the
-   smoke test proves the new route.
-3. **Copy the database.** Stop the old service first, so that nothing is written
-   after the copy:
+1. **Set up the new host** as in *First-time setup*, steps 1 to 3. Change only
+   the four `UBERSPACE_SSH_*` secrets, and delete the variables
+   `QUEENS_BACKEND_PATH` and `QUEENS_SERVER_URL` if they still hold the old
+   values. Keep `QUEENS_TOKEN_PEPPER` as it is.
+2. **Copy the database onto the new host**, where nothing runs yet. Stop the
+   old service first, so that nothing is written after the copy:
 
    ```bash
-   # old host
+   ssh <old-user>@encke.uberspace.de 'bash -s' <<'EOF'
    supervisorctl stop queensd
    set -a; . ~/etc/queensd.env; set +a
    ~/bin/queensd backup -o ~/queens/migrate.db
+   ~/bin/queensd admin players --limit 3
+   EOF
    ```
 
    ```bash
-   # from your own machine, through it
-   scp <old-user>@encke.uberspace.de:queens/migrate.db .
-   scp migrate.db ludwigso@<host>.uberspace.de:queens/migrate.db
+   ssh <old-user>@encke.uberspace.de 'cat ~/queens/migrate.db' \
+     | ssh ludwigso@kari.uberspace.de 'umask 077; cat > ~/queens/queens.db && cp ~/queens/queens.db ~/queens/backups/pre-move.db'
    ```
 
    ```bash
-   # new host
-   systemctl --user stop queensd
-   mv ~/queens/migrate.db ~/queens/queens.db
-   rm -f ~/queens/queens.db-wal ~/queens/queens.db-shm
-   chmod 600 ~/queens/queens.db
-   systemctl --user start queensd && curl -fsS http://127.0.0.1:8721/readyz
-   set -a; . ~/etc/queensd.env; set +a; ~/bin/queensd admin players --limit 5
+   ssh ludwigso@kari.uberspace.de 'sqlite3 ~/queens/queens.db "PRAGMA integrity_check; SELECT count(*) FROM players;"'
    ```
 
-   The start applies any migration the copy lacks and re-imports the levels.
-4. **Cut a release.** Only the new APK knows the new URL; testers have to
-   install it.
-5. **Retire the old service, but leave its web backend in place.** With the
+   It should print `ok` and the number of players. `pre-move.db` stays as the
+   copy to go back to: the first deploy has no running build to take its usual
+   `pre-<sha>.db` snapshot with.
+3. **Merge `main` into `release` and push.** The server job deploys onto the
+   copied database, and its first start applies the migrations the old server
+   never had and imports the levels. Then the APK with the new URL is
+   published; testers have to install it.
+4. **Retire the old service, but leave its web backend in place.** With the
    backend registered and `queensd` stopped, an old APK gets a 502, which it
    retries, and keeps its queued offline results. Remove the backend and the
    request falls through to the webserver, whose 403 the client treats as
@@ -140,9 +143,7 @@ The API used to run on the Uberspace 7 account behind `www.ludwigso.de` at
    backend only once nobody runs the old APK.
 
    ```bash
-   # old host
-   supervisorctl stop queensd
-   rm ~/etc/services.d/queensd.ini && supervisorctl reread && supervisorctl update
+   ssh <old-user>@encke.uberspace.de 'rm -f ~/etc/services.d/queensd.ini; supervisorctl reread; supervisorctl update'
    ```
 
 ## QUEENS_NO_SESSION_GRACE_UNTIL
