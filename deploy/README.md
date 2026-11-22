@@ -46,7 +46,7 @@ journalctl --user -u queensd               JSON, one line per request
 
 The route is registered once, by `bootstrap.sh`:
 
-    uberspace web backend add /queens port 8721 --remove-prefix
+    uberspace web backend add /queens port 8721 --remove-prefix --wait
 
 A bare path is mounted on every domain of the account. `--remove-prefix` strips
 it before forwarding, so `queensd` keeps its own `/v1`, `/healthz` and
@@ -63,7 +63,7 @@ production — the Godot client only ever calls `/v1`.
 
 1. `ssh ludwigso@<host>.uberspace.de 'bash -s' < deploy/uberspace/bootstrap.sh`
    — checks the account, creates the layout and registers the web backend.
-2. On the host, `uberspace ssh key add "<the CI public key>"`.
+2. On the host, `uberspace ssh key add --wait "<the CI public key>"`.
 3. In the `production` environment in GitHub, fill in:
 
 | Name | Kind | Value |

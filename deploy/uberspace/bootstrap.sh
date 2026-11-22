@@ -86,7 +86,9 @@ say "Routing $BACKEND_PATH to port $PORT"
 if uberspace web backend list | grep -F -- "$BACKEND_PATH" | grep -qw -- "$PORT"; then
   echo "  already routed"
 else
-  uberspace web backend add "$BACKEND_PATH" port "$PORT" --remove-prefix
+  # The CLI queues a background job; without --wait the list below can still
+  # show the old state.
+  uberspace web backend add "$BACKEND_PATH" port "$PORT" --remove-prefix --wait
 fi
 uberspace web backend list
 
@@ -95,7 +97,7 @@ cat <<EOF
 ==> Remaining manual steps
 
   1. Add the CI deploy key:
-       uberspace ssh key add "ssh-ed25519 AAAA... queens-deploy"
+       uberspace ssh key add --wait "ssh-ed25519 AAAA... queens-deploy"
 
   2. Record the host keys for the UBERSPACE_SSH_KNOWN_HOSTS secret, from your
      own machine:
