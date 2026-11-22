@@ -4,7 +4,7 @@
 # part of the pipeline, because it registers a web backend and because the
 # checks in it want a human reading the output.
 #
-#   ssh <user>@<host>.uberspace.de 'bash -s' < deploy/uberspace/bootstrap.sh
+#   ssh ludwigso@kari.uberspace.de 'bash -s' < deploy/uberspace/bootstrap.sh
 #
 # Afterwards, add the CI public key with `uberspace ssh key add` and fill in the
 # GitHub secrets listed in deploy/README.md.
