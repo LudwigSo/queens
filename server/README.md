@@ -110,8 +110,8 @@ truth, and replay their still-unsent results on top.
 ## Deployment
 
 One manually triggered pipeline, described in `../deploy/README.md`: merge
-`main` into `release` and the server goes to Uberspace at
-`https://www.ludwigso.de/queens/api` before the APK that was built against it
+`main` into `release` and the server goes to Uberspace 8 at
+`https://ludwigso.uber.space/queens` before the APK that was built against it
 is published.
 
 The binary is mounted behind a path that the reverse proxy strips, so there is
