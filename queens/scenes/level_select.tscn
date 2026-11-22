@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/level_select.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="2_segmented"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" path="res://assets/icons/line/chevron_left.svg" id="4_back"]
 [ext_resource type="Script" path="res://scripts/ui/virtual_grid.gd" id="5_vgrid"]
 [ext_resource type="PackedScene" path="res://scenes/ui/level_card.tscn" id="6_card"]
+[ext_resource type="Script" path="res://scripts/ui/touch_scroll.gd" id="99_touch_scroll"]
 
 [node name="LevelSelect" type="Control"]
 layout_mode = 3
@@ -69,6 +70,7 @@ script = ExtResource("2_segmented")
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+script = ExtResource("99_touch_scroll")
 
 [node name="Grid" type="Control" parent="Margin/VBox/Scroll"]
 layout_mode = 2

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/league_screen.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/ui/segmented.gd" id="2_segmented"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/icons/line/copy.svg" id="6_copy"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/share.svg" id="7_share"]
 [ext_resource type="Texture2D" path="res://assets/icons/line/cloud_off.svg" id="8_offline"]
+[ext_resource type="Script" path="res://scripts/ui/touch_scroll.gd" id="99_touch_scroll"]
 
 [node name="League" type="Control"]
 visible = false
@@ -204,6 +205,7 @@ text = "LEAGUE_ADD"
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+script = ExtResource("99_touch_scroll")
 
 [node name="List" type="VBoxContainer" parent="Margin/VBox/Scroll"]
 layout_mode = 2
